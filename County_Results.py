@@ -231,9 +231,20 @@ for county_name, county_code in COUNTIES.items():
             for party, value in parties.items():
 
 
-                ballots = value.get(
-                    "Mail",
-                    0
+                ballots = (
+
+                    value.get(
+                        "Mail",
+                        0
+                    )
+
+                    +
+
+                    value.get(
+                        "EarlyVoting",
+                        0
+                    )
+
                 )
 
 

@@ -90,13 +90,15 @@ COUNTIES = {
 
 DATA_DIR = "data"
 ARCHIVE_DIR = "archive"
+REPORT_DIR = "reports"
+
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(ARCHIVE_DIR, exist_ok=True)
+os.makedirs(REPORT_DIR, exist_ok=True)
 
 PREVIOUS_FILE = os.path.join(DATA_DIR, "previous_turnout.csv")
 TRACKER_FILE = os.path.join(DATA_DIR, "county_tracker.csv")
 HISTORY_FILE = os.path.join(DATA_DIR, "county_history.csv")
-
 
 
 RUN_TIME = datetime.now().strftime(
@@ -1230,3 +1232,124 @@ tweet += """
 
 
 print(tweet)
+# ==========================
+# SAVE REPORT TXT FILE
+# ==========================
+
+report_time = datetime.now().strftime(
+    "%Y-%m-%d_%H-%M-%S"
+)
+
+
+report = f"""
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Run Time:
+{RUN_TIME}
+
+
+Updated Counties:
+{len(updates)}
+
+Unchanged Counties:
+{unchanged}
+
+
+STATEWIDE SUMMARY
+=================================
+
+{statewide_leader}
+
+Margin Change:
+{statewide_margin_change}
+
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: {new_dem:+,}
+🔴 REP: {new_rep:+,}
+🟣 OTHER: {new_other:+,}
+🟢 TOTAL: {grand_total:+,}
+
+
+RATING / FORECAST CHANGES
+=================================
+
+"""
+
+
+if rating_changes:
+
+    for change in rating_changes:
+
+        report += f"""
+{change['County']}
+
+{change['Old']} → {change['New']}
+
+Margin Move:
+{change['Margin Change']:+.3f}
+
+"""
+
+else:
+
+    report += (
+        "No rating changes detected.\n"
+    )
+
+
+
+report += """
+
+TWEET DRAFT
+=================================
+
+"""
+
+
+report += tweet
+
+
+
+# ==========================
+# SAVE LATEST REPORT
+# ==========================
+
+with open(
+    os.path.join(
+        REPORT_DIR,
+        "latest_report.txt"
+    ),
+    "w",
+    encoding="utf-8"
+) as file:
+
+    file.write(report)
+
+
+
+# ==========================
+# SAVE TIMESTAMP REPORT
+# ==========================
+
+with open(
+    os.path.join(
+        REPORT_DIR,
+        f"florida_report_{report_time}.txt"
+    ),
+    "w",
+    encoding="utf-8"
+) as file:
+
+    file.write(report)
+
+
+
+print(
+    "Saved report:",
+    f"florida_report_{report_time}.txt"
+)

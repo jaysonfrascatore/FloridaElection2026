@@ -6,6 +6,9 @@ on:
 
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   update-data:
 
@@ -16,22 +19,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-
       - name: Install dependencies
         run: |
           pip install pandas requests
 
-
       - name: Run Python script
         run: |
           python County_Results.py
-
 
       - name: Commit updated data
         run: |

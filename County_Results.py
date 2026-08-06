@@ -1,6 +1,7 @@
 import requests
 import pandas as pd
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import os
 
 
@@ -101,7 +102,7 @@ TRACKER_FILE = os.path.join(DATA_DIR, "county_tracker.csv")
 HISTORY_FILE = os.path.join(DATA_DIR, "county_history.csv")
 
 
-RUN_TIME = datetime.now().strftime(
+RUN_TIME = datetime.now(ZoneInfo("America/New_York")).strftime(
     "%Y-%m-%d %H:%M:%S"
 )
 
@@ -759,7 +760,7 @@ archive_file = os.path.join(
 
     +
 
-    datetime.now().strftime(
+    datetime.now(ZoneInfo("America/New_York")).strftime(
         "%Y-%m-%d_%H-%M-%S"
     )
 
@@ -1126,7 +1127,7 @@ print(
 # ==========================
 
 
-tweet_time = datetime.now().strftime(
+tweet_time = datetime.now(ZoneInfo("America/New_York")).strftime(
     "%I %p"
 ).lstrip("0")
 
@@ -1236,7 +1237,7 @@ print(tweet)
 # SAVE REPORT TXT FILE
 # ==========================
 
-report_time = datetime.now().strftime(
+report_time = datetime.now(ZoneInfo("America/New_York")).strftime(
     "%Y-%m-%d_%H-%M-%S"
 )
 

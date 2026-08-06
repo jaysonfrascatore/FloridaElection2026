@@ -2,12 +2,8 @@ name: Update Florida Turnout Data
 
 on:
   schedule:
-    # 7:15 AM – 7:15 PM EDT (11:15–23:15 UTC)
-    - cron: "15 11-23 * * *"
-
-    # 8:15 PM – 9:15 PM EDT (00:15–01:15 UTC)
-    - cron: "15 0-1 * * *"
-
+    - cron: "30 11-23 * * *"
+    - cron: "30 0-1 * * *"
   workflow_dispatch:
 
 permissions:
@@ -16,14 +12,12 @@ permissions:
   id-token: write
 
 jobs:
-  update-data:
+  update:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -34,21 +28,37 @@ jobs:
         run: |
           pip install pandas requests
 
-      - name: Run Python script
+      - name: Run updater
         run: |
-          python County_Results.py
+          python update_turnout.py
 
       - name: Commit updated data
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-
           git add .
-
-          git status
-
-          git commit -m "Automatic turnout update" || echo "No changes to commit"
-
-          git pull --rebase origin main
-
+          git commit -m "Automatic turnout update" || exit 0
           git push
+
+  deploy:
+    needs: update
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: "."
+
+      - name: Deploy
+        uses: actions/deploy-pages@v4

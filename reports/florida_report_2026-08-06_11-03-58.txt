@@ -1,0 +1,111 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Run Time:
+2026-08-06 11:03:18
+
+
+Updated Counties:
+30
+
+Unchanged Counties:
+37
+
+
+STATEWIDE SUMMARY
+=================================
+
+🔵 Democrats lead by 22,322 votes statewide.
+
+Margin Change:
+-0.01% toward Republicans
+
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +4,325
+🔴 REP: +4,027
+🟣 OTHER: +1,477
+🟢 TOTAL: +9,829
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+Hillsborough
+
+Lean D → Likely D
+
+Margin Move:
++0.005
+
+
+Lake
+
+Toss Up D → Toss Up R
+
+Margin Move:
+-0.004
+
+
+Sumter
+
+Likely R → Safe R
+
+Margin Move:
+-0.006
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️11 AM Florida EV & VBM Update
+
+New votes have been cast in 30 counties over the last hour, with the largest update coming from Miami-Dade County.
+
+🔵 DEM: +4,325
+🔴 REP: +4,027
+🟣 OTHER: +1,477
+🟢 TOTAL: +9,829
+
+🔵 Democrats lead by 22,322 votes statewide.
+
+🔴 Margin Change: -0.01% toward Republicans
+
+Largest County Updates
+
+
+🥇Miami-Dade County
+
+🔵 DEM: +1,713
+🔴 REP: +738
+🟣 OTHER: +561
+🟢 TOTAL: +3,012
+
+
+
+🥈Hillsborough County
+
+🔵 DEM: +1,017
+🔴 REP: +701
+🟣 OTHER: +301
+🟢 TOTAL: +2,019
+
+
+
+🥉Collier County
+
+🔵 DEM: +442
+🔴 REP: +915
+🟣 OTHER: +189
+🟢 TOTAL: +1,546
+
+
+
+#Florida #EarlyVoting #VoteByMail

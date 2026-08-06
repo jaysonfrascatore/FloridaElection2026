@@ -1,0 +1,103 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Run Time:
+2026-08-06 12:20:32
+
+
+Updated Counties:
+40
+
+Unchanged Counties:
+27
+
+
+STATEWIDE SUMMARY
+=================================
+
+🔵 Democrats lead by 20,982 votes statewide.
+
+Margin Change:
+-0.18% toward Republicans
+
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +5,523
+🔴 REP: +6,863
+🟣 OTHER: +1,696
+🟢 TOTAL: +14,082
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+Pinellas
+
+Toss Up D → Lean R
+
+Margin Move:
+-0.037
+
+
+Sarasota
+
+Likely D → Lean D
+
+Margin Move:
+-0.008
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️12 PM Florida EV & VBM Update
+
+New votes have been cast in 40 counties over the last hour, with the largest update coming from Hillsborough County.
+
+🔵 DEM: +5,523
+🔴 REP: +6,863
+🟣 OTHER: +1,696
+🟢 TOTAL: +14,082
+
+🔵 Democrats lead by 20,982 votes statewide.
+
+🔴 Margin Change: -0.18% toward Republicans
+
+Largest County Updates
+
+
+🥇Hillsborough County
+
+🔵 DEM: +1,261
+🔴 REP: +1,108
+🟣 OTHER: +451
+🟢 TOTAL: +2,820
+
+
+
+🥈Pinellas County
+
+🔵 DEM: +173
+🔴 REP: +1,674
+🟣 OTHER: +1
+🟢 TOTAL: +1,848
+
+
+
+🥉Volusia County
+
+🔵 DEM: +629
+🔴 REP: +644
+🟣 OTHER: +266
+🟢 TOTAL: +1,539
+
+
+
+#Florida #EarlyVoting #VoteByMail

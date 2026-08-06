@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Florida County Returns</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root{
+    --bg:#0a0e17;
+    --panel:#10151f;
+    --panel-2:#151b28;
+    --border:#212a3b;
+    --text:#e9edf5;
+    --muted:#7c879c;
+    --muted-2:#556076;
+    --dem:#5b9bd9;
+    --dem-dim:#294a68;
+    --rep:#d4675a;
+    --rep-dim:#6b332c;
+    --gold:#d8b466;
+    --safe:#3a4356;
+    --serif:'Fraunces', Georgia, serif;
+    --mono:'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+    --sans:'Inter', -apple-system, sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    min-height:100vh;
+    padding:28px clamp(16px,4vw,48px) 60px;
+  }
+  header{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    gap:24px; flex-wrap:wrap;
+    border-bottom:1px solid var(--border);
+    padding-bottom:20px; margin-bottom:22px;
+  }
+  .title-block .eyebrow{
+    font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--gold); margin-bottom:8px;
+  }
+  h1{
+    font-family:var(--serif); font-weight:500; font-size:clamp(26px,3.2vw,38px);
+    letter-spacing:-.01em;
+  }
+  .title-block p{ color:var(--muted); font-size:14px; margin-top:6px; max-width:520px; }
+  .upload-zone{
+    display:flex; align-items:center; gap:14px;
+    border:1px dashed var(--border); border-radius:10px;
+    padding:14px 18px; background:var(--panel);
+    cursor:pointer; transition:border-color .15s, background .15s;
+  }
+  .upload-zone:hover{ border-color:var(--gold); background:var(--panel-2); }
+  .upload-zone input{ display:none; }
+  .upload-icon{
+    width:34px; height:34px; border-radius:8px; background:var(--panel-2);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    border:1px solid var(--border);
+  }
+  .upload-text .t1{ font-size:13px; font-weight:600; }
+  .upload-text .t2{ font-size:11.5px; color:var(--muted); font-family:var(--mono); margin-top:2px;}
+  #fileMeta{ font-size:11.5px; color:var(--muted-2); font-family:var(--mono); }
+
+  .empty-state{
+    border:1px solid var(--border); border-radius:14px; background:var(--panel);
+    padding:80px 24px; text-align:center; color:var(--muted);
+  }
+  .empty-state svg{ opacity:.35; margin-bottom:18px; }
+  .empty-state .t1{ font-family:var(--serif); font-size:20px; color:var(--text); margin-bottom:6px; }
+  .empty-state .t2{ font-size:13.5px; }
+
+  #dashboard{ display:none; }
+  #dashboard.active{ display:block; }
+
+  /* statewide margin bar */
+  .margin-strip{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:18px 22px; margin-bottom:18px;
+  }
+  .margin-strip .row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; gap:12px; flex-wrap:wrap;}
+  .margin-strip .label{ font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+  .margin-strip .leader{ font-family:var(--serif); font-size:22px; }
+  .margin-strip .leader.D{ color:var(--dem); } .margin-strip .leader.R{ color:var(--rep); }
+  .bar-track{
+    position:relative; height:14px; border-radius:7px; overflow:hidden;
+    background:var(--safe); display:flex;
+  }
+  .bar-d{ background:linear-gradient(90deg,#3d78ab,var(--dem)); height:100%; }
+  .bar-r{ background:linear-gradient(90deg,var(--rep),#a94438); height:100%; }
+  .bar-labels{ display:flex; justify-content:space-between; margin-top:8px; font-family:var(--mono); font-size:12px; }
+  .bar-labels .d{ color:var(--dem); } .bar-labels .r{ color:var(--rep); }
+
+  .stat-cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-top:14px; }
+  .stat-card{ background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:10px 14px; }
+  .stat-card .v{ font-family:var(--mono); font-size:19px; font-weight:600; }
+  .stat-card .k{ font-size:11px; color:var(--muted); margin-top:2px; }
+
+  .controls{
+    display:flex; justify-content:space-between; align-items:center; gap:16px;
+    flex-wrap:wrap; margin-bottom:14px;
+  }
+  .segmented{ display:flex; background:var(--panel); border:1px solid var(--border); border-radius:9px; padding:3px; gap:2px; }
+  .segmented button{
+    font-family:var(--mono); font-size:11.5px; color:var(--muted); background:none; border:none;
+    padding:7px 12px; border-radius:6px; cursor:pointer; white-space:nowrap;
+  }
+  .segmented button.active{ background:var(--panel-2); color:var(--text); box-shadow:inset 0 0 0 1px var(--border); }
+  .search-box{
+    background:var(--panel); border:1px solid var(--border); border-radius:9px;
+    padding:8px 12px; display:flex; align-items:center; gap:8px; min-width:200px;
+  }
+  .search-box input{
+    background:none; border:none; outline:none; color:var(--text); font-family:var(--sans); font-size:13px; width:100%;
+  }
+  .search-box input::placeholder{ color:var(--muted-2); }
+
+  .grid{ display:grid; grid-template-columns:1.15fr 1fr; gap:18px; align-items:start; }
+  @media (max-width:920px){ .grid{ grid-template-columns:1fr; } }
+
+  .panel{ background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px; }
+  .panel h2{ font-family:var(--serif); font-weight:500; font-size:15px; margin-bottom:10px; color:var(--text); }
+  #map{ width:100%; height:560px; }
+
+  .table-wrap{ max-height:596px; overflow-y:auto; overflow-x:hidden; border-radius:8px; }
+  table{ width:100%; table-layout:fixed; border-collapse:collapse; font-size:11px; }
+  th:nth-child(1), td:nth-child(1){ width:17%; }
+  th:nth-child(2), td:nth-child(2){ width:14%; }
+  th:nth-child(3), td:nth-child(3){ width:10.5%; }
+  th:nth-child(4), td:nth-child(4){ width:10.5%; }
+  th:nth-child(5), td:nth-child(5){ width:9%; }
+  th:nth-child(6), td:nth-child(6){ width:11%; }
+  th:nth-child(7), td:nth-child(7){ width:10%; }
+  th:nth-child(8), td:nth-child(8){ width:18%; }
+  thead th{
+    position:sticky; top:0; background:var(--panel-2); text-align:left; padding:8px 6px;
+    font-family:var(--mono); font-size:10px; letter-spacing:.04em; text-transform:uppercase;
+    color:var(--muted); cursor:pointer; border-bottom:1px solid var(--border); user-select:none;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  thead th:hover{ color:var(--text); }
+  thead th.sorted::after{ content:' \2193'; color:var(--gold); }
+  thead th.sorted.asc::after{ content:' \2191'; }
+  tbody td{
+    padding:6px 6px; border-bottom:1px solid var(--border); font-family:var(--mono);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  tbody tr{ cursor:pointer; transition:background .1s; }
+  tbody tr:hover{ background:var(--panel-2); }
+  tbody tr.hl{ background:var(--panel-2); box-shadow:inset 2px 0 0 var(--gold); }
+  .county-name{ font-family:var(--sans); font-weight:600; color:var(--text); font-size:11.5px; }
+  .chip{
+    display:inline-block; font-family:var(--mono); font-size:9.5px; padding:2px 6px;
+    border-radius:20px; letter-spacing:.02em; max-width:100%; overflow:hidden; text-overflow:ellipsis;
+  }
+  .rating{ color:var(--muted); font-size:10.5px; }
+  .num-d{ color:var(--dem); } .num-r{ color:var(--rep); }
+  .moved::before{ content:'\25B2 '; color:var(--gold); font-size:9px; }
+
+  .legend{ display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+  .legend .swatch{
+    display:flex; align-items:center; gap:6px; font-family:var(--mono); font-size:10.5px;
+    padding:4px 9px; border-radius:20px; letter-spacing:.02em;
+  }
+
+  footer{ margin-top:20px; font-family:var(--mono); font-size:11px; color:var(--muted-2); text-align:center; }
+  .error-msg{
+    background:#3a1c1c; border:1px solid var(--rep-dim); color:#f0b5ac; border-radius:8px;
+    padding:10px 14px; font-size:12.5px; margin-bottom:14px; display:none; font-family:var(--mono);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-block">
+    <div class="eyebrow">County Returns &middot; Florida</div>
+    <h1>Florida County Returns</h1>
+    <p>Reads live from the production data files &mdash; no upload, this is a read-only production dashboard.</p>
+  </div>
+  <div class="upload-zone" id="statusZone" style="cursor:default;">
+    <div class="upload-icon" id="refreshBtn" style="cursor:pointer;" title="Re-check for updated data now">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d8b466" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    </div>
+    <div class="upload-text">
+      <div class="t1" id="loadStatus">Loading latest results&hellip;</div>
+      <div class="t2" id="fileMeta">checking data files</div>
+    </div>
+  </div>
+</header>
+
+<div class="error-msg" id="errorMsg"></div>
+
+<div class="empty-state" id="emptyState">
+  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#7c879c" stroke-width="1.2"><path d="M3 9l6-3 6 3 6-3v12l-6 3-6-3-6 3V9z"/><path d="M9 6v12M15 9v12"/></svg>
+  <div class="t1" id="emptyTitle">Looking for results&hellip;</div>
+  <div class="t2" id="emptyText">Waiting on data/previous_turnout.csv and data/latest.json to appear in this repo.</div>
+</div>
+
+
+<div id="dashboard">
+
+  <div class="margin-strip">
+    <div class="row">
+      <span class="label">Statewide margin</span>
+      <span class="leader" id="stateLeader">&mdash;</span>
+    </div>
+    <div class="bar-track">
+      <div class="bar-d" id="barD" style="width:50%"></div>
+      <div class="bar-r" id="barR" style="width:50%"></div>
+    </div>
+    <div class="bar-labels">
+      <span class="d" id="labelD">DEM &mdash;</span>
+      <span class="r" id="labelR">REP &mdash;</span>
+    </div>
+    <div class="stat-cards">
+      <div class="stat-card"><div class="v" id="statTotal">&mdash;</div><div class="k">Total votes</div></div>
+      <div class="stat-card"><div class="v" id="statCounties">&mdash;</div><div class="k">Counties reporting</div></div>
+      <div class="stat-card"><div class="v" id="statInd">&mdash;</div><div class="k">IND + NPA + Other</div></div>
+      <div class="stat-card"><div class="v" id="statMoved">&mdash;</div><div class="k">Rating changes</div></div>
+      <div class="stat-card"><div class="v" id="statUpdated">&mdash;</div><div class="k">Most recent update</div></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="segmented" id="metricSelect">
+      <button data-metric="rating" class="active">Rating</button>
+      <button data-metric="demshare">DEM %</button>
+      <button data-metric="repshare">REP %</button>
+      <button data-metric="total">Total turnout</button>
+      <button data-metric="move">Margin move</button>
+      <button data-metric="updated">Counties Updated</button>
+    </div>
+    <div class="search-box">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7c879c" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" id="searchInput" placeholder="Search county...">
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2 id="mapTitle">Rating by county</h2>
+      <div id="map"></div>
+      <div class="legend" id="mapLegend"></div>
+    </div>
+    <div class="panel">
+      <h2>County table</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th data-key="county" class="sorted asc">County</th>
+              <th data-key="leader">Leader</th>
+              <th data-key="dem">DEM</th>
+              <th data-key="rep">REP</th>
+              <th data-key="diff">Diff</th>
+              <th data-key="total">Total</th>
+              <th data-key="marginPct">Margin</th>
+              <th data-key="rating">Rating</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <footer id="footerNote"></footer>
+</div>
+
+<script>
+const FL_FIPS = {
+  "Alachua":"12001","Baker":"12003","Bay":"12005","Bradford":"12007","Brevard":"12009",
+  "Broward":"12011","Calhoun":"12013","Charlotte":"12015","Citrus":"12017","Clay":"12019",
+  "Collier":"12021","Columbia":"12023","DeSoto":"12027","Dixie":"12029","Duval":"12031",
+  "Escambia":"12033","Flagler":"12035","Franklin":"12037","Gadsden":"12039","Gilchrist":"12041",
+  "Glades":"12043","Gulf":"12045","Hamilton":"12047","Hardee":"12049","Hendry":"12051",
+  "Hernando":"12053","Highlands":"12055","Hillsborough":"12057","Holmes":"12059","Indian River":"12061",
+  "Jackson":"12063","Jefferson":"12065","Lafayette":"12067","Lake":"12069","Lee":"12071",
+  "Leon":"12073","Levy":"12075","Liberty":"12077","Madison":"12079","Manatee":"12081",
+  "Marion":"12083","Martin":"12085","Miami-Dade":"12086","Monroe":"12087","Nassau":"12089",
+  "Okaloosa":"12091","Okeechobee":"12093","Orange":"12095","Osceola":"12097","Palm Beach":"12099",
+  "Pasco":"12101","Pinellas":"12103","Polk":"12105","Putnam":"12107","St. Johns":"12109",
+  "St. Lucie":"12111","Santa Rosa":"12113","Sarasota":"12115","Seminole":"12117","Sumter":"12119",
+  "Suwannee":"12121","Taylor":"12123","Union":"12125","Volusia":"12127","Wakulla":"12129",
+  "Walton":"12131","Washington":"12133"
+};
+
+const RATING_CATS = [
+  { key:'Safe R',   color:'#880d1e' },
+  { key:'Likely R', color:'#dd2d4a' },
+  { key:'Lean R',   color:'#f49cbb' },
+  { key:'Toss Up',  color:'#9d4edd' },
+  { key:'Tie',      color:'#e9c46a' },
+  { key:'Lean D',   color:'#90e0ef' },
+  { key:'Likely D', color:'#00b4d8' },
+  { key:'Safe D',   color:'#03045e' }
+];
+const MOVE_CATS = [
+  { key:'Unchanged', color:'#141a26' },
+  { key:'Changed',   color:'#ffca3a' }
+];
+const UPDATED_CATS = [
+  { key:'No new votes', color:'#141a26' },
+  { key:'Updated',      color:'#0ead69' }
+];
+function categoryFor(c){
+  if(c.marginPct === 0) return 'Tie';
+  const r = c.rating.toLowerCase();
+  if(r === 'toss up') return 'Toss Up';
+  if(r === 'safe' || r === 'likely' || r === 'lean') return c.rating + ' ' + c.leader;
+  return c.rating;
+}
+function moveCategoryFor(c){ return c.ratingChanged ? 'Changed' : 'Unchanged'; }
+function updatedCategoryFor(c){ return c.totalNew ? 'Updated' : 'No new votes'; }
+function catColor(catKey){
+  const cat = RATING_CATS.find(c=>c.key===catKey) || MOVE_CATS.find(c=>c.key===catKey) || UPDATED_CATS.find(c=>c.key===catKey);
+  return cat ? cat.color : '#3a4356';
+}
+function contrastText(hex){
+  const n = parseInt(hex.slice(1),16);
+  const r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+  const lum = (0.299*r + 0.587*g + 0.114*b)/255;
+  return lum > 0.6 ? '#0a0e17' : '#ffffff';
+}
+function stepColorscale(cats){
+  const n = cats.length, scale = [];
+  cats.forEach((cat,i)=>{
+    scale.push([i/n, cat.color]);
+    scale.push([(i+1)/n, cat.color]);
+  });
+  return scale;
+}
+
+let COUNTIES = [];
+let geojsonFL = null;
+let currentMetric = 'rating';
+let sortKey = 'county', sortAsc = true;
+let highlightedCounty = null;
+
+// ---- Auto-load config ----
+// Production-only data source: no manual upload. Every run, the Python
+// script writes data/previous_turnout.csv (fixed name, overwritten each
+// time) AND a timestamped archive/florida_turnout_*.csv, then records
+// which archive file is newest in data/latest.json (since the archive
+// filename changes every run, the page needs that pointer to find it).
+// On load, we fetch all three, and use whichever of previous_turnout.csv
+// / the pointed-to archive file has the newer "Timestamp" value — this
+// protects against the two files landing in a repo out of order (e.g. a
+// GitHub Actions commit that pushes one before the other).
+const MANIFEST_PATH = 'data/latest.json';
+const PREVIOUS_PATH = 'data/previous_turnout.csv';
+const AUTO_REFRESH_MS = 60000; // re-check for newer data every 60s; set to 0 to disable
+let lastLoadedAt = null;
+let autoLoadFailed = false;
+let activeSourceLabel = '';
+
+function rowTimestamp(rows){
+  const t = rows && rows[0] && (rows[0]['Timestamp'] || rows[0]['Last Updated']);
+  const parsed = t ? Date.parse(t) : NaN;
+  return isNaN(parsed) ? 0 : parsed;
+}
+
+async function fetchCSV(path){
+  const resp = await fetch(path + '?t=' + Date.now(), { cache:'no-store' });
+  if(!resp.ok) throw new Error('HTTP ' + resp.status + ' for ' + path);
+  const text = await resp.text();
+  const parsed = Papa.parse(text, { header:true, skipEmptyLines:true });
+  if(!parsed.data.length) throw new Error(path + ' is empty');
+  return parsed.data;
+}
+
+const fmt = n => n.toLocaleString('en-US');
+const pct = n => (n*100).toFixed(1)+'%';
+
+function num(v){ const n = parseFloat(v); return isNaN(n) ? 0 : n; }
+function pick(row, keys){
+  for(const k of keys){ if(row[k] !== undefined && row[k] !== '') return row[k]; }
+  return '';
+}
+function normName(s){ return (s||'').toString().trim(); }
+
+async function loadLatestCSV(isManualRefresh){
+  const loadStatus = document.getElementById('loadStatus');
+  const fileMeta = document.getElementById('fileMeta');
+  if(isManualRefresh){ loadStatus.textContent = 'Checking for updates\u2026'; }
+  try{
+    // 1. Always try to read previous_turnout.csv (the fixed-name file).
+    let previousRows = null;
+    try{ previousRows = await fetchCSV(PREVIOUS_PATH); }catch(e){ /* may not exist yet */ }
+
+    // 2. Try the manifest to find the latest archive file, and read it.
+    let archiveRows = null, archivePath = null;
+    try{
+      const manifestResp = await fetch(MANIFEST_PATH + '?t=' + Date.now(), { cache:'no-store' });
+      if(manifestResp.ok){
+        const manifest = await manifestResp.json();
+        if(manifest.archive_file){
+          archivePath = manifest.archive_file;
+          archiveRows = await fetchCSV(archivePath);
+        }
+      }
+    }catch(e){ /* manifest missing or archive file unreachable */ }
+
+    if(!previousRows && !archiveRows) throw new Error('no data files found');
+
+    // 3. Use whichever has the newer Timestamp. Falls back to whichever
+    // one loaded successfully if only one did.
+    let rows, sourceLabel;
+    const prevTime = previousRows ? rowTimestamp(previousRows) : -1;
+    const archTime = archiveRows ? rowTimestamp(archiveRows) : -1;
+    if(archiveRows && archTime >= prevTime){
+      rows = archiveRows; sourceLabel = archivePath;
+    }else{
+      rows = previousRows; sourceLabel = PREVIOUS_PATH;
+    }
+
+    buildCounties(rows);
+    lastLoadedAt = new Date();
+    autoLoadFailed = false;
+    activeSourceLabel = sourceLabel;
+
+    loadStatus.textContent = 'Live \u00b7 ' + sourceLabel;
+    fileMeta.textContent = 'last checked ' + lastLoadedAt.toLocaleTimeString();
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('dashboard').classList.add('active');
+    document.getElementById('errorMsg').style.display = 'none';
+    render();
+  }catch(e){
+    if(COUNTIES.length){
+      // Already showing data — a failed background refresh shouldn't blow that away.
+      if(isManualRefresh){ loadStatus.textContent = 'Live \u00b7 ' + activeSourceLabel; }
+      return;
+    }
+    autoLoadFailed = true;
+    loadStatus.textContent = 'No results file yet';
+    fileMeta.textContent = 'looking for ' + PREVIOUS_PATH;
+    document.getElementById('emptyTitle').textContent = 'No results file found yet';
+    document.getElementById('emptyText').textContent =
+      `Waiting on "${PREVIOUS_PATH}" and "${MANIFEST_PATH}" to appear in this repo. This page will pick them up automatically once the script has run.`;
+  }
+}
+
+function buildCounties(rows){
+  const out = [];
+  rows.forEach(row => {
+    const name = normName(pick(row, ['County_x','County','County_y']));
+    if(!name || !FL_FIPS[name]) return;
+    const dem = num(pick(row,['DEM']));
+    const rep = num(pick(row,['REP']));
+    const ind = num(pick(row,['IND']));
+    const npa = num(pick(row,['NPA']));
+    const other = num(pick(row,['OTHER']));
+    const total = num(pick(row,['TOTAL'])) || (dem+rep+ind+npa+other);
+    const demShare = num(pick(row,['DEM %'])) || (total ? dem/total : 0);
+    const repShare = num(pick(row,['REP %'])) || (total ? rep/total : 0);
+    let signedMargin = pick(row,['Signed Margin']);
+    signedMargin = signedMargin !== '' ? num(signedMargin) : (demShare - repShare);
+    const leader = normName(pick(row,['Leader'])) || (signedMargin >= 0 ? 'D' : 'R');
+    const rating = normName(pick(row,['Rating'])) || '—';
+    const marginMove = num(pick(row,['Margin Move']));
+    const ratingChanged = normName(pick(row,['Rating Change'])).toLowerCase() === 'yes';
+    const ratingMove = normName(pick(row,['Rating Move']));
+    const lastUpdated = normName(pick(row,['Last Updated','County_y']));
+    const totalNew = num(pick(row,['Total New','TOTAL NEW','New Total','Total_New']));
+    const diff = Math.abs(dem - rep);
+    const rec = {
+      county:name, fips:FL_FIPS[name], code:normName(pick(row,['Code'])),
+      dem,rep,ind,npa,other,total,demShare,repShare,diff,
+      marginPct: signedMargin, leader, rating,
+      marginMove, ratingChanged, ratingMove, totalNew,
+      lastUpdated: pick(row,['Last Updated']) || ''
+    };
+    rec.category = categoryFor(rec);
+    out.push(rec);
+  });
+  if(out.length === 0) throw new Error('no matching Florida counties found in this file');
+  COUNTIES = out;
+}
+
+async function ensureGeojson(){
+  if(geojsonFL) return geojsonFL;
+  const resp = await fetch('https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json');
+  const full = await resp.json();
+  geojsonFL = { type:'FeatureCollection', features: full.features.filter(f => f.properties.STATE === '12') };
+  return geojsonFL;
+}
+
+function renderStats(){
+  const totalD = COUNTIES.reduce((s,c)=>s+c.dem,0);
+  const totalR = COUNTIES.reduce((s,c)=>s+c.rep,0);
+  const totalOther = COUNTIES.reduce((s,c)=>s+c.ind+c.npa+c.other,0);
+  const total = totalD+totalR+totalOther;
+  const dShare = total ? totalD/total : 0;
+  const rShare = total ? totalR/total : 0;
+  const leader = totalD >= totalR ? 'D' : 'R';
+
+  const leaderEl = document.getElementById('stateLeader');
+  leaderEl.textContent = (leader === 'D' ? 'DEM' : 'REP') + ' +' + fmt(Math.abs(totalD-totalR));
+  leaderEl.className = 'leader ' + leader;
+
+  document.getElementById('barD').style.width = (dShare*100).toFixed(2)+'%';
+  document.getElementById('barR').style.width = (rShare*100).toFixed(2)+'%';
+  document.getElementById('labelD').textContent = 'DEM ' + fmt(totalD) + ' (' + pct(dShare) + ')';
+  document.getElementById('labelR').textContent = 'REP ' + fmt(totalR) + ' (' + pct(rShare) + ')';
+
+  document.getElementById('statTotal').textContent = fmt(total);
+  document.getElementById('statCounties').textContent = COUNTIES.length + ' / 67';
+  document.getElementById('statInd').textContent = fmt(totalOther);
+  document.getElementById('statMoved').textContent = COUNTIES.filter(c=>c.ratingChanged).length;
+  const times = COUNTIES.map(c=>c.lastUpdated).filter(Boolean).sort();
+  document.getElementById('statUpdated').textContent = times.length ? times[times.length-1] : '—';
+}
+
+const METRICS = {
+  rating: { title:'Rating by county', categorical:true, cats:RATING_CATS, catFn:categoryFor },
+  demshare: { title:'DEM % of vote', get:c=>c.demShare, scale:[[0,'#90e0ef'],[0.5,'#00b4d8'],[1,'#03045e']], range:()=>1 },
+  repshare: { title:'REP % of vote', get:c=>c.repShare, scale:[[0,'#f49cbb'],[0.5,'#dd2d4a'],[1,'#880d1e']], range:()=>1 },
+  total: { title:'Total turnout by county', get:c=>c.total, scale:[[0,'#bce784'],[0.5,'#8ac926'],[1,'#007200']], range:cs=>Math.max(...cs.map(c=>c.total)) },
+  move: { title:'Counties with a forecast rating change', categorical:true, cats:MOVE_CATS, catFn:moveCategoryFor },
+  updated: { title:'Counties updated (new votes reported)', categorical:true, cats:UPDATED_CATS, catFn:updatedCategoryFor }
+};
+
+async function renderMap(){
+  await ensureGeojson();
+  const m = METRICS[currentMetric];
+  document.getElementById('mapTitle').textContent = m.title;
+
+  const locations = COUNTIES.map(c=>c.fips);
+  const text = COUNTIES.map(c =>
+    `<b>${c.county}</b><br>` +
+    `Rating: ${c.category}<br>` +
+    `DEM ${fmt(c.dem)} (${pct(c.demShare)})<br>` +
+    `REP ${fmt(c.rep)} (${pct(c.repShare)})<br>` +
+    `IND/NPA/Other ${fmt(c.ind+c.npa+c.other)}<br>` +
+    `Total ${fmt(c.total)}<br>` +
+    `Margin ${(c.marginPct>=0?'+':'')}${pct(c.marginPct)}` +
+    (c.ratingChanged ? `<br><i>${c.ratingMove}</i>` : '')
+  );
+
+  let trace;
+  const legendEl = document.getElementById('mapLegend');
+
+  if(m.categorical){
+    const cats = m.cats, n = cats.length;
+    const z = COUNTIES.map(c => cats.findIndex(cat=>cat.key===m.catFn(c)) + 0.5);
+    trace = {
+      type:'choropleth', geojson: geojsonFL, locations, z,
+      featureidkey:'id', zmin:0, zmax:n,
+      colorscale: stepColorscale(cats), marker:{line:{color:'#0a0e17', width:1}},
+      text, hoverinfo:'text', hoverlabel:{bgcolor:'#151b28', bordercolor:'#212a3b', font:{family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5'}},
+      showscale:false
+    };
+    legendEl.style.display = 'flex';
+    legendEl.innerHTML = cats.map(cat => {
+      const count = COUNTIES.filter(c=>m.catFn(c)===cat.key).length;
+      if(!count) return '';
+      return `<span class="swatch" style="background:${cat.color};color:${contrastText(cat.color)}">${cat.key} · ${count}</span>`;
+    }).join('');
+  }else{
+    const zmax = m.range(COUNTIES);
+    const zmin = 0;
+    const z = COUNTIES.map(m.get);
+    trace = {
+      type:'choropleth', geojson: geojsonFL, locations, z,
+      featureidkey:'id', zmin, zmax,
+      colorscale: m.scale, marker:{line:{color:'#0a0e17', width:1}},
+      text, hoverinfo:'text', hoverlabel:{bgcolor:'#151b28', bordercolor:'#212a3b', font:{family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5'}},
+      showscale:true, colorbar:{ tickfont:{color:'#7c879c', size:10}, thickness:12, len:0.6, outlinewidth:0 }
+    };
+    legendEl.style.display = 'none';
+    legendEl.innerHTML = '';
+  }
+
+  const layout = {
+    geo:{ scope:'usa', fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' },
+    paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+    margin:{t:10,b:10,l:10,r:10}, font:{family:'Inter, sans-serif'}
+  };
+  Plotly.newPlot('map', [trace], layout, {displayModeBar:false, responsive:true});
+
+  document.getElementById('map').on('plotly_click', function(ev){
+    const fips = ev.points[0].location;
+    const c = COUNTIES.find(c=>c.fips===fips);
+    if(c){ highlightedCounty = c.county; renderTable(); }
+  });
+}
+
+function renderTable(){
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  let rows = COUNTIES.filter(c => c.county.toLowerCase().includes(q));
+  rows.sort((a,b)=>{
+    let av=a[sortKey], bv=b[sortKey];
+    if(typeof av === 'string'){ av=av.toLowerCase(); bv=bv.toLowerCase(); }
+    if(av<bv) return sortAsc?-1:1;
+    if(av>bv) return sortAsc?1:-1;
+    return 0;
+  });
+  const body = document.getElementById('tableBody');
+  body.innerHTML = rows.map(c => `
+    <tr data-county="${c.county}" class="${c.county===highlightedCounty?'hl':''}">
+      <td class="county-name">${c.county}${c.ratingChanged?'<span class="moved" title="'+c.ratingMove+'"></span>':''}</td>
+      <td><span class="chip" style="background:${catColor(c.category)};color:${contrastText(catColor(c.category))}">${c.category}</span></td>
+      <td class="num-d">${fmt(c.dem)}</td>
+      <td class="num-r">${fmt(c.rep)}</td>
+      <td>${fmt(c.diff)}</td>
+      <td>${fmt(c.total)}</td>
+      <td class="${c.marginPct>=0?'num-d':'num-r'}">${c.marginPct>=0?'+':''}${pct(c.marginPct)}</td>
+      <td class="rating">${c.rating}</td>
+    </tr>
+  `).join('');
+  body.querySelectorAll('tr').forEach(tr => {
+    tr.addEventListener('click', () => {
+      highlightedCounty = tr.dataset.county;
+      renderTable();
+    });
+  });
+}
+
+function render(){
+  renderStats();
+  renderMap();
+  renderTable();
+  const refreshedNote = lastLoadedAt ? ` \u00b7 data refreshed ${lastLoadedAt.toLocaleTimeString()}` : '';
+  document.getElementById('footerNote').textContent =
+    `${COUNTIES.length} counties parsed \u00b7 rendered client-side, no data leaves your browser${refreshedNote}`;
+}
+
+document.getElementById('refreshBtn').addEventListener('click', () => loadLatestCSV(true));
+
+// Auto-load the latest results on page load, then keep checking for updates.
+loadLatestCSV(false);
+if(AUTO_REFRESH_MS > 0){
+  setInterval(() => loadLatestCSV(true), AUTO_REFRESH_MS);
+}
+
+document.getElementById('metricSelect').addEventListener('click', e => {
+  const btn = e.target.closest('button'); if(!btn) return;
+  document.querySelectorAll('#metricSelect button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  currentMetric = btn.dataset.metric;
+  if(COUNTIES.length) renderMap();
+});
+
+document.getElementById('searchInput').addEventListener('input', () => { if(COUNTIES.length) renderTable(); });
+
+document.querySelectorAll('thead th').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.key;
+    if(sortKey === key){ sortAsc = !sortAsc; } else { sortKey = key; sortAsc = true; }
+    document.querySelectorAll('thead th').forEach(t=>t.classList.remove('sorted','asc'));
+    th.classList.add('sorted'); if(sortAsc) th.classList.add('asc');
+    if(COUNTIES.length) renderTable();
+  });
+});
+</script>
+</body>
+</html>

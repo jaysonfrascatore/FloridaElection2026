@@ -1,0 +1,119 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Run Time:
+2026-08-06 7:37:52
+
+
+Updated Counties:
+11
+
+Unchanged Counties:
+56
+
+
+STATEWIDE SUMMARY
+=================================
+
+🔵 Democrats lead by 22,561 votes statewide.
+
+Margin Change:
++0.28% toward Democrats
+
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: -12,242
+🔴 REP: -14,000
+🟣 OTHER: -2,434
+🟢 TOTAL: -28,676
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+Hendry
+
+Safe R → Lean R
+
+Margin Move:
++0.235
+
+
+Jefferson
+
+Toss Up D → Safe D
+
+Margin Move:
++0.374
+
+
+Monroe
+
+Toss Up R → Toss Up D
+
+Margin Move:
++0.041
+
+
+Putnam
+
+Safe R → Likely R
+
+Margin Move:
++0.207
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️7 AM Florida EV & VBM Update
+
+New votes have been cast in 11 counties over the last hour, with the largest update coming from Taylor County.
+
+🔵 DEM: -12,242
+🔴 REP: -14,000
+🟣 OTHER: -2,434
+🟢 TOTAL: -28,676
+
+🔵 Democrats lead by 22,561 votes statewide.
+
+🔴 Margin Change: +0.28% toward Democrats
+
+Largest County Updates
+
+
+🥇Taylor County
+
+🔵 DEM: +1
+🔴 REP: +8
+🟣 OTHER: +0
+🟢 TOTAL: +9
+
+
+
+🥈Calhoun County
+
+🔵 DEM: -36
+🔴 REP: -120
+🟣 OTHER: -3
+🟢 TOTAL: -159
+
+
+
+🥉Jefferson County
+
+🔵 DEM: -77
+🔴 REP: -151
+🟣 OTHER: -7
+🟢 TOTAL: -235
+
+
+
+#Florida #EarlyVoting #VoteByMail

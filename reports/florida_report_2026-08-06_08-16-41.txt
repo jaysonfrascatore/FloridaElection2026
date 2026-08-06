@@ -1,0 +1,88 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Run Time:
+2026-08-06 08:16:10
+
+
+Updated Counties:
+6
+
+Unchanged Counties:
+61
+
+
+STATEWIDE SUMMARY
+=================================
+
+🔵 Democrats lead by 22,574 votes statewide.
+
+Margin Change:
++0.00% toward Democrats
+
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +32
+🔴 REP: +19
+🟣 OTHER: +6
+🟢 TOTAL: +57
+
+
+RATING / FORECAST CHANGES
+=================================
+
+No rating changes detected.
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️8 AM Florida EV & VBM Update
+
+New votes have been cast in 6 counties over the last hour, with the largest update coming from Charlotte County.
+
+🔵 DEM: +32
+🔴 REP: +19
+🟣 OTHER: +6
+🟢 TOTAL: +57
+
+🔵 Democrats lead by 22,574 votes statewide.
+
+🔴 Margin Change: +0.00% toward Democrats
+
+Largest County Updates
+
+
+🥇Charlotte County
+
+🔵 DEM: +28
+🔴 REP: +18
+🟣 OTHER: +4
+🟢 TOTAL: +50
+
+
+
+🥈Duval County
+
+🔵 DEM: +0
+🔴 REP: +0
+🟣 OTHER: +2
+🟢 TOTAL: +2
+
+
+
+🥉Seminole County
+
+🔵 DEM: +1
+🔴 REP: +1
+🟣 OTHER: +0
+🟢 TOTAL: +2
+
+
+
+#Florida #EarlyVoting #VoteByMail

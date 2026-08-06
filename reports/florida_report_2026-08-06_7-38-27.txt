@@ -4,7 +4,7 @@ FLORIDA TURNOUT UPDATE
 =================================
 
 Run Time:
-2026-08-06 11:37:52
+2026-08-06 7:37:52
 
 
 Updated Counties:
@@ -73,7 +73,7 @@ TWEET DRAFT
 =================================
 
 
-🗳️11 AM Florida EV & VBM Update
+🗳️7 AM Florida EV & VBM Update
 
 New votes have been cast in 11 counties over the last hour, with the largest update coming from Taylor County.
 

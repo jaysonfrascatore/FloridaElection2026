@@ -7,7 +7,10 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   update-data:

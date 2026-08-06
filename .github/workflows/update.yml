@@ -3,25 +3,21 @@ name: Update Florida Turnout Data
 on:
   schedule:
     - cron: "0 * * * *"
-
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 jobs:
   update-data:
-
     runs-on: ubuntu-latest
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: true
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v5
-        with:
-          persist-credentials: true
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -29,18 +25,21 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: |
-          pip install pandas requests
+        run: pip install pandas requests
 
       - name: Run Python script
-        run: |
-          python County_Results.py
+        run: python County_Results.py
 
-      - name: Commit updated data
+      - name: Commit updated data to main
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-
           git add .
           git commit -m "Automatic turnout update" || exit 0
           git push
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .

@@ -12,6 +12,7 @@ permissions:
   id-token: write
 
 jobs:
+
   update:
     runs-on: ubuntu-latest
 
@@ -40,6 +41,7 @@ jobs:
           git commit -m "Automatic turnout update" || exit 0
           git push
 
+
   deploy:
     needs: update
     runs-on: ubuntu-latest
@@ -49,8 +51,16 @@ jobs:
       id-token: write
       contents: read
 
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
-      - uses: actions/checkout@v4
+
+      - name: Checkout latest files
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -60,5 +70,6 @@ jobs:
         with:
           path: "."
 
-      - name: Deploy
+      - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4

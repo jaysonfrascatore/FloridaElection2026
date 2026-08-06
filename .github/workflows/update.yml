@@ -2,7 +2,11 @@ name: Update Florida Turnout Data
 
 on:
   schedule:
-    - cron: "0 * * * *"
+    # 7:15 AM – 7:15 PM EDT (11:15–23:15 UTC)
+    - cron: "15 11-23 * * *"
+
+    # 8:15 PM – 9:15 PM EDT (00:15–01:15 UTC)
+    - cron: "15 0-1 * * *"
 
   workflow_dispatch:
 
@@ -11,32 +15,26 @@ permissions:
 
 jobs:
   update-data:
-
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-
       - name: Install dependencies
         run: |
           pip install pandas requests
 
-
       - name: Run Python script
         run: |
           python County_Results.py
-
 
       - name: Commit updated data
         run: |

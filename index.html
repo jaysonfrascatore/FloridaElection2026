@@ -168,6 +168,15 @@
     padding:4px 9px; border-radius:20px; letter-spacing:.02em;
   }
 
+  /* updates panel */
+  #updatesPanel .updates-table-wrap{ max-height:420px; overflow-y:auto; border-radius:8px; }
+  #updatesPanel table th:nth-child(1){ width:26%; }
+  #updatesPanel table th:nth-child(2),
+  #updatesPanel table th:nth-child(3),
+  #updatesPanel table th:nth-child(4),
+  #updatesPanel table th:nth-child(5){ width:18.5%; }
+  .medal-card .v{ font-family:var(--sans); font-size:14px; }
+
   footer{ margin-top:20px; font-family:var(--mono); font-size:11px; color:var(--muted-2); text-align:center; }
   .error-msg{
     background:#3a1c1c; border:1px solid var(--rep-dim); color:#f0b5ac; border-radius:8px;
@@ -267,6 +276,25 @@
           <tbody id="tableBody"></tbody>
         </table>
       </div>
+    </div>
+  </div>
+
+  <div class="panel" id="updatesPanel" style="margin-top:18px;">
+    <h2>County Updates &mdash; votes added this cycle</h2>
+    <div class="stat-cards" id="topThree"></div>
+    <div class="updates-table-wrap" style="margin-top:14px;">
+      <table>
+        <thead>
+          <tr>
+            <th>County</th>
+            <th>DEM +</th>
+            <th>REP +</th>
+            <th>Other +</th>
+            <th>Total +</th>
+          </tr>
+        </thead>
+        <tbody id="updatesBody"></tbody>
+      </table>
     </div>
   </div>
 
@@ -467,13 +495,21 @@ function buildCounties(rows){
     const ratingChanged = normName(pick(row,['Rating Change'])).toLowerCase() === 'yes';
     const ratingMove = normName(pick(row,['Rating Move']));
     const lastUpdated = normName(pick(row,['Last Updated','County_y']));
+    // Party-level vote breakdown for this update cycle (from the Python
+    // script's "DEM New" / "REP New" / "IND New" / "NPA New" / "OTHER New" /
+    // "Total New" columns). IND/NPA/OTHER are combined into one "otherNew"
+    // figure to match how the rest of the table treats third-party/NPA votes.
+    const demNew = num(pick(row,['DEM New']));
+    const repNew = num(pick(row,['REP New']));
+    const otherNew = num(pick(row,['IND New'])) + num(pick(row,['NPA New'])) + num(pick(row,['OTHER New']));
     const totalNew = num(pick(row,['Total New','TOTAL NEW','New Total','Total_New']));
     const diff = Math.abs(dem - rep);
     const rec = {
       county:name, fips:FL_FIPS[name], code:normName(pick(row,['Code'])),
       dem,rep,ind,npa,other,total,demShare,repShare,diff,
       marginPct: signedMargin, leader, rating,
-      marginMove, ratingChanged, ratingMove, totalNew,
+      marginMove, ratingChanged, ratingMove,
+      demNew, repNew, otherNew, totalNew,
       lastUpdated: pick(row,['Last Updated']) || ''
     };
     rec.category = categoryFor(rec);
@@ -540,7 +576,8 @@ async function renderMap(){
     `IND/NPA/Other ${fmt(c.ind+c.npa+c.other)}<br>` +
     `Total ${fmt(c.total)}<br>` +
     `Margin ${(c.marginPct>=0?'+':'')}${pct(c.marginPct)}` +
-    (c.ratingChanged ? `<br><i>${c.ratingMove}</i>` : '')
+    (c.ratingChanged ? `<br><i>${c.ratingMove}</i>` : '') +
+    (c.totalNew ? `<br>New votes this cycle: +${fmt(c.totalNew)}` : '')
   );
 
   let trace;
@@ -622,10 +659,40 @@ function renderTable(){
   });
 }
 
+// New: table of counties that received votes this update cycle, broken
+// down by party, plus a top-3 "largest updates" callout — mirrors the
+// tweet generator's top-3 section in the Python script, but live on the page.
+function renderUpdatesTable(){
+  const updated = COUNTIES.filter(c => c.totalNew !== 0)
+    .slice()
+    .sort((a,b) => b.totalNew - a.totalNew);
+
+  const body = document.getElementById('updatesBody');
+  body.innerHTML = updated.length ? updated.map(c => `
+    <tr>
+      <td class="county-name">${c.county}</td>
+      <td class="num-d">${c.demNew>=0?'+':''}${fmt(c.demNew)}</td>
+      <td class="num-r">${c.repNew>=0?'+':''}${fmt(c.repNew)}</td>
+      <td>${c.otherNew>=0?'+':''}${fmt(c.otherNew)}</td>
+      <td style="font-weight:600;">+${fmt(c.totalNew)}</td>
+    </tr>
+  `).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">No new votes this update</td></tr>';
+
+  const top3 = updated.slice(0,3);
+  const medals = ['🥇','🥈','🥉'];
+  document.getElementById('topThree').innerHTML = top3.length ? top3.map((c,i) => `
+    <div class="stat-card medal-card">
+      <div class="v">${medals[i]} ${c.county}</div>
+      <div class="k">+${fmt(c.totalNew)} total &middot; DEM ${c.demNew>=0?'+':''}${fmt(c.demNew)} / REP ${c.repNew>=0?'+':''}${fmt(c.repNew)} / Other ${c.otherNew>=0?'+':''}${fmt(c.otherNew)}</div>
+    </div>
+  `).join('') : '<div class="stat-card"><div class="v">—</div><div class="k">No county updates this cycle</div></div>';
+}
+
 function render(){
   renderStats();
   renderMap();
   renderTable();
+  renderUpdatesTable();
   const refreshedNote = lastLoadedAt ? ` \u00b7 data refreshed ${lastLoadedAt.toLocaleTimeString()}` : '';
   document.getElementById('footerNote').textContent =
     `${COUNTIES.length} counties parsed \u00b7 rendered client-side, no data leaves your browser${refreshedNote}`;

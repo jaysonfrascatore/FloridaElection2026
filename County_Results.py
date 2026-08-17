@@ -6,6 +6,7 @@ import json
 import os
 import re
 from html import unescape
+from bs4 import BeautifulSoup
 
 
 # ============================================================
@@ -18,12 +19,10 @@ BASE_URL = (
 )
 
 
-# Broward uses the ElectionLink turnout-party API
+# Broward uses the ElectionLink turnout-party page
 BROWARD_URL = (
     "https://my.browardvotes.gov/"
-    "api/v1/widgets/chart"
-    "?tile=ptq06000000000000000000000000006"
-    "&dashboard=turnout-party"
+    "TEDElectionLink/TurnOutWidget/dashboard/view/turnout-party"
 )
 
 
@@ -213,7 +212,7 @@ def clean_text(value):
 def number_from_text(value):
 
     """
-    Convert something like:
+    Convert text such as:
 
         44,784
         41,057
@@ -247,25 +246,6 @@ def number_from_text(value):
     )
 
 
-def extract_td_texts(row_html):
-
-    """
-    Extract the text contained in every <td>
-    within a table row.
-    """
-
-    cells = re.findall(
-        r"<td\b[^>]*>(.*?)</td>",
-        row_html,
-        flags=re.IGNORECASE | re.DOTALL
-    )
-
-    return [
-        clean_text(cell)
-        for cell in cells
-    ]
-
-
 def get_numeric_ballot_value(value):
 
     """
@@ -275,7 +255,10 @@ def get_numeric_ballot_value(value):
     if value is None:
         return 0
 
-    if isinstance(value, (int, float)):
+    if isinstance(
+        value,
+        (int, float)
+    ):
 
         return int(value)
 
@@ -284,15 +267,15 @@ def get_numeric_ballot_value(value):
     )
 
 
-def get_ballot_value(ballot_data, field_names):
+def get_ballot_value(
+    ballot_data,
+    field_names
+):
 
     """
     Return the first matching ballot field.
 
-    This allows the script to support the normal
-    TurnoutQuickView ElectionDay field while also
-    tolerating alternate Election Day naming if
-    a county source uses it.
+    This supports Election Day field-name variations.
     """
 
     for field in field_names:
@@ -316,10 +299,10 @@ def get_ballot_value(ballot_data, field_names):
 def get_broward_data():
 
     """
-    Pull Broward County's Voter Turnout By Party
-    table from the Broward ElectionLink API.
+    Pull Broward County turnout data from the
+    ElectionLink turnout-party page.
 
-    Broward's table contains:
+    Expected table:
 
         Party
         Eligible Voters
@@ -329,7 +312,7 @@ def get_broward_data():
         Total
         Turnout
 
-    The CSV continues to contain only:
+    The final CSV stores only:
 
         DEM
         REP
@@ -337,13 +320,13 @@ def get_broward_data():
         NPA
         OTHER
 
-    Internally, VBM / EV / Election Day are parsed
-    so we know whether Election Day has been ingested.
+    VBM + EV + Election Day are combined into
+    those party totals.
     """
 
     print(
         "  Broward source:",
-        "ElectionLink turnout-party API"
+        BROWARD_URL
     )
 
     headers = {
@@ -368,13 +351,20 @@ def get_broward_data():
     response = requests.get(
         BROWARD_URL,
         headers=headers,
-        timeout=20
+        timeout=30
     )
 
     response.raise_for_status()
 
 
-    content = response.text
+    # --------------------------------------------------------
+    # Parse HTML
+    # --------------------------------------------------------
+
+    soup = BeautifulSoup(
+        response.text,
+        "html.parser"
+    )
 
 
     totals = {
@@ -388,165 +378,206 @@ def get_broward_data():
     }
 
 
-    # --------------------------------------------------------
-    # Election Day detection
-    # --------------------------------------------------------
+    found_parties = set()
+
 
     election_day_found = False
 
 
-    # --------------------------------------------------------
-    # Find table rows
-    # --------------------------------------------------------
+    # ========================================================
+    # FIND TABLES
+    # ========================================================
 
-    rows_html = re.findall(
-        r"<tr\b[^>]*>(.*?)</tr>",
-        content,
-        flags=re.IGNORECASE | re.DOTALL
+    tables = soup.find_all(
+        "table"
     )
 
 
-    found_parties = []
+    print(
+        "  Broward tables found:",
+        len(tables)
+    )
 
 
-    for row_html in rows_html:
+    for table in tables:
 
-        cells = extract_td_texts(
-            row_html
+        rows = table.find_all(
+            "tr"
         )
 
 
-        if len(cells) < 6:
+        for tr in rows:
 
-            continue
-
-
-        party_name = cells[0]
-
-
-        # Expected:
-        #
-        # 0 = Party
-        # 1 = Eligible Voters
-        # 2 = Vote By Mail
-        # 3 = Early Vote
-        # 4 = Election Day
-        # 5 = Total
-        # 6 = Turnout
+            cells = tr.find_all(
+                ["td", "th"]
+            )
 
 
-        vbm = number_from_text(
-            cells[2]
-        )
+            cell_texts = [
+
+                clean_text(
+                    cell.get_text(
+                        " ",
+                        strip=True
+                    )
+                )
+
+                for cell in cells
+
+            ]
 
 
-        ev = number_from_text(
-            cells[3]
-        )
+            if not cell_texts:
+                continue
 
 
-        election_day = number_from_text(
-            cells[4]
-        )
+            # ------------------------------------------------
+            # Identify party row
+            # ------------------------------------------------
+
+            party_name = cell_texts[0]
 
 
-        total = number_from_text(
-            cells[5]
-        )
+            if party_name not in [
+
+                "Florida Democratic Party",
+                "Republican Party Of Florida",
+                "No Party Affiliation",
+                "Other"
+
+            ]:
+
+                continue
 
 
-        # If the Election Day column exists in the
-        # Broward table, we consider ED ingested.
-        if len(cells) >= 5:
+            # ------------------------------------------------
+            # Expected:
+            #
+            # 0 = Party
+            # 1 = Eligible Voters
+            # 2 = Vote By Mail
+            # 3 = Early Vote
+            # 4 = Election Day
+            # 5 = Total
+            # 6 = Turnout
+            # ------------------------------------------------
 
+            if len(cell_texts) < 6:
+
+                continue
+
+
+            vbm = number_from_text(
+                cell_texts[2]
+            )
+
+
+            early_vote = number_from_text(
+                cell_texts[3]
+            )
+
+
+            election_day = number_from_text(
+                cell_texts[4]
+            )
+
+
+            total_column = number_from_text(
+                cell_texts[5]
+            )
+
+
+            # Election Day exists in the table.
             election_day_found = True
 
 
-        # ----------------------------------------------------
-        # Democratic Party
-        # ----------------------------------------------------
+            # ------------------------------------------------
+            # IMPORTANT:
+            #
+            # Use VBM + EV + Election Day.
+            #
+            # We intentionally do NOT simply use the Total
+            # column because we want to explicitly verify that
+            # Election Day is being included.
+            # ------------------------------------------------
 
-        if party_name == (
-            "Florida Democratic Party"
-        ):
+            calculated_total = (
 
-            totals["DEM"] = (
                 vbm
                 +
-                ev
+                early_vote
                 +
                 election_day
-            )
 
-            found_parties.append(
-                "DEM"
             )
 
 
-        # ----------------------------------------------------
-        # Republican Party
-        # ----------------------------------------------------
+            # ------------------------------------------------
+            # DEM
+            # ------------------------------------------------
 
-        elif party_name == (
-            "Republican Party Of Florida"
-        ):
+            if party_name == (
+                "Florida Democratic Party"
+            ):
 
-            totals["REP"] = (
-                vbm
-                +
-                ev
-                +
-                election_day
-            )
+                totals["DEM"] = calculated_total
 
-            found_parties.append(
-                "REP"
-            )
+                found_parties.add(
+                    "DEM"
+                )
 
 
-        # ----------------------------------------------------
-        # No Party Affiliation
-        # ----------------------------------------------------
+            # ------------------------------------------------
+            # REP
+            # ------------------------------------------------
 
-        elif party_name == (
-            "No Party Affiliation"
-        ):
+            elif party_name == (
+                "Republican Party Of Florida"
+            ):
 
-            totals["NPA"] = (
-                vbm
-                +
-                ev
-                +
-                election_day
-            )
+                totals["REP"] = calculated_total
 
-            found_parties.append(
-                "NPA"
-            )
+                found_parties.add(
+                    "REP"
+                )
 
 
-        # ----------------------------------------------------
-        # Other
-        # ----------------------------------------------------
+            # ------------------------------------------------
+            # NPA
+            # ------------------------------------------------
 
-        elif party_name == "Other":
+            elif party_name == (
+                "No Party Affiliation"
+            ):
 
-            totals["OTHER"] = (
-                vbm
-                +
-                ev
-                +
-                election_day
-            )
+                totals["NPA"] = calculated_total
 
-            found_parties.append(
-                "OTHER"
-            )
+                found_parties.add(
+                    "NPA"
+                )
 
 
-    # --------------------------------------------------------
-    # Validation
-    # --------------------------------------------------------
+            # ------------------------------------------------
+            # OTHER
+            # ------------------------------------------------
+
+            elif party_name == "Other":
+
+                totals["OTHER"] = calculated_total
+
+                found_parties.add(
+                    "OTHER"
+                )
+
+
+    # ========================================================
+    # FALLBACK PARSING
+    # ========================================================
+
+    # Some versions of the Broward page may return markup
+    # that BeautifulSoup does not expose as a conventional
+    # table. If the expected rows were not found, fall back
+    # to raw HTML row parsing.
 
     expected = {
 
@@ -558,23 +589,182 @@ def get_broward_data():
     }
 
 
-    found = set(
+    if not expected.issubset(
         found_parties
-    )
+    ):
 
+        print(
+            "  BeautifulSoup table parse incomplete."
+        )
 
-    if not expected.issubset(found):
-
-        raise ValueError(
-            "Broward party table could not be "
-            f"fully parsed. Found: {sorted(found)}"
+        print(
+            "  Attempting raw HTML parser..."
         )
 
 
-    # IND does not have its own category in
-    # Broward's party turnout table.
+        rows_html = re.findall(
+
+            r"<tr\b[^>]*>(.*?)</tr>",
+
+            response.text,
+
+            flags=(
+                re.IGNORECASE
+                |
+                re.DOTALL
+            )
+
+        )
+
+
+        for row_html in rows_html:
+
+            cells = re.findall(
+
+                r"<t[dh]\b[^>]*>"
+                r"(.*?)"
+                r"</t[dh]>",
+
+                row_html,
+
+                flags=(
+                    re.IGNORECASE
+                    |
+                    re.DOTALL
+                )
+
+            )
+
+
+            cell_texts = [
+
+                clean_text(
+                    cell
+                )
+
+                for cell in cells
+
+            ]
+
+
+            if len(cell_texts) < 6:
+
+                continue
+
+
+            party_name = cell_texts[0]
+
+
+            if party_name not in [
+
+                "Florida Democratic Party",
+                "Republican Party Of Florida",
+                "No Party Affiliation",
+                "Other"
+
+            ]:
+
+                continue
+
+
+            vbm = number_from_text(
+                cell_texts[2]
+            )
+
+
+            early_vote = number_from_text(
+                cell_texts[3]
+            )
+
+
+            election_day = number_from_text(
+                cell_texts[4]
+            )
+
+
+            calculated_total = (
+
+                vbm
+                +
+                early_vote
+                +
+                election_day
+
+            )
+
+
+            election_day_found = True
+
+
+            if party_name == (
+                "Florida Democratic Party"
+            ):
+
+                totals["DEM"] = calculated_total
+
+                found_parties.add(
+                    "DEM"
+                )
+
+
+            elif party_name == (
+                "Republican Party Of Florida"
+            ):
+
+                totals["REP"] = calculated_total
+
+                found_parties.add(
+                    "REP"
+                )
+
+
+            elif party_name == (
+                "No Party Affiliation"
+            ):
+
+                totals["NPA"] = calculated_total
+
+                found_parties.add(
+                    "NPA"
+                )
+
+
+            elif party_name == "Other":
+
+                totals["OTHER"] = calculated_total
+
+                found_parties.add(
+                    "OTHER"
+                )
+
+
+    # ========================================================
+    # VALIDATION
+    # ========================================================
+
+    if not expected.issubset(
+        found_parties
+    ):
+
+        raise ValueError(
+
+            "Broward party table could not be "
+            "fully parsed. Found: "
+            f"{sorted(found_parties)}"
+
+        )
+
+
+    # Broward does not have a separate IND category
+    # in this turnout table.
 
     totals["IND"] = 0
+
+
+    print(
+        "  Broward Election Day detected:",
+        election_day_found
+    )
 
 
     print(
@@ -583,7 +773,10 @@ def get_broward_data():
     )
 
 
-    return totals, election_day_found
+    return (
+        totals,
+        election_day_found
+    )
 
 
 # ============================================================
@@ -594,9 +787,6 @@ rows = []
 
 
 # Global Election Day detection.
-#
-# This starts False and becomes True as soon as
-# ANY source provides Election Day data.
 
 election_day_ingested = False
 
@@ -687,7 +877,7 @@ for county_name, county_code in COUNTIES.items():
 
         response = requests.get(
             index_url,
-            timeout=10
+            timeout=15
         )
 
         response.raise_for_status()
@@ -725,7 +915,7 @@ for county_name, county_code in COUNTIES.items():
 
             response = requests.get(
                 data_url,
-                timeout=10
+                timeout=15
             )
 
             response.raise_for_status()
@@ -763,10 +953,13 @@ for county_name, county_code in COUNTIES.items():
                 # ------------------------------------------------
 
                 mail, mail_found = get_ballot_value(
+
                     value,
+
                     [
                         "Mail"
                     ]
+
                 )
 
 
@@ -775,10 +968,13 @@ for county_name, county_code in COUNTIES.items():
                 # ------------------------------------------------
 
                 early_voting, ev_found = get_ballot_value(
+
                     value,
+
                     [
                         "EarlyVoting"
                     ]
+
                 )
 
 
@@ -787,18 +983,17 @@ for county_name, county_code in COUNTIES.items():
                 # ------------------------------------------------
 
                 election_day, ed_found = get_ballot_value(
+
                     value,
+
                     [
                         "ElectionDay",
                         "ElectionDayVoting",
                         "ElectionDayVote"
                     ]
+
                 )
 
-
-                # ------------------------------------------------
-                # GLOBAL ELECTION DAY DETECTION
-                # ------------------------------------------------
 
                 if ed_found:
 
@@ -806,14 +1001,7 @@ for county_name, county_code in COUNTIES.items():
 
 
                 # ------------------------------------------------
-                # TOTAL PARTY BALLOTS
-                #
-                # This is intentionally:
-                #
-                # VBM + EV + Election Day
-                #
-                # No separate VBM / EV / ED columns are
-                # written to the CSV.
+                # TOTAL
                 # ------------------------------------------------
 
                 ballots = (
@@ -883,7 +1071,7 @@ if election_day_ingested:
 else:
 
     print(
-        "Election Day not yet ingested"
+        "Election Day not yet ingested."
     )
 
 
@@ -984,8 +1172,6 @@ major_total = (
 
 )
 
-
-# Avoid division by zero.
 
 df["DEM %"] = (
 
@@ -1108,12 +1294,8 @@ updates = []
 
 rating_changes = []
 
-rating_history = []
-
 unchanged = 0
 
-
-# Default columns.
 
 for col in [
 
@@ -1132,18 +1314,11 @@ for col in [
 df["Margin Move"] = 0.0
 
 
-for col in [
-
-    "Rating Change",
-    "Rating Move",
-    "Margin Diff"
-
-]:
-
-    df[col] = ""
-
-
 df["Rating Change"] = "No"
+
+df["Rating Move"] = ""
+
+df["Margin Diff"] = ""
 
 
 # ============================================================
@@ -1184,7 +1359,7 @@ if previous is not None:
 
 
         # ----------------------------------------------------
-        # MARGIN DIFF COMPARISON
+        # MARGIN CHANGE
         # ----------------------------------------------------
 
         margin_diff = (
@@ -1233,7 +1408,7 @@ if previous is not None:
 
 
         # ----------------------------------------------------
-        # RATING / FORECAST CHANGES
+        # RATING CHANGE
         # ----------------------------------------------------
 
         if (
@@ -1359,10 +1534,6 @@ if previous is not None:
                 ] = change
 
 
-        # ----------------------------------------------------
-        # TOTAL VOTE MOVEMENT
-        # ----------------------------------------------------
-
         df.loc[
 
             df["Code"] == row["Code"],
@@ -1371,10 +1542,6 @@ if previous is not None:
 
         ] = total_change
 
-
-        # ----------------------------------------------------
-        # STORE UPDATES
-        # ----------------------------------------------------
 
         if changes:
 
@@ -1403,7 +1570,6 @@ else:
     print(
         "\nFirst run detected."
     )
-
 
     print(
         "Creating baseline file..."
@@ -1903,7 +2069,7 @@ if election_day_ingested:
 else:
 
     print(
-        "Election Day not yet ingested"
+        "Election Day not yet ingested."
     )
 
 
@@ -2075,6 +2241,10 @@ print(
 
 )
 
+
+# ============================================================
+# COMPLETE
+# ============================================================
 
 print(
     "\n================================="
@@ -2317,7 +2487,7 @@ if election_day_ingested:
 else:
 
     report += (
-        "Election Day not yet ingested\n"
+        "Election Day not yet ingested.\n"
     )
 
 

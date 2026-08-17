@@ -1,7 +1,6 @@
 import requests
 import pandas as pd
 from datetime import datetime
-from zoneinfo import ZoneInfo
 import os
 from bs4 import BeautifulSoup
 
@@ -15,7 +14,6 @@ BASE_URL = (
     "turnoutquickview.electionsfl.org/data/FL/"
 )
 
-# Broward uses the working ElectionLink turnout-party page
 BROWARD_URL = (
     "https://my.browardvotes.gov/"
     "TEDElectionLink/TurnOutWidget/dashboard/view/turnout-party"
@@ -100,21 +98,60 @@ COUNTIES = {
 
 
 # ============================================================
-# FILES
+# FOLDERS
 # ============================================================
 
-PREVIOUS_FILE = "previous_turnout.csv"
-TRACKER_FILE = "county_tracker.csv"
-HISTORY_FILE = "county_history.csv"
+DATA_DIR = "data"
+ARCHIVE_DIR = "archive"
+REPORT_DIR = "reports"
+
+
+os.makedirs(
+    DATA_DIR,
+    exist_ok=True
+)
+
+os.makedirs(
+    ARCHIVE_DIR,
+    exist_ok=True
+)
+
+os.makedirs(
+    REPORT_DIR,
+    exist_ok=True
+)
+
+
+# ============================================================
+# FILE LOCATIONS
+# ============================================================
+
+PREVIOUS_FILE = os.path.join(
+    DATA_DIR,
+    "previous_turnout.csv"
+)
+
+TRACKER_FILE = os.path.join(
+    DATA_DIR,
+    "county_tracker.csv"
+)
+
+HISTORY_FILE = os.path.join(
+    DATA_DIR,
+    "county_history.csv"
+)
+
+LATEST_REPORT_FILE = os.path.join(
+    REPORT_DIR,
+    "latest_report.txt"
+)
 
 
 # ============================================================
 # RUN TIME
 # ============================================================
 
-RUN_TIME = datetime.now(
-    ZoneInfo("America/New_York")
-).strftime(
+RUN_TIME = datetime.now().strftime(
     "%Y-%m-%d %H:%M:%S"
 )
 
@@ -173,7 +210,13 @@ def get_broward_data():
             "(Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 "
             "(KHTML, like Gecko) "
-            "Chrome/151.0 Safari/537.36"
+            "Chrome/151.0 Safari/537.36",
+
+        "Accept":
+            "text/html,"
+            "application/xhtml+xml,"
+            "application/xml;q=0.9,"
+            "*/*;q=0.8"
 
     }
 
@@ -181,7 +224,7 @@ def get_broward_data():
     response = requests.get(
         BROWARD_URL,
         headers=headers,
-        timeout=20
+        timeout=30
     )
 
 
@@ -236,7 +279,8 @@ def get_broward_data():
         if party_element is None:
 
             raise ValueError(
-                f"Could not find Party{party_number}"
+                f"Could not find Party{party_number} "
+                "on Broward page."
             )
 
 
@@ -258,7 +302,8 @@ def get_broward_data():
 
                 raise ValueError(
                     f"Could not find "
-                    f"{field}{party_number}"
+                    f"{field}{party_number} "
+                    "on Broward page."
                 )
 
 
@@ -275,38 +320,44 @@ def get_broward_data():
             )
 
 
+            if not text:
+
+                return 0
+
+
             if field == "Turnout":
 
                 return float(text)
 
 
-            return int(text)
+            return int(
+                float(text)
+            )
 
+
+        # ----------------------------------------------------
+        # Voting methods
+        # ----------------------------------------------------
 
         eligible = get_value(
             "EligibleCount"
         )
 
-
         vbm = get_value(
             "VoteByMail"
         )
-
 
         early = get_value(
             "EarlyVote"
         )
 
-
         election_day = get_value(
             "ElectionDay"
         )
 
-
         total = get_value(
             "Total"
         )
-
 
         turnout = get_value(
             "Turnout"
@@ -314,25 +365,33 @@ def get_broward_data():
 
 
         # ----------------------------------------------------
-        # Store combined total
+        # Store total
         # ----------------------------------------------------
 
         totals[party_code] = total
 
 
         # ----------------------------------------------------
-        # Store detailed voting method data
+        # Store detailed data
         # ----------------------------------------------------
 
-        detailed[f"{party_code} VBM"] = vbm
+        detailed[
+            f"{party_code} VBM"
+        ] = vbm
 
-        detailed[f"{party_code} EV"] = early
 
-        detailed[f"{party_code} ED"] = election_day
+        detailed[
+            f"{party_code} EV"
+        ] = early
+
+
+        detailed[
+            f"{party_code} ED"
+        ] = election_day
 
 
         # ----------------------------------------------------
-        # Display what was found
+        # Console output
         # ----------------------------------------------------
 
         print(
@@ -379,15 +438,21 @@ def get_broward_data():
 
         calculated = (
 
-            detailed[f"{party_code} VBM"]
+            detailed[
+                f"{party_code} VBM"
+            ]
 
             +
 
-            detailed[f"{party_code} EV"]
+            detailed[
+                f"{party_code} EV"
+            ]
 
             +
 
-            detailed[f"{party_code} ED"]
+            detailed[
+                f"{party_code} ED"
+            ]
 
         )
 
@@ -396,11 +461,12 @@ def get_broward_data():
 
             print(
                 f"WARNING: {party_code} "
-                f"does not match!"
+                "does not match!"
             )
 
             print(
-                f"  VBM + EV + ED = {calculated:,}"
+                f"  VBM + EV + ED = "
+                f"{calculated:,}"
             )
 
             print(
@@ -434,7 +500,7 @@ for county_name, county_code in COUNTIES.items():
 
 
     # ========================================================
-    # BROWARD SPECIAL SOURCE
+    # BROWARD
     # ========================================================
 
     if county_name == "Broward":
@@ -517,11 +583,11 @@ for county_name, county_code in COUNTIES.items():
         except Exception as e:
 
             print(
-                "BROWARD FAILED:"
+                "\nBROWARD FAILED:"
             )
 
             print(
-                e
+                str(e)
             )
 
 
@@ -553,7 +619,7 @@ for county_name, county_code in COUNTIES.items():
 
         index_response = requests.get(
             index_url,
-            timeout=10
+            timeout=15
         )
 
         index_response.raise_for_status()
@@ -587,7 +653,7 @@ for county_name, county_code in COUNTIES.items():
 
             data_response = requests.get(
                 data_url,
-                timeout=10
+                timeout=15
             )
 
             data_response.raise_for_status()
@@ -620,27 +686,47 @@ for county_name, county_code in COUNTIES.items():
                     continue
 
 
-                # ------------------------------------------------
-                # Current live turnout
-                #
-                # VBM + Early Voting
-                #
-                # This matches your working local version.
-                # ------------------------------------------------
+                mail = value.get(
+                    "Mail",
+                    0
+                )
+
+                early = value.get(
+                    "EarlyVoting",
+                    0
+                )
+
+                election_day = (
+
+                    value.get(
+                        "ElectionDay",
+                        0
+                    )
+
+                    or
+
+                    value.get(
+                        "ElectionDayVoting",
+                        0
+                    )
+
+                    or
+
+                    value.get(
+                        "ElectionDayVote",
+                        0
+                    )
+
+                )
+
 
                 ballots = (
 
-                    value.get(
-                        "Mail",
-                        0
-                    )
-
+                    mail
                     +
-
-                    value.get(
-                        "EarlyVoting",
-                        0
-                    )
+                    early
+                    +
+                    election_day
 
                 )
 
@@ -684,82 +770,11 @@ df = pd.DataFrame(
 )
 
 
-# ============================================================
-# VALIDATION
-# ============================================================
-
 if df.empty:
 
-    print(
-        "\nERROR: No county data was collected."
-    )
-
-    raise SystemExit(1)
-
-
-print(
-    "\n================================="
-)
-
-print(
-    "COUNTY COLLECTION COMPLETE"
-)
-
-print(
-    "================================="
-)
-
-print(
-    "Counties loaded:",
-    len(df),
-    "/",
-    len(COUNTIES)
-)
-
-
-if "BRO" not in df["Code"].values:
-
-    print(
-        "\nWARNING: BROWARD IS MISSING!"
-    )
-
     raise SystemExit(
-        "Broward failed to load."
+        "ERROR: No county data was collected."
     )
-
-
-# ============================================================
-# BROWARD VERIFICATION
-# ============================================================
-
-broward_check = df[
-    df["Code"] == "BRO"
-].iloc[0]
-
-
-print(
-    "\nBROWARD VERIFICATION"
-)
-
-print(
-    "DEM:",
-    f"{int(broward_check['DEM']):,}"
-)
-
-print(
-    "REP:",
-    f"{int(broward_check['REP']):,}"
-)
-
-print(
-    "NPA:",
-    f"{int(broward_check['NPA']):,}"
-)
-
-print(
-    "OTHER:",
-    f"{int(broward_check['OTHER']):,}"
-)
 
 
 # ============================================================
@@ -825,25 +840,29 @@ major_total = (
 df["DEM %"] = (
 
     df["DEM"]
-    /
-    major_total.replace(
-        0,
-        pd.NA
+    .div(
+        major_total.replace(
+            0,
+            pd.NA
+        )
     )
+    .fillna(0)
 
-).fillna(0)
+)
 
 
 df["REP %"] = (
 
     df["REP"]
-    /
-    major_total.replace(
-        0,
-        pd.NA
+    .div(
+        major_total.replace(
+            0,
+            pd.NA
+        )
     )
+    .fillna(0)
 
-).fillna(0)
+)
 
 
 df["D Raw Margin"] = (
@@ -901,17 +920,17 @@ def rating(margin):
     )
 
 
-    if margin < .03:
+    if margin < 0.03:
 
         return "Toss Up"
 
 
-    elif margin < .08:
+    elif margin < 0.08:
 
         return "Lean"
 
 
-    elif margin < .15:
+    elif margin < 0.15:
 
         return "Likely"
 
@@ -924,9 +943,7 @@ def rating(margin):
 df["Rating"] = (
 
     df["Signed Margin"]
-    .apply(
-        rating
-    )
+    .apply(rating)
 
 )
 
@@ -974,7 +991,7 @@ df["Rating Change"] = "No"
 
 
 # ============================================================
-# COMPARE AGAINST PREVIOUS RUN
+# COMPARE TO PREVIOUS RUN
 # ============================================================
 
 if previous is not None:
@@ -1018,7 +1035,7 @@ if previous is not None:
             margin_diff_text = (
 
                 f"+{margin_diff:.2%} "
-                f"toward Democrats"
+                "toward Democrats"
 
             )
 
@@ -1028,7 +1045,7 @@ if previous is not None:
             margin_diff_text = (
 
                 f"{margin_diff:.2%} "
-                f"toward Republicans"
+                "toward Republicans"
 
             )
 
@@ -1041,11 +1058,8 @@ if previous is not None:
 
 
         df.loc[
-
             df["Code"] == row["Code"],
-
             "Margin Diff"
-
         ] = margin_diff_text
 
 
@@ -1103,20 +1117,14 @@ if previous is not None:
 
 
             df.loc[
-
                 df["Code"] == row["Code"],
-
                 "Rating Change"
-
             ] = "Yes"
 
 
             df.loc[
-
                 df["Code"] == row["Code"],
-
                 "Rating Move"
-
             ] = (
 
                 f"{row['Rating_OLD']} "
@@ -1129,11 +1137,8 @@ if previous is not None:
 
 
             df.loc[
-
                 df["Code"] == row["Code"],
-
                 "Margin Move"
-
             ] = margin_change
 
 
@@ -1168,11 +1173,8 @@ if previous is not None:
 
 
                 df.loc[
-
                     df["Code"] == row["Code"],
-
                     f"{party} New"
-
                 ] = change
 
 
@@ -1181,11 +1183,8 @@ if previous is not None:
         # ----------------------------------------------------
 
         df.loc[
-
             df["Code"] == row["Code"],
-
             "Total New"
-
         ] = total_change
 
 
@@ -1240,9 +1239,7 @@ for _, row in df.iterrows():
 
     changed = any(
 
-        x["Code"]
-        ==
-        county_code
+        x["Code"] == county_code
 
         for x in updates
 
@@ -1250,11 +1247,7 @@ for _, row in df.iterrows():
 
 
     old = tracker[
-
-        tracker["Code"]
-        ==
-        county_code
-
+        tracker["Code"] == county_code
     ]
 
 
@@ -1262,14 +1255,10 @@ for _, row in df.iterrows():
 
         last_updated = RUN_TIME
 
-
     else:
 
         last_updated = (
-
-            old.iloc[0]
-            ["Last Updated"]
-
+            old.iloc[0]["Last Updated"]
         )
 
 
@@ -1293,13 +1282,9 @@ tracker = pd.DataFrame(
 
 
 df = df.merge(
-
     tracker,
-
     on="Code",
-
     how="left"
-
 )
 
 
@@ -1324,34 +1309,19 @@ for item in updates:
             item["Code"],
 
         "DEM New":
-            item.get(
-                "DEM",
-                0
-            ),
+            item.get("DEM", 0),
 
         "REP New":
-            item.get(
-                "REP",
-                0
-            ),
+            item.get("REP", 0),
 
         "IND New":
-            item.get(
-                "IND",
-                0
-            ),
+            item.get("IND", 0),
 
         "NPA New":
-            item.get(
-                "NPA",
-                0
-            ),
+            item.get("NPA", 0),
 
         "OTHER New":
-            item.get(
-                "OTHER",
-                0
-            ),
+            item.get("OTHER", 0),
 
         "Total New":
             item["Total New"]
@@ -1366,9 +1336,7 @@ if history_rows:
     )
 
 
-    if os.path.exists(
-        HISTORY_FILE
-    ):
+    if os.path.exists(HISTORY_FILE):
 
         old_history = pd.read_csv(
             HISTORY_FILE
@@ -1376,23 +1344,17 @@ if history_rows:
 
 
         history = pd.concat(
-
             [
                 old_history,
                 history
             ],
-
             ignore_index=True
-
         )
 
 
     history.to_csv(
-
         HISTORY_FILE,
-
         index=False
-
     )
 
 
@@ -1401,38 +1363,30 @@ if history_rows:
 # ============================================================
 
 df.to_csv(
-
     PREVIOUS_FILE,
-
     index=False
-
 )
 
 
 tracker.to_csv(
-
     TRACKER_FILE,
-
     index=False
-
 )
 
 
 # ============================================================
-# ARCHIVE
+# SAVE ARCHIVE
 # ============================================================
 
-archive_file = (
+archive_file = os.path.join(
+
+    ARCHIVE_DIR,
 
     "florida_turnout_"
 
     +
 
-    datetime.now(
-        ZoneInfo(
-            "America/New_York"
-        )
-    ).strftime(
+    datetime.now().strftime(
         "%Y-%m-%d_%H-%M-%S"
     )
 
@@ -1444,11 +1398,8 @@ archive_file = (
 
 
 df.to_csv(
-
     archive_file,
-
     index=False
-
 )
 
 
@@ -1459,7 +1410,6 @@ df.to_csv(
 state_dem = df["DEM"].sum()
 
 state_rep = df["REP"].sum()
-
 
 state_other = (
 
@@ -1531,49 +1481,39 @@ if previous is not None:
 
 
     old_total = (
-
         old_dem
         +
         old_rep
-
     )
 
 
     new_total = (
-
         state_dem
         +
         state_rep
-
     )
 
 
     if old_total > 0 and new_total > 0:
 
         old_share = (
-
             old_dem
             /
             old_total
-
         )
 
 
         new_share = (
-
             state_dem
             /
             new_total
-
         )
 
 
         statewide_change = (
-
             new_share
             -
             old_share
-
         )
 
 
@@ -1582,7 +1522,7 @@ if previous is not None:
             statewide_margin_change = (
 
                 f"+{statewide_change:.2%} "
-                f"toward Democrats"
+                "toward Democrats"
 
             )
 
@@ -1592,7 +1532,7 @@ if previous is not None:
             statewide_margin_change = (
 
                 f"{statewide_change:.2%} "
-                f"toward Republicans"
+                "toward Republicans"
 
             )
 
@@ -1661,10 +1601,56 @@ print(
 
 
 print(
+    "\nCounties successfully loaded:",
+    len(df),
+    "/",
+    len(COUNTIES)
+)
+
+
+if "BRO" in df["Code"].values:
+
+    broward_row = df[
+        df["Code"] == "BRO"
+    ].iloc[0]
+
+
+    print(
+        "\nBROWARD VERIFICATION:"
+    )
+
+    print(
+        "  DEM:",
+        f"{broward_row['DEM']:,.0f}"
+    )
+
+    print(
+        "  REP:",
+        f"{broward_row['REP']:,.0f}"
+    )
+
+    print(
+        "  NPA:",
+        f"{broward_row['NPA']:,.0f}"
+    )
+
+    print(
+        "  OTHER:",
+        f"{broward_row['OTHER']:,.0f}"
+    )
+
+
+else:
+
+    print(
+        "\nWARNING: Broward is missing from the dataset."
+    )
+
+
+print(
     "\nUpdated Counties:",
     len(updates)
 )
-
 
 print(
     "Unchanged Counties:",
@@ -1681,7 +1667,7 @@ print(
 )
 
 
-if len(rating_changes) == 0:
+if not rating_changes:
 
     print(
         "No rating changes detected."
@@ -1714,7 +1700,7 @@ else:
 # COUNTY UPDATES
 # ============================================================
 
-if len(updates) == 0:
+if not updates:
 
     print(
         "\nNo county changes detected."
@@ -1739,27 +1725,21 @@ else:
         for key, value in county.items():
 
             if key not in [
-
                 "County",
                 "Code",
                 "Total New"
-
             ]:
 
                 print(
-
                     " ",
                     key,
                     f"{value:+}"
-
                 )
 
 
         print(
-
             " Total New:",
             f"{county['Total New']:+}"
-
         )
 
 
@@ -1803,10 +1783,8 @@ for party in [
 
 
     print(
-
         party + ":",
         f"{total:+}"
-
     )
 
 
@@ -1820,51 +1798,8 @@ grand_total = sum(
 
 
 print(
-
     "TOTAL:",
     f"{grand_total:+}"
-
-)
-
-
-# ============================================================
-# COMPLETE
-# ============================================================
-
-print(
-    "\n================================="
-)
-
-print(
-    "COMPLETE"
-)
-
-print(
-    "================================="
-)
-
-print(
-    "Broward:",
-    "LOADED"
-)
-
-print(
-    "Counties:",
-    f"{len(df)}/{len(COUNTIES)}"
-)
-
-print(
-    "Saved:",
-    PREVIOUS_FILE
-)
-
-print(
-    "Archive:",
-    archive_file
-)
-
-print(
-    "================================="
 )
 
 
@@ -1872,13 +1807,9 @@ print(
 # TWEET GENERATOR
 # ============================================================
 
-tweet_time = datetime.now(
-    ZoneInfo("America/New_York")
-).strftime(
+tweet_time = datetime.now().strftime(
     "%I %p"
-).lstrip(
-    "0"
-)
+).lstrip("0")
 
 
 new_dem = sum(
@@ -1931,19 +1862,6 @@ new_other = sum(
 )
 
 
-print(
-    "\n================================="
-)
-
-print(
-    "TWEET DRAFT"
-)
-
-print(
-    "================================="
-)
-
-
 tweet = f"""
 🗳️{tweet_time} Florida EV & VBM Update
 
@@ -1963,20 +1881,15 @@ Largest County Updates
 
 
 medals = [
-
     "🥇",
     "🥈",
     "🥉"
-
 ]
 
 
 for medal, county in zip(
-
     medals,
-
     top_three
-
 ):
 
     county_other = (
@@ -2022,5 +1935,180 @@ tweet += """
 
 
 print(
+    "\n================================="
+)
+
+print(
+    "TWEET DRAFT"
+)
+
+print(
+    "================================="
+)
+
+print(
     tweet
+)
+
+
+# ============================================================
+# SAVE LATEST REPORT
+# ============================================================
+
+report = f"""
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Run Time:
+{RUN_TIME}
+
+Counties Loaded:
+{len(df)} / {len(COUNTIES)}
+
+Updated Counties:
+{len(updates)}
+
+Unchanged Counties:
+{unchanged}
+
+STATEWIDE SUMMARY
+=================================
+
+{statewide_leader}
+
+Margin Change:
+{statewide_margin_change}
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: {new_dem:+,}
+🔴 REP: {new_rep:+,}
+🟣 OTHER: {new_other:+,}
+🟢 TOTAL: {grand_total:+,}
+
+RATING / FORECAST CHANGES
+=================================
+"""
+
+
+if rating_changes:
+
+    for change in rating_changes:
+
+        report += f"""
+
+{change['County']}
+
+{change['Old']} → {change['New']}
+
+Margin Move:
+{change['Margin Change']:+.3f}
+
+"""
+
+
+else:
+
+    report += """
+
+No rating changes detected.
+
+"""
+
+
+report += """
+
+TWEET DRAFT
+=================================
+
+"""
+
+report += tweet
+
+
+with open(
+    LATEST_REPORT_FILE,
+    "w",
+    encoding="utf-8"
+) as file:
+
+    file.write(
+        report
+    )
+
+
+# ============================================================
+# SAVE TIMESTAMPED REPORT
+# ============================================================
+
+report_time = datetime.now().strftime(
+    "%Y-%m-%d_%H-%M-%S"
+)
+
+
+timestamped_report = os.path.join(
+
+    REPORT_DIR,
+
+    f"florida_report_{report_time}.txt"
+
+)
+
+
+with open(
+    timestamped_report,
+    "w",
+    encoding="utf-8"
+) as file:
+
+    file.write(
+        report
+    )
+
+
+# ============================================================
+# FINAL OUTPUT
+# ============================================================
+
+print(
+    "\n================================="
+)
+
+print(
+    "COMPLETE"
+)
+
+print(
+    "================================="
+)
+
+print(
+    "Current data:",
+    PREVIOUS_FILE
+)
+
+print(
+    "Tracker:",
+    TRACKER_FILE
+)
+
+print(
+    "History:",
+    HISTORY_FILE
+)
+
+print(
+    "Archive:",
+    archive_file
+)
+
+print(
+    "Latest report:",
+    LATEST_REPORT_FILE
+)
+
+print(
+    "================================="
 )

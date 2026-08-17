@@ -1,0 +1,99 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Run Time:
+2026-08-17 13:41:34
+
+
+Election Day Status:
+Election Day not yet ingested
+
+
+Updated Counties:
+40
+
+Unchanged Counties:
+26
+
+
+STATEWIDE SUMMARY
+=================================
+
+🔴 Republicans lead by 119,645 votes statewide.
+
+Margin Change:
+-0.15% toward Republicans
+
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +2,989
+🔴 REP: +2,799
+🟣 OTHER: +521
+🟢 TOTAL: +6,309
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+St. Lucie
+
+Toss Up R → Toss Up D
+
+Margin Move:
++0.010
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️1 PM Florida EV & VBM Update
+
+New votes have been cast in 40 counties over the last hour, with the largest update coming from Sarasota County.
+
+🔵 DEM: +2,989
+🔴 REP: +2,799
+🟣 OTHER: +521
+🟢 TOTAL: +6,309
+
+🔴 Republicans lead by 119,645 votes statewide.
+
+🔴 Margin Change: -0.15% toward Republicans
+
+Largest County Updates
+
+
+🥇Sarasota County
+
+🔵 DEM: +739
+🔴 REP: +575
+🟣 OTHER: +227
+🟢 TOTAL: +1,541
+
+
+
+🥈Pinellas County
+
+🔵 DEM: +671
+🔴 REP: +634
+🟣 OTHER: +0
+🟢 TOTAL: +1,305
+
+
+
+🥉Manatee County
+
+🔵 DEM: +265
+🔴 REP: +305
+🟣 OTHER: +16
+🟢 TOTAL: +586
+
+
+
+#Florida #EarlyVoting #VoteByMail

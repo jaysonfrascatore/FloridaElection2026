@@ -12,12 +12,7 @@ jobs:
   update-data:
     runs-on: ubuntu-latest
 
-    concurrency:
-      group: pages-deploy
-      cancel-in-progress: true
-
     steps:
-
       - name: Checkout repository
         uses: actions/checkout@v5
 
@@ -30,19 +25,17 @@ jobs:
         run: |
           pip install pandas requests beautifulsoup4
 
-      - name: Run Python script
-        run: python County_Results.py
-
-      - name: Commit updated data to main
+      - name: Run Florida turnout scraper
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          git add .
-          git commit -m "Automatic turnout update" || exit 0
-          git push
+          python County_Results.py
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
+      - name: Commit updated turnout data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add .
+
+          git diff --cached --quiet || git commit -m "Automatic turnout update"
+
+          git push

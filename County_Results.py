@@ -1,6 +1,7 @@
 import requests
 import pandas as pd
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import os
 from bs4 import BeautifulSoup
 
@@ -151,7 +152,13 @@ LATEST_REPORT_FILE = os.path.join(
 # RUN TIME
 # ============================================================
 
-RUN_TIME = datetime.now().strftime(
+EASTERN = ZoneInfo(
+    "America/New_York"
+)
+
+RUN_TIME = datetime.now(
+    EASTERN
+).strftime(
     "%Y-%m-%d %H:%M:%S"
 )
 
@@ -1386,7 +1393,9 @@ archive_file = os.path.join(
 
     +
 
-    datetime.now().strftime(
+    datetime.now(
+        EASTERN
+    ).strftime(
         "%Y-%m-%d_%H-%M-%S"
     )
 
@@ -1596,7 +1605,8 @@ print(
 )
 
 print(
-    RUN_TIME
+    RUN_TIME,
+    "Eastern Time"
 )
 
 
@@ -1807,7 +1817,9 @@ print(
 # TWEET GENERATOR
 # ============================================================
 
-tweet_time = datetime.now().strftime(
+tweet_time = datetime.now(
+    EASTERN
+).strftime(
     "%I %p"
 ).lstrip("0")
 
@@ -1961,7 +1973,7 @@ FLORIDA TURNOUT UPDATE
 =================================
 
 Run Time:
-{RUN_TIME}
+{RUN_TIME} Eastern Time
 
 Counties Loaded:
 {len(df)} / {len(COUNTIES)}
@@ -2043,7 +2055,9 @@ with open(
 # SAVE TIMESTAMPED REPORT
 # ============================================================
 
-report_time = datetime.now().strftime(
+report_time = datetime.now(
+    EASTERN
+).strftime(
     "%Y-%m-%d_%H-%M-%S"
 )
 

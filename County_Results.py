@@ -2,15 +2,12 @@ import requests
 import pandas as pd
 from datetime import datetime
 from zoneinfo import ZoneInfo
-import json
 import os
-import re
-from html import unescape
 from bs4 import BeautifulSoup
 
 
 # ============================================================
-# DATA SOURCES
+# SOURCES
 # ============================================================
 
 BASE_URL = (
@@ -18,8 +15,7 @@ BASE_URL = (
     "turnoutquickview.electionsfl.org/data/FL/"
 )
 
-
-# Broward uses the ElectionLink turnout-party page
+# Broward uses the working ElectionLink turnout-party page
 BROWARD_URL = (
     "https://my.browardvotes.gov/"
     "TEDElectionLink/TurnOutWidget/dashboard/view/turnout-party"
@@ -107,31 +103,9 @@ COUNTIES = {
 # FILES
 # ============================================================
 
-DATA_DIR = "data"
-ARCHIVE_DIR = "archive"
-REPORT_DIR = "reports"
-
-os.makedirs(DATA_DIR, exist_ok=True)
-os.makedirs(ARCHIVE_DIR, exist_ok=True)
-os.makedirs(REPORT_DIR, exist_ok=True)
-
-
-PREVIOUS_FILE = os.path.join(
-    DATA_DIR,
-    "previous_turnout.csv"
-)
-
-
-TRACKER_FILE = os.path.join(
-    DATA_DIR,
-    "county_tracker.csv"
-)
-
-
-HISTORY_FILE = os.path.join(
-    DATA_DIR,
-    "county_history.csv"
-)
+PREVIOUS_FILE = "previous_turnout.csv"
+TRACKER_FILE = "county_tracker.csv"
+HISTORY_FILE = "county_history.csv"
 
 
 # ============================================================
@@ -178,172 +152,28 @@ else:
 
 
 # ============================================================
-# HELPER FUNCTIONS
-# ============================================================
-
-def clean_text(value):
-
-    """
-    Remove HTML tags and return clean text.
-    """
-
-    if value is None:
-        return ""
-
-    value = unescape(
-        str(value)
-    )
-
-    value = re.sub(
-        r"<[^>]+>",
-        " ",
-        value
-    )
-
-    value = re.sub(
-        r"\s+",
-        " ",
-        value
-    )
-
-    return value.strip()
-
-
-def number_from_text(value):
-
-    """
-    Convert text such as:
-
-        44,784
-        41,057
-        0
-
-    into an integer.
-    """
-
-    if value is None:
-        return 0
-
-    value = clean_text(
-        value
-    )
-
-    value = value.replace(
-        ",",
-        ""
-    )
-
-    match = re.search(
-        r"-?\d+",
-        value
-    )
-
-    if not match:
-        return 0
-
-    return int(
-        match.group()
-    )
-
-
-def get_numeric_ballot_value(value):
-
-    """
-    Safely convert a JSON ballot value to an integer.
-    """
-
-    if value is None:
-        return 0
-
-    if isinstance(
-        value,
-        (int, float)
-    ):
-
-        return int(value)
-
-    return number_from_text(
-        value
-    )
-
-
-def get_ballot_value(
-    ballot_data,
-    field_names
-):
-
-    """
-    Return the first matching ballot field.
-
-    This supports Election Day field-name variations.
-    """
-
-    for field in field_names:
-
-        if field in ballot_data:
-
-            return (
-                get_numeric_ballot_value(
-                    ballot_data[field]
-                ),
-                True
-            )
-
-    return 0, False
-
-
-# ============================================================
 # BROWARD PARSER
 # ============================================================
 
 def get_broward_data():
 
-    """
-    Pull Broward County turnout data from the
-    ElectionLink turnout-party page.
-
-    Expected table:
-
-        Party
-        Eligible Voters
-        Vote By Mail
-        Early Vote
-        Election Day
-        Total
-        Turnout
-
-    The final CSV stores only:
-
-        DEM
-        REP
-        IND
-        NPA
-        OTHER
-
-    VBM + EV + Election Day are combined into
-    those party totals.
-    """
+    print(
+        "\nUsing Broward County source:"
+    )
 
     print(
-        "  Broward source:",
         BROWARD_URL
     )
 
+
     headers = {
 
-        "User-Agent": (
+        "User-Agent":
             "Mozilla/5.0 "
             "(Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 "
             "(KHTML, like Gecko) "
             "Chrome/151.0 Safari/537.36"
-        ),
-
-        "Accept": (
-            "text/html,"
-            "application/xhtml+xml,"
-            "application/json"
-        )
 
     }
 
@@ -351,20 +181,31 @@ def get_broward_data():
     response = requests.get(
         BROWARD_URL,
         headers=headers,
-        timeout=30
+        timeout=20
     )
+
 
     response.raise_for_status()
 
-
-    # --------------------------------------------------------
-    # Parse HTML
-    # --------------------------------------------------------
 
     soup = BeautifulSoup(
         response.text,
         "html.parser"
     )
+
+
+    # --------------------------------------------------------
+    # Party mapping
+    # --------------------------------------------------------
+
+    party_mapping = {
+
+        0: "DEM",
+        1: "REP",
+        2: "NPA",
+        3: "OTHER"
+
+    }
 
 
     totals = {
@@ -378,405 +219,203 @@ def get_broward_data():
     }
 
 
-    found_parties = set()
+    detailed = {}
 
 
-    election_day_found = False
+    # --------------------------------------------------------
+    # Extract each party
+    # --------------------------------------------------------
 
+    for party_number, party_code in party_mapping.items():
 
-    # ========================================================
-    # FIND TABLES
-    # ========================================================
-
-    tables = soup.find_all(
-        "table"
-    )
-
-
-    print(
-        "  Broward tables found:",
-        len(tables)
-    )
-
-
-    for table in tables:
-
-        rows = table.find_all(
-            "tr"
+        party_element = soup.find(
+            id=f"Party{party_number}"
         )
 
 
-        for tr in rows:
+        if party_element is None:
 
-            cells = tr.find_all(
-                ["td", "th"]
+            raise ValueError(
+                f"Could not find Party{party_number}"
             )
 
 
-            cell_texts = [
-
-                clean_text(
-                    cell.get_text(
-                        " ",
-                        strip=True
-                    )
-                )
-
-                for cell in cells
-
-            ]
+        party_name = (
+            party_element.get_text(
+                strip=True
+            )
+        )
 
 
-            if not cell_texts:
-                continue
+        def get_value(field):
 
-
-            # ------------------------------------------------
-            # Identify party row
-            # ------------------------------------------------
-
-            party_name = cell_texts[0]
-
-
-            if party_name not in [
-
-                "Florida Democratic Party",
-                "Republican Party Of Florida",
-                "No Party Affiliation",
-                "Other"
-
-            ]:
-
-                continue
-
-
-            # ------------------------------------------------
-            # Expected:
-            #
-            # 0 = Party
-            # 1 = Eligible Voters
-            # 2 = Vote By Mail
-            # 3 = Early Vote
-            # 4 = Election Day
-            # 5 = Total
-            # 6 = Turnout
-            # ------------------------------------------------
-
-            if len(cell_texts) < 6:
-
-                continue
-
-
-            vbm = number_from_text(
-                cell_texts[2]
+            element = soup.find(
+                id=f"{field}{party_number}"
             )
 
 
-            early_vote = number_from_text(
-                cell_texts[3]
-            )
+            if element is None:
 
-
-            election_day = number_from_text(
-                cell_texts[4]
-            )
-
-
-            total_column = number_from_text(
-                cell_texts[5]
-            )
-
-
-            # Election Day exists in the table.
-            election_day_found = True
-
-
-            # ------------------------------------------------
-            # IMPORTANT:
-            #
-            # Use VBM + EV + Election Day.
-            #
-            # We intentionally do NOT simply use the Total
-            # column because we want to explicitly verify that
-            # Election Day is being included.
-            # ------------------------------------------------
-
-            calculated_total = (
-
-                vbm
-                +
-                early_vote
-                +
-                election_day
-
-            )
-
-
-            # ------------------------------------------------
-            # DEM
-            # ------------------------------------------------
-
-            if party_name == (
-                "Florida Democratic Party"
-            ):
-
-                totals["DEM"] = calculated_total
-
-                found_parties.add(
-                    "DEM"
+                raise ValueError(
+                    f"Could not find "
+                    f"{field}{party_number}"
                 )
 
 
-            # ------------------------------------------------
-            # REP
-            # ------------------------------------------------
-
-            elif party_name == (
-                "Republican Party Of Florida"
-            ):
-
-                totals["REP"] = calculated_total
-
-                found_parties.add(
-                    "REP"
-                )
+            text = element.get_text(
+                strip=True
+            )
 
 
-            # ------------------------------------------------
-            # NPA
-            # ------------------------------------------------
-
-            elif party_name == (
-                "No Party Affiliation"
-            ):
-
-                totals["NPA"] = calculated_total
-
-                found_parties.add(
-                    "NPA"
-                )
+            text = (
+                text
+                .replace(",", "")
+                .replace("%", "")
+                .strip()
+            )
 
 
-            # ------------------------------------------------
-            # OTHER
-            # ------------------------------------------------
+            if field == "Turnout":
 
-            elif party_name == "Other":
-
-                totals["OTHER"] = calculated_total
-
-                found_parties.add(
-                    "OTHER"
-                )
+                return float(text)
 
 
-    # ========================================================
-    # FALLBACK PARSING
-    # ========================================================
+            return int(text)
 
-    # Some versions of the Broward page may return markup
-    # that BeautifulSoup does not expose as a conventional
-    # table. If the expected rows were not found, fall back
-    # to raw HTML row parsing.
 
-    expected = {
+        eligible = get_value(
+            "EligibleCount"
+        )
+
+
+        vbm = get_value(
+            "VoteByMail"
+        )
+
+
+        early = get_value(
+            "EarlyVote"
+        )
+
+
+        election_day = get_value(
+            "ElectionDay"
+        )
+
+
+        total = get_value(
+            "Total"
+        )
+
+
+        turnout = get_value(
+            "Turnout"
+        )
+
+
+        # ----------------------------------------------------
+        # Store combined total
+        # ----------------------------------------------------
+
+        totals[party_code] = total
+
+
+        # ----------------------------------------------------
+        # Store detailed voting method data
+        # ----------------------------------------------------
+
+        detailed[f"{party_code} VBM"] = vbm
+
+        detailed[f"{party_code} EV"] = early
+
+        detailed[f"{party_code} ED"] = election_day
+
+
+        # ----------------------------------------------------
+        # Display what was found
+        # ----------------------------------------------------
+
+        print(
+            f"  {party_name}:"
+        )
+
+        print(
+            f"    VBM: {vbm:,}"
+        )
+
+        print(
+            f"    Early Vote: {early:,}"
+        )
+
+        print(
+            f"    Election Day: {election_day:,}"
+        )
+
+        print(
+            f"    Total: {total:,}"
+        )
+
+        print(
+            f"    Eligible: {eligible:,}"
+        )
+
+        print(
+            f"    Turnout: {turnout:.2f}%"
+        )
+
+
+    # --------------------------------------------------------
+    # Sanity check
+    # --------------------------------------------------------
+
+    for party_code in [
 
         "DEM",
         "REP",
         "NPA",
         "OTHER"
 
+    ]:
+
+        calculated = (
+
+            detailed[f"{party_code} VBM"]
+
+            +
+
+            detailed[f"{party_code} EV"]
+
+            +
+
+            detailed[f"{party_code} ED"]
+
+        )
+
+
+        if calculated != totals[party_code]:
+
+            print(
+                f"WARNING: {party_code} "
+                f"does not match!"
+            )
+
+            print(
+                f"  VBM + EV + ED = {calculated:,}"
+            )
+
+            print(
+                f"  Reported total = "
+                f"{totals[party_code]:,}"
+            )
+
+
+    return {
+
+        **totals,
+
+        **detailed
+
     }
-
-
-    if not expected.issubset(
-        found_parties
-    ):
-
-        print(
-            "  BeautifulSoup table parse incomplete."
-        )
-
-        print(
-            "  Attempting raw HTML parser..."
-        )
-
-
-        rows_html = re.findall(
-
-            r"<tr\b[^>]*>(.*?)</tr>",
-
-            response.text,
-
-            flags=(
-                re.IGNORECASE
-                |
-                re.DOTALL
-            )
-
-        )
-
-
-        for row_html in rows_html:
-
-            cells = re.findall(
-
-                r"<t[dh]\b[^>]*>"
-                r"(.*?)"
-                r"</t[dh]>",
-
-                row_html,
-
-                flags=(
-                    re.IGNORECASE
-                    |
-                    re.DOTALL
-                )
-
-            )
-
-
-            cell_texts = [
-
-                clean_text(
-                    cell
-                )
-
-                for cell in cells
-
-            ]
-
-
-            if len(cell_texts) < 6:
-
-                continue
-
-
-            party_name = cell_texts[0]
-
-
-            if party_name not in [
-
-                "Florida Democratic Party",
-                "Republican Party Of Florida",
-                "No Party Affiliation",
-                "Other"
-
-            ]:
-
-                continue
-
-
-            vbm = number_from_text(
-                cell_texts[2]
-            )
-
-
-            early_vote = number_from_text(
-                cell_texts[3]
-            )
-
-
-            election_day = number_from_text(
-                cell_texts[4]
-            )
-
-
-            calculated_total = (
-
-                vbm
-                +
-                early_vote
-                +
-                election_day
-
-            )
-
-
-            election_day_found = True
-
-
-            if party_name == (
-                "Florida Democratic Party"
-            ):
-
-                totals["DEM"] = calculated_total
-
-                found_parties.add(
-                    "DEM"
-                )
-
-
-            elif party_name == (
-                "Republican Party Of Florida"
-            ):
-
-                totals["REP"] = calculated_total
-
-                found_parties.add(
-                    "REP"
-                )
-
-
-            elif party_name == (
-                "No Party Affiliation"
-            ):
-
-                totals["NPA"] = calculated_total
-
-                found_parties.add(
-                    "NPA"
-                )
-
-
-            elif party_name == "Other":
-
-                totals["OTHER"] = calculated_total
-
-                found_parties.add(
-                    "OTHER"
-                )
-
-
-    # ========================================================
-    # VALIDATION
-    # ========================================================
-
-    if not expected.issubset(
-        found_parties
-    ):
-
-        raise ValueError(
-
-            "Broward party table could not be "
-            "fully parsed. Found: "
-            f"{sorted(found_parties)}"
-
-        )
-
-
-    # Broward does not have a separate IND category
-    # in this turnout table.
-
-    totals["IND"] = 0
-
-
-    print(
-        "  Broward Election Day detected:",
-        election_day_found
-    )
-
-
-    print(
-        "  Broward totals:",
-        totals
-    )
-
-
-    return (
-        totals,
-        election_day_found
-    )
 
 
 # ============================================================
@@ -786,18 +425,112 @@ def get_broward_data():
 rows = []
 
 
-# Global Election Day detection.
-
-election_day_ingested = False
-
-
 for county_name, county_code in COUNTIES.items():
 
     print(
-        "Loading:",
+        "\nLoading:",
         county_name
     )
 
+
+    # ========================================================
+    # BROWARD SPECIAL SOURCE
+    # ========================================================
+
+    if county_name == "Broward":
+
+        try:
+
+            broward = get_broward_data()
+
+
+            rows.append({
+
+                "Timestamp":
+                    RUN_TIME,
+
+                "County":
+                    county_name,
+
+                "Code":
+                    county_code,
+
+                "DEM":
+                    broward["DEM"],
+
+                "REP":
+                    broward["REP"],
+
+                "IND":
+                    broward["IND"],
+
+                "NPA":
+                    broward["NPA"],
+
+                "OTHER":
+                    broward["OTHER"],
+
+                "DEM VBM":
+                    broward["DEM VBM"],
+
+                "DEM EV":
+                    broward["DEM EV"],
+
+                "DEM ED":
+                    broward["DEM ED"],
+
+                "REP VBM":
+                    broward["REP VBM"],
+
+                "REP EV":
+                    broward["REP EV"],
+
+                "REP ED":
+                    broward["REP ED"],
+
+                "NPA VBM":
+                    broward["NPA VBM"],
+
+                "NPA EV":
+                    broward["NPA EV"],
+
+                "NPA ED":
+                    broward["NPA ED"],
+
+                "OTHER VBM":
+                    broward["OTHER VBM"],
+
+                "OTHER EV":
+                    broward["OTHER EV"],
+
+                "OTHER ED":
+                    broward["OTHER ED"]
+
+            })
+
+
+            print(
+                "Broward successfully loaded."
+            )
+
+
+        except Exception as e:
+
+            print(
+                "BROWARD FAILED:"
+            )
+
+            print(
+                e
+            )
+
+
+        continue
+
+
+    # ========================================================
+    # ALL OTHER COUNTIES
+    # ========================================================
 
     totals = {
 
@@ -810,63 +543,6 @@ for county_name, county_code in COUNTIES.items():
     }
 
 
-    # ========================================================
-    # BROWARD SPECIAL SOURCE
-    # ========================================================
-
-    if county_code == "BRO":
-
-        try:
-
-            (
-                totals,
-                broward_ed_found
-            ) = get_broward_data()
-
-
-            if broward_ed_found:
-
-                election_day_ingested = True
-
-
-        except Exception as e:
-
-            print(
-                "Failed:",
-                county_name
-            )
-
-            print(
-                "  Error:",
-                str(e)
-            )
-
-            continue
-
-
-        rows.append({
-
-            "Timestamp":
-                RUN_TIME,
-
-            "County":
-                county_name,
-
-            "Code":
-                county_code,
-
-            **totals
-
-        })
-
-
-        continue
-
-
-    # ========================================================
-    # ALL OTHER COUNTIES
-    # ========================================================
-
     index_url = (
         f"{BASE_URL}"
         f"{county_code}/index.json"
@@ -875,26 +551,22 @@ for county_name, county_code in COUNTIES.items():
 
     try:
 
-        response = requests.get(
+        index_response = requests.get(
             index_url,
-            timeout=15
+            timeout=10
         )
 
-        response.raise_for_status()
+        index_response.raise_for_status()
 
-        index = response.json()
+        index = index_response.json()
 
 
     except Exception as e:
 
         print(
             "Failed:",
-            county_name
-        )
-
-        print(
-            "  Error:",
-            str(e)
+            county_name,
+            e
         )
 
         continue
@@ -913,14 +585,14 @@ for county_name, county_code in COUNTIES.items():
 
         try:
 
-            response = requests.get(
+            data_response = requests.get(
                 data_url,
-                timeout=15
+                timeout=10
             )
 
-            response.raise_for_status()
+            data_response.raise_for_status()
 
-            data = response.json()
+            data = data_response.json()
 
 
             parties = (
@@ -949,68 +621,26 @@ for county_name, county_code in COUNTIES.items():
 
 
                 # ------------------------------------------------
-                # VOTE BY MAIL
-                # ------------------------------------------------
-
-                mail, mail_found = get_ballot_value(
-
-                    value,
-
-                    [
-                        "Mail"
-                    ]
-
-                )
-
-
-                # ------------------------------------------------
-                # EARLY VOTING
-                # ------------------------------------------------
-
-                early_voting, ev_found = get_ballot_value(
-
-                    value,
-
-                    [
-                        "EarlyVoting"
-                    ]
-
-                )
-
-
-                # ------------------------------------------------
-                # ELECTION DAY
-                # ------------------------------------------------
-
-                election_day, ed_found = get_ballot_value(
-
-                    value,
-
-                    [
-                        "ElectionDay",
-                        "ElectionDayVoting",
-                        "ElectionDayVote"
-                    ]
-
-                )
-
-
-                if ed_found:
-
-                    election_day_ingested = True
-
-
-                # ------------------------------------------------
-                # TOTAL
+                # Current live turnout
+                #
+                # VBM + Early Voting
+                #
+                # This matches your working local version.
                 # ------------------------------------------------
 
                 ballots = (
 
-                    mail
+                    value.get(
+                        "Mail",
+                        0
+                    )
+
                     +
-                    early_voting
-                    +
-                    election_day
+
+                    value.get(
+                        "EarlyVoting",
+                        0
+                    )
 
                 )
 
@@ -1046,37 +676,7 @@ for county_name, county_code in COUNTIES.items():
 
 
 # ============================================================
-# ELECTION DAY STATUS
-# ============================================================
-
-print(
-    "\n================================="
-)
-
-print(
-    "BALLOT TYPE STATUS"
-)
-
-print(
-    "================================="
-)
-
-
-if election_day_ingested:
-
-    print(
-        "Election Day data detected and ingested."
-    )
-
-else:
-
-    print(
-        "Election Day not yet ingested."
-    )
-
-
-# ============================================================
-# BUILD DATAFRAME
+# CREATE DATAFRAME
 # ============================================================
 
 df = pd.DataFrame(
@@ -1098,51 +698,100 @@ if df.empty:
 
 
 print(
-    "\nCounties successfully loaded:",
+    "\n================================="
+)
+
+print(
+    "COUNTY COLLECTION COMPLETE"
+)
+
+print(
+    "================================="
+)
+
+print(
+    "Counties loaded:",
     len(df),
     "/",
     len(COUNTIES)
 )
 
 
+if "BRO" not in df["Code"].values:
+
+    print(
+        "\nWARNING: BROWARD IS MISSING!"
+    )
+
+    raise SystemExit(
+        "Broward failed to load."
+    )
+
+
 # ============================================================
 # BROWARD VERIFICATION
 # ============================================================
 
-if "BRO" in df["Code"].values:
-
-    broward_check = df[
-        df["Code"] == "BRO"
-    ].iloc[0]
+broward_check = df[
+    df["Code"] == "BRO"
+].iloc[0]
 
 
-    print(
-        "\nBroward verification:"
-    )
+print(
+    "\nBROWARD VERIFICATION"
+)
+
+print(
+    "DEM:",
+    f"{int(broward_check['DEM']):,}"
+)
+
+print(
+    "REP:",
+    f"{int(broward_check['REP']):,}"
+)
+
+print(
+    "NPA:",
+    f"{int(broward_check['NPA']):,}"
+)
+
+print(
+    "OTHER:",
+    f"{int(broward_check['OTHER']):,}"
+)
 
 
-    print(
-        "  DEM:",
-        f"{int(broward_check['DEM']):,}"
-    )
+# ============================================================
+# ENSURE DETAILED COLUMNS EXIST
+# ============================================================
+
+for col in [
+
+    "DEM VBM",
+    "DEM EV",
+    "DEM ED",
+
+    "REP VBM",
+    "REP EV",
+    "REP ED",
+
+    "NPA VBM",
+    "NPA EV",
+    "NPA ED",
+
+    "OTHER VBM",
+    "OTHER EV",
+    "OTHER ED"
+
+]:
+
+    if col not in df.columns:
+
+        df[col] = 0
 
 
-    print(
-        "  REP:",
-        f"{int(broward_check['REP']):,}"
-    )
-
-
-    print(
-        "  NPA:",
-        f"{int(broward_check['NPA']):,}"
-    )
-
-
-    print(
-        "  OTHER:",
-        f"{int(broward_check['OTHER']):,}"
-    )
+df = df.fillna(0)
 
 
 # ============================================================
@@ -1176,29 +825,25 @@ major_total = (
 df["DEM %"] = (
 
     df["DEM"]
-    .div(
-        major_total.replace(
-            0,
-            pd.NA
-        )
+    /
+    major_total.replace(
+        0,
+        pd.NA
     )
-    .fillna(0)
 
-)
+).fillna(0)
 
 
 df["REP %"] = (
 
     df["REP"]
-    .div(
-        major_total.replace(
-            0,
-            pd.NA
-        )
+    /
+    major_total.replace(
+        0,
+        pd.NA
     )
-    .fillna(0)
 
-)
+).fillna(0)
 
 
 df["D Raw Margin"] = (
@@ -1314,11 +959,18 @@ for col in [
 df["Margin Move"] = 0.0
 
 
+for col in [
+
+    "Rating Change",
+    "Rating Move",
+    "Margin Diff"
+
+]:
+
+    df[col] = ""
+
+
 df["Rating Change"] = "No"
-
-df["Rating Move"] = ""
-
-df["Margin Diff"] = ""
 
 
 # ============================================================
@@ -1341,16 +993,6 @@ if previous is not None:
     )
 
 
-    print(
-        "\nComparison columns:"
-    )
-
-
-    print(
-        comparison.columns.tolist()
-    )
-
-
     for _, row in comparison.iterrows():
 
         changes = {}
@@ -1359,7 +1001,7 @@ if previous is not None:
 
 
         # ----------------------------------------------------
-        # MARGIN CHANGE
+        # Margin change
         # ----------------------------------------------------
 
         margin_diff = (
@@ -1376,7 +1018,7 @@ if previous is not None:
             margin_diff_text = (
 
                 f"+{margin_diff:.2%} "
-                "toward Democrats"
+                f"toward Democrats"
 
             )
 
@@ -1386,7 +1028,7 @@ if previous is not None:
             margin_diff_text = (
 
                 f"{margin_diff:.2%} "
-                "toward Republicans"
+                f"toward Republicans"
 
             )
 
@@ -1408,7 +1050,7 @@ if previous is not None:
 
 
         # ----------------------------------------------------
-        # RATING CHANGE
+        # Rating change
         # ----------------------------------------------------
 
         if (
@@ -1496,7 +1138,7 @@ if previous is not None:
 
 
         # ----------------------------------------------------
-        # VOTE CHANGES
+        # Vote changes
         # ----------------------------------------------------
 
         for party in [
@@ -1534,6 +1176,10 @@ if previous is not None:
                 ] = change
 
 
+        # ----------------------------------------------------
+        # Total movement
+        # ----------------------------------------------------
+
         df.loc[
 
             df["Code"] == row["Code"],
@@ -1542,6 +1188,10 @@ if previous is not None:
 
         ] = total_change
 
+
+        # ----------------------------------------------------
+        # Store update
+        # ----------------------------------------------------
 
         if changes:
 
@@ -1590,7 +1240,9 @@ for _, row in df.iterrows():
 
     changed = any(
 
-        x["Code"] == county_code
+        x["Code"]
+        ==
+        county_code
 
         for x in updates
 
@@ -1745,7 +1397,7 @@ if history_rows:
 
 
 # ============================================================
-# SAVE FILES
+# SAVE CURRENT DATA
 # ============================================================
 
 df.to_csv(
@@ -1766,9 +1418,11 @@ tracker.to_csv(
 )
 
 
-archive_file = os.path.join(
+# ============================================================
+# ARCHIVE
+# ============================================================
 
-    ARCHIVE_DIR,
+archive_file = (
 
     "florida_turnout_"
 
@@ -1796,52 +1450,6 @@ df.to_csv(
     index=False
 
 )
-
-
-# ============================================================
-# MANIFEST
-# ============================================================
-
-manifest = {
-
-    "run_time":
-        RUN_TIME,
-
-    "previous_file":
-        PREVIOUS_FILE.replace(
-            os.sep,
-            "/"
-        ),
-
-    "archive_file":
-        archive_file.replace(
-            os.sep,
-            "/"
-        )
-
-}
-
-
-with open(
-
-    os.path.join(
-        DATA_DIR,
-        "latest.json"
-    ),
-
-    "w"
-
-) as f:
-
-    json.dump(
-
-        manifest,
-
-        f,
-
-        indent=2
-
-    )
 
 
 # ============================================================
@@ -1917,14 +1525,9 @@ else:
 
 if previous is not None:
 
-    old_dem = previous[
-        "DEM"
-    ].sum()
+    old_dem = previous["DEM"].sum()
 
-
-    old_rep = previous[
-        "REP"
-    ].sum()
+    old_rep = previous["REP"].sum()
 
 
     old_total = (
@@ -1974,29 +1577,31 @@ if previous is not None:
         )
 
 
-    else:
+        if statewide_change > 0:
 
-        statewide_change = 0
+            statewide_margin_change = (
 
+                f"+{statewide_change:.2%} "
+                f"toward Democrats"
 
-    if statewide_change > 0:
-
-        statewide_margin_change = (
-
-            f"+{statewide_change:.2%} "
-            "toward Democrats"
-
-        )
+            )
 
 
-    elif statewide_change < 0:
+        elif statewide_change < 0:
 
-        statewide_margin_change = (
+            statewide_margin_change = (
 
-            f"{statewide_change:.2%} "
-            "toward Republicans"
+                f"{statewide_change:.2%} "
+                f"toward Republicans"
 
-        )
+            )
+
+
+        else:
+
+            statewide_margin_change = (
+                "No change"
+            )
 
 
     else:
@@ -2056,24 +1661,6 @@ print(
 
 
 print(
-    "\nElection Day Status:"
-)
-
-
-if election_day_ingested:
-
-    print(
-        "Election Day data detected and ingested."
-    )
-
-else:
-
-    print(
-        "Election Day not yet ingested."
-    )
-
-
-print(
     "\nUpdated Counties:",
     len(updates)
 )
@@ -2086,7 +1673,7 @@ print(
 
 
 # ============================================================
-# RATING / FORECAST CHANGES
+# RATING CHANGES
 # ============================================================
 
 print(
@@ -2110,14 +1697,12 @@ else:
             change["County"]
         )
 
-
         print(
             " ",
             change["Old"],
             "→",
             change["New"]
         )
-
 
         print(
             " Margin Move:",
@@ -2255,7 +1840,26 @@ print(
 )
 
 print(
+    "================================="
+)
+
+print(
+    "Broward:",
+    "LOADED"
+)
+
+print(
+    "Counties:",
+    f"{len(df)}/{len(COUNTIES)}"
+)
+
+print(
     "Saved:",
+    PREVIOUS_FILE
+)
+
+print(
+    "Archive:",
     archive_file
 )
 
@@ -2269,11 +1873,7 @@ print(
 # ============================================================
 
 tweet_time = datetime.now(
-
-    ZoneInfo(
-        "America/New_York"
-    )
-
+    ZoneInfo("America/New_York")
 ).strftime(
     "%I %p"
 ).lstrip(
@@ -2344,33 +1944,8 @@ print(
 )
 
 
-# ============================================================
-# TWEET BALLOT-TYPE LABEL
-# ============================================================
-
-if election_day_ingested:
-
-    tweet_ballot_label = (
-        "Florida EV, VBM & Election Day Update"
-    )
-
-    tweet_hashtags = (
-        "#Florida #EarlyVoting #VoteByMail #ElectionDay"
-    )
-
-else:
-
-    tweet_ballot_label = (
-        "Florida EV & VBM Update"
-    )
-
-    tweet_hashtags = (
-        "#Florida #EarlyVoting #VoteByMail"
-    )
-
-
 tweet = f"""
-🗳️{tweet_time} {tweet_ballot_label}
+🗳️{tweet_time} Florida EV & VBM Update
 
 New votes have been cast in {len(updates)} counties over the last hour, with the largest update coming from {top_three[0]['County'] if top_three else 'No county'} County.
 
@@ -2399,6 +1974,7 @@ medals = [
 for medal, county in zip(
 
     medals,
+
     top_three
 
 ):
@@ -2439,168 +2015,12 @@ for medal, county in zip(
 """
 
 
-tweet += f"""
+tweet += """
 
-{tweet_hashtags}
+#Florida #EarlyVoting #VoteByMail
 """
 
 
 print(
     tweet
-)
-
-
-# ============================================================
-# SAVE REPORT TXT FILE
-# ============================================================
-
-report_time = datetime.now(
-
-    ZoneInfo(
-        "America/New_York"
-    )
-
-).strftime(
-    "%Y-%m-%d_%H-%M-%S"
-)
-
-
-report = f"""
-=================================
-FLORIDA TURNOUT UPDATE
-=================================
-
-Run Time:
-{RUN_TIME}
-
-
-Election Day Status:
-"""
-
-
-if election_day_ingested:
-
-    report += (
-        "Election Day data detected and ingested.\n"
-    )
-
-else:
-
-    report += (
-        "Election Day not yet ingested.\n"
-    )
-
-
-report += f"""
-
-Updated Counties:
-{len(updates)}
-
-Unchanged Counties:
-{unchanged}
-
-
-STATEWIDE SUMMARY
-=================================
-
-{statewide_leader}
-
-Margin Change:
-{statewide_margin_change}
-
-
-TOTAL NEW VOTES
-=================================
-
-🔵 DEM: {new_dem:+,}
-🔴 REP: {new_rep:+,}
-🟣 OTHER: {new_other:+,}
-🟢 TOTAL: {grand_total:+,}
-
-
-RATING / FORECAST CHANGES
-=================================
-
-"""
-
-
-if rating_changes:
-
-    for change in rating_changes:
-
-        report += f"""
-{change['County']}
-
-{change['Old']} → {change['New']}
-
-Margin Move:
-{change['Margin Change']:+.3f}
-
-"""
-
-else:
-
-    report += (
-        "No rating changes detected.\n"
-    )
-
-
-report += """
-
-TWEET DRAFT
-=================================
-
-"""
-
-
-report += tweet
-
-
-# ============================================================
-# SAVE LATEST REPORT
-# ============================================================
-
-with open(
-
-    os.path.join(
-        REPORT_DIR,
-        "latest_report.txt"
-    ),
-
-    "w",
-
-    encoding="utf-8"
-
-) as file:
-
-    file.write(
-        report
-    )
-
-
-# ============================================================
-# SAVE TIMESTAMP REPORT
-# ============================================================
-
-with open(
-
-    os.path.join(
-        REPORT_DIR,
-        f"florida_report_{report_time}.txt"
-    ),
-
-    "w",
-
-    encoding="utf-8"
-
-) as file:
-
-    file.write(
-        report
-    )
-
-
-print(
-    "Saved report:",
-    f"florida_report_{report_time}.txt"
 )

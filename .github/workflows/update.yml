@@ -11,13 +11,16 @@ permissions:
   id-token: write
 
 jobs:
+
   update-data:
     runs-on: ubuntu-latest
+
     concurrency:
       group: pages-deploy
       cancel-in-progress: true
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v5
 
@@ -27,7 +30,8 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install pandas requests
+        run: |
+          pip install pandas requests
 
       - name: Run Python script
         run: python County_Results.py
@@ -36,12 +40,33 @@ jobs:
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
+
           git add .
+
           git commit -m "Automatic turnout update" || exit 0
+
           git push
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
+          path: .
+
+  deploy:
+    needs: update-data
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

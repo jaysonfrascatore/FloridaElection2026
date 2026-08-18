@@ -1268,31 +1268,6 @@ for _, row in df.iterrows():
     county_code = row["Code"]
 
 
-    changed = any(
-
-        x["Code"] == county_code
-
-        for x in updates
-
-    )
-
-
-    old = tracker[
-        tracker["Code"] == county_code
-    ]
-
-
-    if changed or old.empty:
-
-        last_updated = RUN_TIME
-
-    else:
-
-        last_updated = (
-            old.iloc[0]["Last Updated"]
-        )
-
-
     tracker_updates.append({
 
         "County":
@@ -1302,7 +1277,7 @@ for _, row in df.iterrows():
             county_code,
 
         "Last Updated":
-            last_updated
+            RUN_TIME
 
     })
 
@@ -1317,7 +1292,6 @@ df = df.merge(
     on="Code",
     how="left"
 )
-
 
 # ============================================================
 # COUNTY HISTORY

@@ -149,19 +149,43 @@ LATEST_REPORT_FILE = os.path.join(
 
 
 # ============================================================
-# RUN TIME
+# RUN TIME — EASTERN TIME
 # ============================================================
 
-EASTERN = ZoneInfo(
-    "America/New_York"
-)
+EASTERN = ZoneInfo("America/New_York")
 
-RUN_TIME = datetime.now(
-    EASTERN
-).strftime(
-    "%Y-%m-%d %H:%M:%S"
-)
+RUN_NOW = datetime.now(EASTERN)
 
+
+def ordinal_day(day):
+
+    if 10 <= day % 100 <= 20:
+        suffix = "th"
+
+    else:
+
+        suffix = {
+            1: "st",
+            2: "nd",
+            3: "rd"
+        }.get(
+            day % 10,
+            "th"
+        )
+
+    return f"{day}{suffix}"
+
+
+RUN_TIME = (
+
+    f"Updated at "
+    f"{RUN_NOW.strftime('%B')} "
+    f"{ordinal_day(RUN_NOW.day)}, "
+    f"{RUN_NOW.strftime('%Y')} "
+    f"at "
+    f"{RUN_NOW.strftime('%I:%M%p').lstrip('0').lower()}"
+
+)
 
 # ============================================================
 # LOAD MEMORY FILES

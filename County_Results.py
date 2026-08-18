@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import os
+import json
 from bs4 import BeautifulSoup
 
 
@@ -147,19 +148,29 @@ LATEST_REPORT_FILE = os.path.join(
     "latest_report.txt"
 )
 
+LATEST_JSON_FILE = os.path.join(
+    DATA_DIR,
+    "latest.json"
+)
+
 
 # ============================================================
 # RUN TIME — EASTERN TIME
 # ============================================================
 
-EASTERN = ZoneInfo("America/New_York")
+EASTERN = ZoneInfo(
+    "America/New_York"
+)
 
-RUN_NOW = datetime.now(EASTERN)
+RUN_NOW = datetime.now(
+    EASTERN
+)
 
 
 def ordinal_day(day):
 
     if 10 <= day % 100 <= 20:
+
         suffix = "th"
 
     else:
@@ -186,6 +197,7 @@ RUN_TIME = (
     f"{RUN_NOW.strftime('%I:%M%p').lstrip('0').lower()}"
 
 )
+
 
 # ============================================================
 # LOAD MEMORY FILES
@@ -1293,6 +1305,7 @@ df = df.merge(
     how="left"
 )
 
+
 # ============================================================
 # COUNTY HISTORY
 # ============================================================
@@ -1383,23 +1396,21 @@ tracker.to_csv(
 # SAVE ARCHIVE
 # ============================================================
 
+# IMPORTANT:
+# Use RUN_NOW here instead of calling datetime.now() again.
+# This guarantees the archive timestamp and displayed
+# timestamp refer to the exact same run.
+
+archive_timestamp = RUN_NOW.strftime(
+    "%Y-%m-%d_%H-%M-%S"
+)
+
+
 archive_file = os.path.join(
 
     ARCHIVE_DIR,
 
-    "florida_turnout_"
-
-    +
-
-    datetime.now(
-        EASTERN
-    ).strftime(
-        "%Y-%m-%d_%H-%M-%S"
-    )
-
-    +
-
-    ".csv"
+    f"florida_turnout_{archive_timestamp}.csv"
 
 )
 
@@ -1408,6 +1419,44 @@ df.to_csv(
     archive_file,
     index=False
 )
+
+
+# ============================================================
+# UPDATE LATEST JSON
+# ============================================================
+
+latest_json = {
+
+    "run_time":
+        RUN_TIME,
+
+    "previous_file":
+        PREVIOUS_FILE.replace(
+            os.sep,
+            "/"
+        ),
+
+    "archive_file":
+        archive_file.replace(
+            os.sep,
+            "/"
+        )
+
+}
+
+
+with open(
+    LATEST_JSON_FILE,
+    "w",
+    encoding="utf-8"
+) as file:
+
+    json.dump(
+        latest_json,
+        file,
+        indent=2,
+        ensure_ascii=False
+    )
 
 
 # ============================================================
@@ -1815,9 +1864,7 @@ print(
 # TWEET GENERATOR
 # ============================================================
 
-tweet_time = datetime.now(
-    EASTERN
-).strftime(
+tweet_time = RUN_NOW.strftime(
     "%I %p"
 ).lstrip("0")
 
@@ -2053,9 +2100,7 @@ with open(
 # SAVE TIMESTAMPED REPORT
 # ============================================================
 
-report_time = datetime.now(
-    EASTERN
-).strftime(
+report_time = RUN_NOW.strftime(
     "%Y-%m-%d_%H-%M-%S"
 )
 
@@ -2099,6 +2144,11 @@ print(
 print(
     "Current data:",
     PREVIOUS_FILE
+)
+
+print(
+    "Latest JSON:",
+    LATEST_JSON_FILE
 )
 
 print(

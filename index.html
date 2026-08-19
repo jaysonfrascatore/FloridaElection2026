@@ -280,7 +280,7 @@
   </div>
 
   <div class="panel" id="updatesPanel" style="margin-top:18px;">
-    <h2>County Updates &mdash; votes added this cycle</h2>
+    <h2>County Updates &mdash; votes added this hour</h2>
     <div class="stat-cards" id="topThree"></div>
     <div class="updates-table-wrap" style="margin-top:14px;">
       <table>
@@ -495,7 +495,7 @@ function buildCounties(rows){
     const ratingChanged = normName(pick(row,['Rating Change'])).toLowerCase() === 'yes';
     const ratingMove = normName(pick(row,['Rating Move']));
     const lastUpdated = normName(pick(row,['Last Updated','County_y']));
-    // Party-level vote breakdown for this update cycle (from the Python
+    // Party-level vote breakdown for this update hour (from the Python
     // script's "DEM New" / "REP New" / "IND New" / "NPA New" / "OTHER New" /
     // "Total New" columns). IND/NPA/OTHER are combined into one "otherNew"
     // figure to match how the rest of the table treats third-party/NPA votes.
@@ -577,7 +577,7 @@ async function renderMap(){
     `Total ${fmt(c.total)}<br>` +
     `Margin ${(c.marginPct>=0?'+':'')}${pct(c.marginPct)}` +
     (c.ratingChanged ? `<br><i>${c.ratingMove}</i>` : '') +
-    (c.totalNew ? `<br>New votes this cycle: +${fmt(c.totalNew)}` : '')
+    (c.totalNew ? `<br>New votes this hour: +${fmt(c.totalNew)}` : '')
   );
 
   let trace;
@@ -659,7 +659,7 @@ function renderTable(){
   });
 }
 
-// New: table of counties that received votes this update cycle, broken
+// New: table of counties that received votes this update hour, broken
 // down by party, plus a top-3 "largest updates" callout — mirrors the
 // tweet generator's top-3 section in the Python script, but live on the page.
 function renderUpdatesTable(){
@@ -685,7 +685,7 @@ function renderUpdatesTable(){
       <div class="v">${medals[i]} ${c.county}</div>
       <div class="k">+${fmt(c.totalNew)} total &middot; DEM ${c.demNew>=0?'+':''}${fmt(c.demNew)} / REP ${c.repNew>=0?'+':''}${fmt(c.repNew)} / Other ${c.otherNew>=0?'+':''}${fmt(c.otherNew)}</div>
     </div>
-  `).join('') : '<div class="stat-card"><div class="v">—</div><div class="k">No county updates this cycle</div></div>';
+  `).join('') : '<div class="stat-card"><div class="v">—</div><div class="k">There were no county updates this hour</div></div>';
 }
 
 function render(){
@@ -695,7 +695,7 @@ function render(){
   renderUpdatesTable();
   const refreshedNote = lastLoadedAt ? ` \u00b7 data refreshed ${lastLoadedAt.toLocaleTimeString()}` : '';
   document.getElementById('footerNote').textContent =
-    `${COUNTIES.length} counties parsed \u00b7 rendered client-side, no data leaves your browser${refreshedNote}`;
+    `${COUNTIES.length} counties parsed \u00b7 Florida Votes 2026 · Created by Jayson Frascatore${refreshedNote}`;
 }
 
 document.getElementById('refreshBtn').addEventListener('click', () => loadLatestCSV(true));

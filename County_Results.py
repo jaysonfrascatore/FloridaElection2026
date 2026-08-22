@@ -23,6 +23,13 @@ BROWARD_URL = (
 
 
 # ============================================================
+# COUNTY UPDATE SANITY CHECK
+# ============================================================
+
+COUNTY_DROP_SANITY_THRESHOLD = 5000
+
+
+# ============================================================
 # COUNTIES
 # ============================================================
 
@@ -853,6 +860,149 @@ df = df.fillna(0)
 
 
 # ============================================================
+# COUNTY UPDATE SANITY CHECK
+# ============================================================
+
+rejected_counties = []
+
+
+if previous is not None:
+
+    for index, row in df.iterrows():
+
+        county_code = row["Code"]
+
+
+        previous_rows = previous[
+            previous["Code"] == county_code
+        ]
+
+
+        if previous_rows.empty:
+
+            continue
+
+
+        previous_row = previous_rows.iloc[0]
+
+
+        previous_total = (
+
+            previous_row["DEM"]
+            +
+            previous_row["REP"]
+            +
+            previous_row["IND"]
+            +
+            previous_row["NPA"]
+            +
+            previous_row["OTHER"]
+
+        )
+
+
+        scraped_total = (
+
+            row["DEM"]
+            +
+            row["REP"]
+            +
+            row["IND"]
+            +
+            row["NPA"]
+            +
+            row["OTHER"]
+
+        )
+
+
+        votes_removed = (
+            previous_total
+            -
+            scraped_total
+        )
+
+
+        # ----------------------------------------------------
+        # Reject ONLY this county if >5,000 votes are removed
+        # ----------------------------------------------------
+
+        if (
+            votes_removed
+            >
+            COUNTY_DROP_SANITY_THRESHOLD
+        ):
+
+            county_name = row["County"]
+
+
+            print(
+                "\n⚠️ REJECTED COUNTY UPDATE:"
+            )
+
+            print(
+                f"  County: {county_name}"
+            )
+
+            print(
+                f"  Previous accepted total: "
+                f"{previous_total:,.0f}"
+            )
+
+            print(
+                f"  Newly scraped total: "
+                f"{scraped_total:,.0f}"
+            )
+
+            print(
+                f"  Votes removed: "
+                f"{votes_removed:,.0f}"
+            )
+
+            print(
+                f"  Threshold: "
+                f"{COUNTY_DROP_SANITY_THRESHOLD:,}"
+            )
+
+            print(
+                "  Keeping previous accepted data."
+            )
+
+
+            rejected_counties.append({
+
+                "County":
+                    county_name,
+
+                "Code":
+                    county_code,
+
+                "Previous Total":
+                    previous_total,
+
+                "Scraped Total":
+                    scraped_total,
+
+                "Votes Removed":
+                    votes_removed
+
+            })
+
+
+            # Restore the ENTIRE previous accepted row.
+            # No vote totals are capped or modified.
+
+            for column in previous.columns:
+
+                if column in df.columns:
+
+                    df.loc[
+                        index,
+                        column
+                    ] = previous_row[column]
+
+
+# ============================================================
 # CALCULATIONS
 # ============================================================
 
@@ -989,6 +1139,53 @@ df["Rating"] = (
     .apply(rating)
 
 )
+
+
+# ============================================================
+# STATEWIDE TOTALS
+# ============================================================
+
+state_dem = df["DEM"].sum()
+
+state_rep = df["REP"].sum()
+
+state_other = (
+
+    df["IND"].sum()
+    +
+    df["NPA"].sum()
+    +
+    df["OTHER"].sum()
+
+)
+
+
+state_total = (
+
+    state_dem
+    +
+    state_rep
+    +
+    state_other
+
+)
+
+
+statewide_totals = {
+
+    "DEM":
+        int(state_dem),
+
+    "REP":
+        int(state_rep),
+
+    "OTHER":
+        int(state_other),
+
+    "TOTAL":
+        int(state_total)
+
+}
 
 
 # ============================================================
@@ -1280,6 +1477,35 @@ for _, row in df.iterrows():
     county_code = row["Code"]
 
 
+    rejected = any(
+
+        item["Code"] == county_code
+
+        for item in rejected_counties
+
+    )
+
+
+    previous_tracker_rows = tracker[
+        tracker["Code"] == county_code
+    ]
+
+
+    if (
+        rejected
+        and
+        not previous_tracker_rows.empty
+    ):
+
+        last_updated = (
+            previous_tracker_rows.iloc[0]["Last Updated"]
+        )
+
+    else:
+
+        last_updated = RUN_TIME
+
+
     tracker_updates.append({
 
         "County":
@@ -1289,7 +1515,7 @@ for _, row in df.iterrows():
             county_code,
 
         "Last Updated":
-            RUN_TIME
+            last_updated
 
     })
 
@@ -1396,11 +1622,6 @@ tracker.to_csv(
 # SAVE ARCHIVE
 # ============================================================
 
-# IMPORTANT:
-# Use RUN_NOW here instead of calling datetime.now() again.
-# This guarantees the archive timestamp and displayed
-# timestamp refer to the exact same run.
-
 archive_timestamp = RUN_NOW.strftime(
     "%Y-%m-%d_%H-%M-%S"
 )
@@ -1462,32 +1683,6 @@ with open(
 # ============================================================
 # STATEWIDE SUMMARY
 # ============================================================
-
-state_dem = df["DEM"].sum()
-
-state_rep = df["REP"].sum()
-
-state_other = (
-
-    df["IND"].sum()
-    +
-    df["NPA"].sum()
-    +
-    df["OTHER"].sum()
-
-)
-
-
-state_total = (
-
-    state_dem
-    +
-    state_rep
-    +
-    state_other
-
-)
-
 
 state_margin = (
 
@@ -1713,6 +1908,85 @@ print(
     "Unchanged Counties:",
     unchanged
 )
+
+print(
+    "Rejected County Updates:",
+    len(rejected_counties)
+)
+
+
+# ============================================================
+# STATEWIDE TOTALS
+# ============================================================
+
+print(
+    "\nSTATEWIDE TOTALS:"
+)
+
+print(
+    "  DEM:",
+    f"{statewide_totals['DEM']:,}"
+)
+
+print(
+    "  REP:",
+    f"{statewide_totals['REP']:,}"
+)
+
+print(
+    "  OTHER:",
+    f"{statewide_totals['OTHER']:,}"
+)
+
+print(
+    "  TOTAL:",
+    f"{statewide_totals['TOTAL']:,}"
+)
+
+
+# ============================================================
+# REJECTED COUNTY UPDATES
+# ============================================================
+
+if rejected_counties:
+
+    print(
+        "\n================================="
+    )
+
+    print(
+        "REJECTED COUNTY UPDATES"
+    )
+
+    print(
+        "================================="
+    )
+
+
+    for rejected in rejected_counties:
+
+        print(
+            f"\n{rejected['County']}"
+        )
+
+        print(
+            " Previous Accepted:",
+            f"{rejected['Previous Total']:,.0f}"
+        )
+
+        print(
+            " Scraped:",
+            f"{rejected['Scraped Total']:,.0f}"
+        )
+
+        print(
+            " Votes Removed:",
+            f"{rejected['Votes Removed']:,.0f}"
+        )
+
+        print(
+            " Action: Previous data retained"
+        )
 
 
 # ============================================================
@@ -2029,6 +2303,24 @@ Updated Counties:
 Unchanged Counties:
 {unchanged}
 
+Rejected County Updates:
+{len(rejected_counties)}
+
+STATEWIDE TOTALS
+=================================
+
+DEM:
+{statewide_totals['DEM']:,}
+
+REP:
+{statewide_totals['REP']:,}
+
+OTHER:
+{statewide_totals['OTHER']:,}
+
+TOTAL:
+{statewide_totals['TOTAL']:,}
+
 STATEWIDE SUMMARY
 =================================
 
@@ -2044,6 +2336,45 @@ TOTAL NEW VOTES
 🔴 REP: {new_rep:+,}
 🟣 OTHER: {new_other:+,}
 🟢 TOTAL: {grand_total:+,}
+
+REJECTED COUNTY UPDATES
+=================================
+"""
+
+
+if rejected_counties:
+
+    for rejected in rejected_counties:
+
+        report += f"""
+
+{rejected['County']}
+
+Previous Accepted:
+{rejected['Previous Total']:,.0f}
+
+Scraped:
+{rejected['Scraped Total']:,.0f}
+
+Votes Removed:
+{rejected['Votes Removed']:,.0f}
+
+Action:
+Previous county data retained.
+
+"""
+
+
+else:
+
+    report += """
+
+No county updates were rejected.
+
+"""
+
+
+report += """
 
 RATING / FORECAST CHANGES
 =================================
@@ -2081,6 +2412,7 @@ TWEET DRAFT
 =================================
 
 """
+
 
 report += tweet
 

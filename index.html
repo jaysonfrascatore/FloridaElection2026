@@ -84,28 +84,51 @@
   /* statewide margin bar */
   .margin-strip{
     background:var(--panel); border:1px solid var(--border); border-radius:12px;
-    padding:18px 22px; margin-bottom:18px;
+    padding:18px 22px 20px; margin-bottom:18px;
   }
   .margin-strip .row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; gap:12px; flex-wrap:wrap;}
   .margin-strip .label{ font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
   .margin-strip .leader{ font-family:var(--serif); font-size:22px; }
   .margin-strip .leader.D{ color:var(--dem); } .margin-strip .leader.R{ color:var(--rep); }
+
   .bar-track{
-    position:relative; height:14px; border-radius:7px; overflow:hidden;
-    background:var(--safe); display:flex;
+    position:relative; height:16px;
+    display:flex; gap:3px;
+    /* overflow left visible on purpose so hovered/selected segments can lift without clipping */
   }
-  .bar-d{ background:linear-gradient(90deg,#3d78ab,var(--dem)); height:100%; }
-  .bar-r{ background:linear-gradient(90deg,var(--rep),#a94438); height:100%; }
-  .bar-npa{ background:var(--npa); height:100%; }
+  .bar-seg{
+    height:100%; border-radius:6px; position:relative;
+    transition:width .6s cubic-bezier(.4,0,.2,1), transform .15s ease, filter .15s ease, box-shadow .15s ease, outline-color .15s ease;
+    outline:2px solid transparent; outline-offset:0;
+  }
+  .bar-seg.clickable{ cursor:pointer; }
+  .bar-seg.clickable:hover{
+    transform:translateY(-3px);
+    box-shadow:0 4px 10px rgba(0,0,0,.5);
+    outline-color:var(--gold);
+    filter:brightness(1.12);
+    z-index:2;
+  }
+  .bar-seg.selected{ outline-color:var(--gold); z-index:2; }
+  .bar-d{ background:linear-gradient(90deg,#3d78ab,var(--dem)); }
+  .bar-r{ background:linear-gradient(90deg,var(--rep),#a94438); }
+  .bar-npa{ background:var(--npa); }
+  .bar-other{ background:var(--safe); }
+
   .bar-labels{
-    position:relative; height:18px; margin-top:10px;
+    position:relative; height:18px; margin-top:12px;
     font-family:var(--mono); font-size:12px;
+    transition:opacity .15s ease, visibility .15s ease;
   }
   .bar-labels span{
     position:absolute; top:0; transform:translateX(-50%);
     white-space:nowrap;
   }
   .bar-labels .d{ color:var(--dem); } .bar-labels .r{ color:var(--rep); } .bar-labels .npa{ color:var(--npa-text); }
+  .bar-note{
+    font-family:var(--mono); font-size:11.5px; color:var(--gold);
+    text-align:center; margin-top:12px;
+  }
 
   .stat-cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-top:14px; }
   .stat-card{ background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:10px 14px; }
@@ -117,7 +140,7 @@
     display:flex; justify-content:space-between; align-items:center; gap:16px;
     flex-wrap:wrap; margin-bottom:14px;
   }
-  .segmented{ display:flex; background:var(--panel); border:1px solid var(--border); border-radius:9px; padding:3px; gap:2px; }
+  .segmented{ display:flex; background:var(--panel); border:1px solid var(--border); border-radius:9px; padding:3px; gap:2px; flex-wrap:wrap; }
   .segmented button{
     font-family:var(--mono); font-size:11.5px; color:var(--muted); background:none; border:none;
     padding:7px 12px; border-radius:6px; cursor:pointer; white-space:nowrap;
@@ -140,17 +163,16 @@
   #map{ width:100%; height:560px; }
 
   .table-wrap{ max-height:596px; overflow-y:auto; overflow-x:auto; border-radius:8px; }
-  table{ width:100%; min-width:640px; table-layout:fixed; border-collapse:collapse; font-size:11px; }
+  table{ width:100%; min-width:600px; table-layout:fixed; border-collapse:collapse; font-size:11px; }
   #voteTable th:nth-child(1), #voteTable td:nth-child(1){ width:14%; }
   #voteTable th:nth-child(2), #voteTable td:nth-child(2){ width:11%; }
-  #voteTable th:nth-child(3), #voteTable td:nth-child(3){ width:9%; }
-  #voteTable th:nth-child(4), #voteTable td:nth-child(4){ width:9%; }
-  #voteTable th:nth-child(5), #voteTable td:nth-child(5){ width:9%; }
-  #voteTable th:nth-child(6), #voteTable td:nth-child(6){ width:8%; }
-  #voteTable th:nth-child(7), #voteTable td:nth-child(7){ width:9%; }
-  #voteTable th:nth-child(8), #voteTable td:nth-child(8){ width:8%; }
-  #voteTable th:nth-child(9), #voteTable td:nth-child(9){ width:9%; }
-  #voteTable th:nth-child(10), #voteTable td:nth-child(10){ width:14%; }
+  #voteTable th:nth-child(3), #voteTable td:nth-child(3){ width:10%; }
+  #voteTable th:nth-child(4), #voteTable td:nth-child(4){ width:10%; }
+  #voteTable th:nth-child(5), #voteTable td:nth-child(5){ width:10%; }
+  #voteTable th:nth-child(6), #voteTable td:nth-child(6){ width:9%; }
+  #voteTable th:nth-child(7), #voteTable td:nth-child(7){ width:10%; }
+  #voteTable th:nth-child(8), #voteTable td:nth-child(8){ width:10%; }
+  #voteTable th:nth-child(9), #voteTable td:nth-child(9){ width:16%; }
   thead th{
     position:sticky; top:0; background:var(--panel-2); text-align:left; padding:9px 7px;
     font-family:var(--mono); font-size:10px; letter-spacing:.04em; text-transform:uppercase;
@@ -177,7 +199,6 @@
   .num-npa{ color:var(--npa-text); }
   .num-diff{ color:#ffffff; }
   .num-total{ color:var(--total-green); font-weight:600; }
-  .num-ind{ color:var(--muted); }
   .moved::before{ content:'\25B2 '; color:var(--gold); font-size:9px; }
 
   .legend{ display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
@@ -244,15 +265,17 @@
       <span class="leader" id="stateLeader">&mdash;</span>
     </div>
     <div class="bar-track">
-      <div class="bar-d" id="barD" style="width:50%"></div>
-      <div class="bar-r" id="barR" style="width:50%"></div>
-      <div class="bar-npa" id="barNPA" style="width:0%"></div>
+      <div class="bar-seg bar-d clickable" id="barD" style="width:50%" title="Click to see the Democratic vote share by county"></div>
+      <div class="bar-seg bar-r clickable" id="barR" style="width:50%" title="Click to see the Republican vote share by county"></div>
+      <div class="bar-seg bar-npa clickable" id="barNPA" style="width:0%" title="Click to see the NPA vote share by county"></div>
+      <div class="bar-seg bar-other" id="barOther" style="width:0%" title="Other / independent votes"></div>
     </div>
-    <div class="bar-labels">
+    <div class="bar-labels" id="barLabels">
       <span class="d" id="labelD" style="left:25%">DEM &mdash;</span>
       <span class="r" id="labelR" style="left:75%">REP &mdash;</span>
       <span class="npa" id="labelNPA" style="left:99%">NPA &mdash;</span>
     </div>
+    <div class="bar-note" id="barNote" style="display:none;"></div>
     <div class="stat-cards">
       <div class="stat-card"><div class="v" id="statTotal">&mdash;</div><div class="k">Total votes</div><div class="sub" id="statTotalSub">&mdash;</div></div>
       <div class="stat-card"><div class="v" id="statCounties">&mdash;</div><div class="k">Counties reporting</div></div>
@@ -265,8 +288,7 @@
   <div class="controls">
     <div class="segmented" id="metricSelect">
       <button data-metric="rating" class="active">Rating</button>
-      <button data-metric="demshare">DEM %</button>
-      <button data-metric="repshare">REP %</button>
+      <button data-metric="demrep">Dem vs Rep only</button>
       <button data-metric="total">Total turnout</button>
       <button data-metric="move">Margin move</button>
       <button data-metric="updated">Counties Updated</button>
@@ -296,7 +318,6 @@
               <th data-key="npa">NPA</th>
               <th data-key="diff">Diff</th>
               <th data-key="total">Total</th>
-              <th data-key="indShare">Ind %</th>
               <th data-key="marginPct">Margin</th>
               <th data-key="rating">Rating</th>
             </tr>
@@ -398,6 +419,12 @@ let geojsonFL = null;
 let currentMetric = 'rating';
 let sortKey = 'county', sortAsc = true;
 let highlightedCounty = null;
+
+// Bar-click state: null = show the normal proportional bar; 'dem'/'rep'/'npa'
+// = that segment is filling the whole bar and the map is showing that
+// party's county-level vote share.
+let selectedParty = null;
+let barShares = { d:50, r:50, npa:0, other:0 };
 
 // ---- Auto-load config ----
 // Production-only data source: no manual upload. Every run, the Python
@@ -515,6 +542,7 @@ function buildCounties(rows){
     const total = num(pick(row,['TOTAL'])) || (dem+rep+ind+npa+other);
     const demShare = num(pick(row,['DEM %'])) || (total ? dem/total : 0);
     const repShare = num(pick(row,['REP %'])) || (total ? rep/total : 0);
+    const npaShare = total ? npa/total : 0;
     const indShare = total ? (ind+npa+other)/total : 0;
     let signedMargin = pick(row,['Signed Margin']);
     signedMargin = signedMargin !== '' ? num(signedMargin) : (demShare - repShare);
@@ -535,7 +563,7 @@ function buildCounties(rows){
     const diff = Math.abs(dem - rep);
     const rec = {
       county:name, fips:FL_FIPS[name], code:normName(pick(row,['Code'])),
-      dem,rep,ind,npa,other,total,demShare,repShare,indShare,diff,
+      dem,rep,ind,npa,other,total,demShare,repShare,npaShare,indShare,diff,
       marginPct: signedMargin, leader, rating,
       marginMove, ratingChanged, ratingMove,
       demNew, repNew, otherNew, totalNew,
@@ -556,6 +584,63 @@ async function ensureGeojson(){
   return geojsonFL;
 }
 
+// Applies either the real statewide proportions, or (if a party is
+// selected) fills the whole bar with that party's color. Computed as
+// running-remainder widths so they always sum to exactly 100% — no
+// rounding gap of stray grey track showing through.
+function applyBarWidths(){
+  const barD = document.getElementById('barD');
+  const barR = document.getElementById('barR');
+  const barNPA = document.getElementById('barNPA');
+  const barOther = document.getElementById('barOther');
+  [barD,barR,barNPA].forEach(el=>el.classList.remove('selected'));
+
+  if(selectedParty){
+    const widths = { dem:[100,0,0,0], rep:[0,100,0,0], npa:[0,0,100,0] }[selectedParty];
+    barD.style.width = widths[0]+'%';
+    barR.style.width = widths[1]+'%';
+    barNPA.style.width = widths[2]+'%';
+    barOther.style.width = widths[3]+'%';
+    ({dem:barD, rep:barR, npa:barNPA})[selectedParty].classList.add('selected');
+  }else{
+    barD.style.width = barShares.d.toFixed(3)+'%';
+    barR.style.width = barShares.r.toFixed(3)+'%';
+    barNPA.style.width = barShares.npa.toFixed(3)+'%';
+    barOther.style.width = barShares.other.toFixed(3)+'%';
+  }
+
+  const labels = document.getElementById('barLabels');
+  const note = document.getElementById('barNote');
+  if(selectedParty){
+    labels.style.visibility = 'hidden';
+    note.style.display = 'block';
+    const info = {
+      dem:{ label:'Democratic', color:'var(--dem)' },
+      rep:{ label:'Republican', color:'var(--rep)' },
+      npa:{ label:'NPA', color:'var(--npa-text)' }
+    }[selectedParty];
+    note.innerHTML = `Showing <span style="color:${info.color}">${info.label}</span> vote share by county &middot; click the bar again to reset`;
+  }else{
+    labels.style.visibility = 'visible';
+    note.style.display = 'none';
+  }
+}
+
+function toggleBarParty(party){
+  if(!COUNTIES.length) return;
+  selectedParty = (selectedParty === party) ? null : party;
+  applyBarWidths();
+  document.querySelectorAll('#metricSelect button').forEach(b=>b.classList.remove('active'));
+  if(selectedParty){
+    currentMetric = 'party-' + selectedParty;
+  }else{
+    currentMetric = 'rating';
+    const ratingBtn = document.querySelector('#metricSelect button[data-metric="rating"]');
+    if(ratingBtn) ratingBtn.classList.add('active');
+  }
+  renderMap();
+}
+
 function renderStats(){
   const totalD = COUNTIES.reduce((s,c)=>s+c.dem,0);
   const totalR = COUNTIES.reduce((s,c)=>s+c.rep,0);
@@ -571,10 +656,13 @@ function renderStats(){
   leaderEl.textContent = (leader === 'D' ? 'DEM' : 'REP') + ' +' + fmt(Math.abs(totalD-totalR));
   leaderEl.className = 'leader ' + leader;
 
+  // "other" is computed as the remainder rather than its own independent
+  // share, so the four segments always add up to exactly 100% — no
+  // leftover grey sliver from rounding.
   const dPct = dShare*100, rPct = rShare*100, npaPct = npaShare*100;
-  document.getElementById('barD').style.width = dPct.toFixed(2)+'%';
-  document.getElementById('barR').style.width = rPct.toFixed(2)+'%';
-  document.getElementById('barNPA').style.width = npaPct.toFixed(2)+'%';
+  const otherPct = Math.max(0, 100 - dPct - rPct - npaPct);
+  barShares = { d:dPct, r:rPct, npa:npaPct, other:otherPct };
+  applyBarWidths();
 
   const labelD = document.getElementById('labelD');
   const labelR = document.getElementById('labelR');
@@ -601,12 +689,55 @@ function renderStats(){
 
 const METRICS = {
   rating: { title:'Rating by county', categorical:true, cats:RATING_CATS, catFn:categoryFor },
-  demshare: { title:'DEM % of vote', get:c=>c.demShare, scale:[[0,'#90e0ef'],[0.5,'#00b4d8'],[1,'#03045e']], range:()=>1 },
-  repshare: { title:'REP % of vote', get:c=>c.repShare, scale:[[0,'#f49cbb'],[0.5,'#dd2d4a'],[1,'#880d1e']], range:()=>1 },
+  demrep: {
+    title:'DEM vs REP margin by county', symmetric:true, get:c=>c.marginPct,
+    scale:[[0,'#880d1e'],[0.5,'#e9c46a'],[1,'#03045e']]
+  },
   total: { title:'Total turnout by county', get:c=>c.total, scale:[[0,'#bce784'],[0.5,'#8ac926'],[1,'#007200']], range:cs=>Math.max(...cs.map(c=>c.total)) },
   move: { title:'Counties with a forecast rating change', categorical:true, cats:MOVE_CATS, catFn:moveCategoryFor },
-  updated: { title:'Counties updated (new votes reported)', categorical:true, cats:UPDATED_CATS, catFn:updatedCategoryFor }
+  updated: { title:'Counties updated (new votes reported)', categorical:true, cats:UPDATED_CATS, catFn:updatedCategoryFor },
+  'party-dem': { title:'Democratic vote share by county', get:c=>c.demShare, scale:[[0,'#90e0ef'],[0.5,'#00b4d8'],[1,'#03045e']], range:()=>1 },
+  'party-rep': { title:'Republican vote share by county', get:c=>c.repShare, scale:[[0,'#f49cbb'],[0.5,'#dd2d4a'],[1,'#880d1e']], range:()=>1 },
+  'party-npa': { title:'NPA vote share by county', get:c=>c.npaShare, scale:[[0,'#e0c3fc'],[0.5,'#9d4edd'],[1,'#3a0ca3']], range:cs=>Math.max(0.01, ...cs.map(c=>c.npaShare)) }
 };
+
+function tooltipText(){
+  if(currentMetric === 'party-dem'){
+    return COUNTIES.map(c =>
+      `<b>${c.county}</b><br>` +
+      `<b>DEM votes: ${fmt(c.dem)} (${pct(c.demShare)})</b><br>` +
+      `REP ${fmt(c.rep)} &middot; NPA ${fmt(c.npa)} &middot; Ind/Other ${fmt(c.ind+c.other)}<br>` +
+      `Total ${fmt(c.total)}`
+    );
+  }
+  if(currentMetric === 'party-rep'){
+    return COUNTIES.map(c =>
+      `<b>${c.county}</b><br>` +
+      `<b>REP votes: ${fmt(c.rep)} (${pct(c.repShare)})</b><br>` +
+      `DEM ${fmt(c.dem)} &middot; NPA ${fmt(c.npa)} &middot; Ind/Other ${fmt(c.ind+c.other)}<br>` +
+      `Total ${fmt(c.total)}`
+    );
+  }
+  if(currentMetric === 'party-npa'){
+    return COUNTIES.map(c =>
+      `<b>${c.county}</b><br>` +
+      `<b>NPA votes: ${fmt(c.npa)} (${pct(c.npaShare)})</b><br>` +
+      `DEM ${fmt(c.dem)} &middot; REP ${fmt(c.rep)} &middot; Ind/Other ${fmt(c.ind+c.other)}<br>` +
+      `Total ${fmt(c.total)}`
+    );
+  }
+  return COUNTIES.map(c =>
+    `<b>${c.county}</b><br>` +
+    `Rating: ${c.category}<br>` +
+    `DEM ${fmt(c.dem)} (${pct(c.demShare)})<br>` +
+    `REP ${fmt(c.rep)} (${pct(c.repShare)})<br>` +
+    `Ind/NPA/Other ${fmt(c.ind+c.npa+c.other)} (${pct(c.indShare)})<br>` +
+    `Total ${fmt(c.total)}<br>` +
+    `Margin ${(c.marginPct>=0?'+':'')}${pct(c.marginPct)}` +
+    (c.ratingChanged ? `<br><i>${c.ratingMove}</i>` : '') +
+    (c.totalNew ? `<br>New votes this hour: +${fmt(c.totalNew)}` : '')
+  );
+}
 
 async function renderMap(){
   await ensureGeojson();
@@ -614,18 +745,7 @@ async function renderMap(){
   document.getElementById('mapTitle').textContent = m.title;
 
   const locations = COUNTIES.map(c=>c.fips);
-  const text = COUNTIES.map(c =>
-    `<b>${c.county}</b><br>` +
-    `Rating: ${c.category}<br>` +
-    `DEM ${fmt(c.dem)} (${pct(c.demShare)})<br>` +
-    `REP ${fmt(c.rep)} (${pct(c.repShare)})<br>` +
-    `NPA ${fmt(c.npa)}<br>` +
-    `IND/NPA/Other ${fmt(c.ind+c.npa+c.other)} (${pct(c.indShare)})<br>` +
-    `Total ${fmt(c.total)}<br>` +
-    `Margin ${(c.marginPct>=0?'+':'')}${pct(c.marginPct)}` +
-    (c.ratingChanged ? `<br><i>${c.ratingMove}</i>` : '') +
-    (c.totalNew ? `<br>New votes this hour: +${fmt(c.totalNew)}` : '')
-  );
+  const text = tooltipText();
 
   let trace;
   const legendEl = document.getElementById('mapLegend');
@@ -646,6 +766,18 @@ async function renderMap(){
       if(!count) return '';
       return `<span class="swatch" style="background:${cat.color};color:${contrastText(cat.color)}">${cat.key} · ${count}</span>`;
     }).join('');
+  }else if(m.symmetric){
+    const maxAbs = Math.max(0.01, ...COUNTIES.map(c=>Math.abs(m.get(c))));
+    const z = COUNTIES.map(m.get);
+    trace = {
+      type:'choropleth', geojson: geojsonFL, locations, z,
+      featureidkey:'id', zmin:-maxAbs, zmax:maxAbs,
+      colorscale: m.scale, marker:{line:{color:'#0a0e17', width:1}},
+      text, hoverinfo:'text', hoverlabel:{bgcolor:'#151b28', bordercolor:'#212a3b', font:{family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5'}},
+      showscale:true, colorbar:{ tickfont:{color:'#7c879c', size:10}, thickness:12, len:0.6, outlinewidth:0 }
+    };
+    legendEl.style.display = 'none';
+    legendEl.innerHTML = '';
   }else{
     const zmax = m.range(COUNTIES);
     const zmin = 0;
@@ -695,7 +827,6 @@ function renderTable(){
       <td class="num-npa">${fmt(c.npa)}</td>
       <td class="num-diff">${fmt(c.diff)}</td>
       <td class="num-total">${fmt(c.total)}</td>
-      <td class="num-ind">${pct(c.indShare)}</td>
       <td class="${c.marginPct>=0?'num-d':'num-r'}">${c.marginPct>=0?'+':''}${pct(c.marginPct)}</td>
       <td class="rating">${c.rating}</td>
     </tr>
@@ -755,8 +886,14 @@ if(AUTO_REFRESH_MS > 0){
   setInterval(() => loadLatestCSV(true), AUTO_REFRESH_MS);
 }
 
+document.getElementById('barD').addEventListener('click', () => toggleBarParty('dem'));
+document.getElementById('barR').addEventListener('click', () => toggleBarParty('rep'));
+document.getElementById('barNPA').addEventListener('click', () => toggleBarParty('npa'));
+
 document.getElementById('metricSelect').addEventListener('click', e => {
   const btn = e.target.closest('button'); if(!btn) return;
+  selectedParty = null;
+  applyBarWidths();
   document.querySelectorAll('#metricSelect button').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   currentMetric = btn.dataset.metric;
@@ -765,11 +902,11 @@ document.getElementById('metricSelect').addEventListener('click', e => {
 
 document.getElementById('searchInput').addEventListener('input', () => { if(COUNTIES.length) renderTable(); });
 
-document.querySelectorAll('thead th').forEach(th => {
+document.querySelectorAll('#voteTable thead th').forEach(th => {
   th.addEventListener('click', () => {
     const key = th.dataset.key;
     if(sortKey === key){ sortAsc = !sortAsc; } else { sortKey = key; sortAsc = true; }
-    document.querySelectorAll('thead th').forEach(t=>t.classList.remove('sorted','asc'));
+    document.querySelectorAll('#voteTable thead th').forEach(t=>t.classList.remove('sorted','asc'));
     th.classList.add('sorted'); if(sortAsc) th.classList.add('asc');
     if(COUNTIES.length) renderTable();
   });

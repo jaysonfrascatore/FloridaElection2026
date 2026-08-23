@@ -22,7 +22,7 @@
     --rep:#d4675a;
     --rep-dim:#6b332c;
     --npa:#3a0ca3;
-    --npa-text:#3a0ca3;
+    --npa-text:#c77dff;
     --total-green:#80ed99;
     --gold:#d8b466;
     --safe:#3a4356;
@@ -113,7 +113,6 @@
   .bar-d{ background:linear-gradient(90deg,#3d78ab,var(--dem)); }
   .bar-r{ background:linear-gradient(90deg,var(--rep),#a94438); }
   .bar-npa{ background:var(--npa); }
-  .bar-other{ background:var(--safe); }
 
   .bar-labels{
     position:relative; height:18px; margin-top:12px;
@@ -268,7 +267,6 @@
       <div class="bar-seg bar-d clickable" id="barD" style="width:50%" title="Click to see the Democratic vote share by county"></div>
       <div class="bar-seg bar-r clickable" id="barR" style="width:50%" title="Click to see the Republican vote share by county"></div>
       <div class="bar-seg bar-npa clickable" id="barNPA" style="width:0%" title="Click to see the NPA vote share by county"></div>
-      <div class="bar-seg bar-other" id="barOther" style="width:0%" title="Other / independent votes"></div>
     </div>
     <div class="bar-labels" id="barLabels">
       <span class="d" id="labelD" style="left:25%">DEM &mdash;</span>
@@ -287,8 +285,7 @@
 
   <div class="controls">
     <div class="segmented" id="metricSelect">
-      <button data-metric="rating" class="active">Rating</button>
-      <button data-metric="demrating">D vs R</button>
+      <button data-metric="rating" class="active">D vs R</button>
       <button data-metric="demrepnpa">D vs R vs NPA</button>
       <button data-metric="total">Total turnout</button>
       <button data-metric="move">Margin move</button>
@@ -394,6 +391,21 @@ function categoryFor(c){
   if(r === 'safe' || r === 'likely' || r === 'lean') return c.rating + ' ' + c.leader;
   return c.rating;
 }
+// Same rating tiers as categoryFor, but the tier is decided from a margin
+// that includes NPA in the denominator (dem+rep+npa) instead of the plain
+// DEM-vs-REP margin — used by the "D vs R vs NPA" map.
+function categoryForNpaMargin(c){
+  const margin = c.marginNpaAdj;
+  if(margin === 0) return 'Tie';
+  const leader = margin > 0 ? 'D' : 'R';
+  const abs = Math.abs(margin);
+  let level;
+  if(abs >= 0.20) level = 'Safe';
+  else if(abs >= 0.10) level = 'Likely';
+  else if(abs >= 0.05) level = 'Lean';
+  else return 'Toss Up';
+  return level + ' ' + leader;
+}
 function moveCategoryFor(c){ return c.ratingChanged ? 'Changed' : 'Unchanged'; }
 function updatedCategoryFor(c){ return c.totalNew ? 'Updated' : 'No new votes'; }
 function catColor(catKey){
@@ -425,7 +437,7 @@ let highlightedCounty = null;
 // = that segment is filling the whole bar and the map is showing that
 // party's county-level vote share.
 let selectedParty = null;
-let barShares = { d:50, r:50, npa:0, other:0 };
+let barShares = { d:50, r:50, npa:0 };
 
 // ---- Auto-load config ----
 // Production-only data source: no manual upload. Every run, the Python
@@ -601,21 +613,18 @@ function applyBarWidths(){
   const barD = document.getElementById('barD');
   const barR = document.getElementById('barR');
   const barNPA = document.getElementById('barNPA');
-  const barOther = document.getElementById('barOther');
   [barD,barR,barNPA].forEach(el=>el.classList.remove('selected'));
 
   if(selectedParty){
-    const widths = { dem:[100,0,0,0], rep:[0,100,0,0], npa:[0,0,100,0] }[selectedParty];
+    const widths = { dem:[100,0,0], rep:[0,100,0], npa:[0,0,100] }[selectedParty];
     barD.style.width = widths[0]+'%';
     barR.style.width = widths[1]+'%';
     barNPA.style.width = widths[2]+'%';
-    barOther.style.width = widths[3]+'%';
     ({dem:barD, rep:barR, npa:barNPA})[selectedParty].classList.add('selected');
   }else{
     barD.style.width = barShares.d.toFixed(3)+'%';
     barR.style.width = barShares.r.toFixed(3)+'%';
     barNPA.style.width = barShares.npa.toFixed(3)+'%';
-    barOther.style.width = barShares.other.toFixed(3)+'%';
   }
 
   const labels = document.getElementById('barLabels');
@@ -665,12 +674,16 @@ function renderStats(){
   leaderEl.textContent = (leader === 'D' ? 'DEM' : 'REP') + ' +' + fmt(Math.abs(totalD-totalR));
   leaderEl.className = 'leader ' + leader;
 
-  // "other" is computed as the remainder rather than its own independent
-  // share, so the four segments always add up to exactly 100% — no
-  // leftover grey sliver from rounding.
-  const dPct = dShare*100, rPct = rShare*100, npaPct = npaShare*100;
-  const otherPct = Math.max(0, 100 - dPct - rPct - npaPct);
-  barShares = { d:dPct, r:rPct, npa:npaPct, other:otherPct };
+  // The statewide bar only ever shows DEM, REP, and NPA — IND/Other votes
+  // aren't part of it, so shares are renormalized against (D+R+NPA) only.
+  // NPA's share is the remainder of the other two rather than its own
+  // independently-rounded fraction, so the three always sum to exactly
+  // 100% with no leftover grey sliver from floating-point rounding.
+  const barDenom = totalD + totalR + totalNPA;
+  const dPct = barDenom ? (totalD/barDenom)*100 : 0;
+  const rPct = barDenom ? (totalR/barDenom)*100 : 0;
+  const npaPct = barDenom ? Math.max(0, 100 - dPct - rPct) : 0;
+  barShares = { d:dPct, r:rPct, npa:npaPct };
   applyBarWidths();
 
   const labelD = document.getElementById('labelD');
@@ -697,17 +710,12 @@ function renderStats(){
 }
 
 const METRICS = {
-  rating: { title:'Rating by county', categorical:true, cats:RATING_CATS, catFn:categoryFor },
-  // "D vs R" — the original county-by-county rating view, unchanged, with
-  // NPA left out of the tooltip entirely.
-  demrating: { title:'D vs R rating by county', categorical:true, cats:RATING_CATS, catFn:categoryFor },
-  // "D vs R vs NPA" — a margin that folds NPA into the denominator
-  // alongside DEM and REP, so a county with heavy NPA turnout shows a
-  // visibly smaller lean than the D-vs-R-only view.
-  demrepnpa: {
-    title:'DEM vs REP margin, adjusted for NPA', symmetric:true, get:c=>c.marginNpaAdj,
-    scale:[[0,'#880d1e'],[0.5,'#e9c46a'],[1,'#03045e']]
-  },
+  // "D vs R" — this is the same rating map that used to be called "Rating".
+  rating: { title:'D vs R rating by county', categorical:true, cats:RATING_CATS, catFn:categoryFor },
+  // "D vs R vs NPA" — same rating-tier styling as D vs R, but the tier is
+  // decided from a margin that folds NPA into the denominator alongside
+  // DEM and REP, so heavy-NPA counties can show a lighter lean.
+  demrepnpa: { title:'D vs R vs NPA rating by county', categorical:true, cats:RATING_CATS, catFn:categoryForNpaMargin },
   total: { title:'Total turnout by county', get:c=>c.total, scale:[[0,'#bce784'],[0.5,'#8ac926'],[1,'#007200']], range:cs=>Math.max(...cs.map(c=>c.total)), isCount:true },
   move: { title:'Counties with a forecast rating change', categorical:true, cats:MOVE_CATS, catFn:moveCategoryFor },
   updated: { title:'Counties updated (new votes reported)', categorical:true, cats:UPDATED_CATS, catFn:updatedCategoryFor },
@@ -745,23 +753,10 @@ function tooltipText(){
       `Total ${fmt(c.total)}`
     );
   }
-  if(currentMetric === 'demrating'){
-    // D vs R only — same rating breakdown as the main Rating map, but with
-    // the NPA/Ind line left out entirely.
-    return COUNTIES.map(c =>
-      `<b>${c.county}</b><br>` +
-      `Rating: ${c.category}<br>` +
-      `DEM ${fmt(c.dem)} (${pct(c.demShare)})<br>` +
-      `REP ${fmt(c.rep)} (${pct(c.repShare)})<br>` +
-      `Total ${fmt(c.total)}<br>` +
-      `Margin ${(c.marginPct>=0?'+':'')}${pct(c.marginPct)}` +
-      (c.ratingChanged ? `<br><i>${c.ratingMove}</i>` : '') +
-      (c.totalNew ? `<br>New votes this hour: +${fmt(c.totalNew)}` : '')
-    );
-  }
   if(currentMetric === 'demrepnpa'){
     return COUNTIES.map(c =>
       `<b>${c.county}</b><br>` +
+      `Rating (incl. NPA): ${categoryForNpaMargin(c)}<br>` +
       `DEM ${fmt(c.dem)} (${pct(c.demShare)})<br>` +
       `REP ${fmt(c.rep)} (${pct(c.repShare)})<br>` +
       `NPA ${fmt(c.npa)} (${pct(c.npaShare)})<br>` +

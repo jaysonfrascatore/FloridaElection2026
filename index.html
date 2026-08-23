@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Florida County Returns</title>
+<title>Florida Vote Tracker</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
@@ -21,6 +21,9 @@
     --dem-dim:#294a68;
     --rep:#d4675a;
     --rep-dim:#6b332c;
+    --npa:#3a0ca3;
+    --npa-text:#c77dff;
+    --total-green:#80ed99;
     --gold:#d8b466;
     --safe:#3a4356;
     --serif:'Fraunces', Georgia, serif;
@@ -93,13 +96,22 @@
   }
   .bar-d{ background:linear-gradient(90deg,#3d78ab,var(--dem)); height:100%; }
   .bar-r{ background:linear-gradient(90deg,var(--rep),#a94438); height:100%; }
-  .bar-labels{ display:flex; justify-content:space-between; margin-top:8px; font-family:var(--mono); font-size:12px; }
-  .bar-labels .d{ color:var(--dem); } .bar-labels .r{ color:var(--rep); }
+  .bar-npa{ background:var(--npa); height:100%; }
+  .bar-labels{
+    position:relative; height:18px; margin-top:10px;
+    font-family:var(--mono); font-size:12px;
+  }
+  .bar-labels span{
+    position:absolute; top:0; transform:translateX(-50%);
+    white-space:nowrap;
+  }
+  .bar-labels .d{ color:var(--dem); } .bar-labels .r{ color:var(--rep); } .bar-labels .npa{ color:var(--npa-text); }
 
   .stat-cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-top:14px; }
   .stat-card{ background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:10px 14px; }
   .stat-card .v{ font-family:var(--mono); font-size:19px; font-weight:600; }
   .stat-card .k{ font-size:11px; color:var(--muted); margin-top:2px; }
+  .stat-card .sub{ font-family:var(--mono); font-size:10.5px; color:var(--gold); margin-top:5px; }
 
   .controls{
     display:flex; justify-content:space-between; align-items:center; gap:16px;
@@ -127,18 +139,20 @@
   .panel h2{ font-family:var(--serif); font-weight:500; font-size:15px; margin-bottom:10px; color:var(--text); }
   #map{ width:100%; height:560px; }
 
-  .table-wrap{ max-height:596px; overflow-y:auto; overflow-x:hidden; border-radius:8px; }
-  table{ width:100%; table-layout:fixed; border-collapse:collapse; font-size:11px; }
-  th:nth-child(1), td:nth-child(1){ width:17%; }
-  th:nth-child(2), td:nth-child(2){ width:14%; }
-  th:nth-child(3), td:nth-child(3){ width:10.5%; }
-  th:nth-child(4), td:nth-child(4){ width:10.5%; }
-  th:nth-child(5), td:nth-child(5){ width:9%; }
-  th:nth-child(6), td:nth-child(6){ width:11%; }
-  th:nth-child(7), td:nth-child(7){ width:10%; }
-  th:nth-child(8), td:nth-child(8){ width:18%; }
+  .table-wrap{ max-height:596px; overflow-y:auto; overflow-x:auto; border-radius:8px; }
+  table{ width:100%; min-width:640px; table-layout:fixed; border-collapse:collapse; font-size:11px; }
+  #voteTable th:nth-child(1), #voteTable td:nth-child(1){ width:14%; }
+  #voteTable th:nth-child(2), #voteTable td:nth-child(2){ width:11%; }
+  #voteTable th:nth-child(3), #voteTable td:nth-child(3){ width:9%; }
+  #voteTable th:nth-child(4), #voteTable td:nth-child(4){ width:9%; }
+  #voteTable th:nth-child(5), #voteTable td:nth-child(5){ width:9%; }
+  #voteTable th:nth-child(6), #voteTable td:nth-child(6){ width:8%; }
+  #voteTable th:nth-child(7), #voteTable td:nth-child(7){ width:9%; }
+  #voteTable th:nth-child(8), #voteTable td:nth-child(8){ width:8%; }
+  #voteTable th:nth-child(9), #voteTable td:nth-child(9){ width:9%; }
+  #voteTable th:nth-child(10), #voteTable td:nth-child(10){ width:14%; }
   thead th{
-    position:sticky; top:0; background:var(--panel-2); text-align:left; padding:8px 6px;
+    position:sticky; top:0; background:var(--panel-2); text-align:left; padding:9px 7px;
     font-family:var(--mono); font-size:10px; letter-spacing:.04em; text-transform:uppercase;
     color:var(--muted); cursor:pointer; border-bottom:1px solid var(--border); user-select:none;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
@@ -147,7 +161,7 @@
   thead th.sorted::after{ content:' \2193'; color:var(--gold); }
   thead th.sorted.asc::after{ content:' \2191'; }
   tbody td{
-    padding:6px 6px; border-bottom:1px solid var(--border); font-family:var(--mono);
+    padding:7px 7px; border-bottom:1px solid var(--border); font-family:var(--mono);
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   tbody tr{ cursor:pointer; transition:background .1s; }
@@ -160,6 +174,10 @@
   }
   .rating{ color:var(--muted); font-size:10.5px; }
   .num-d{ color:var(--dem); } .num-r{ color:var(--rep); }
+  .num-npa{ color:var(--npa-text); }
+  .num-diff{ color:#ffffff; }
+  .num-total{ color:var(--total-green); font-weight:600; }
+  .num-ind{ color:var(--muted); }
   .moved::before{ content:'\25B2 '; color:var(--gold); font-size:9px; }
 
   .legend{ display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
@@ -175,7 +193,13 @@
   #updatesPanel table th:nth-child(3),
   #updatesPanel table th:nth-child(4),
   #updatesPanel table th:nth-child(5){ width:18.5%; }
-  .medal-card .v{ font-family:var(--sans); font-size:14px; }
+  #updatesPanel table{ font-size:13px; }
+  #updatesPanel thead th{ font-size:11px; padding:10px 8px; }
+  #updatesPanel tbody td{ padding:11px 8px; }
+  #updatesPanel .county-name{ font-size:13.5px; }
+  #updatesPanel .num-d{ font-weight:600; } #updatesPanel .num-r{ font-weight:600; }
+  .medal-card .v{ font-family:var(--sans); font-size:15px; }
+  .medal-card .k{ font-size:12.5px; }
 
   footer{ margin-top:20px; font-family:var(--mono); font-size:11px; color:var(--muted-2); text-align:center; }
   .error-msg{
@@ -188,9 +212,9 @@
 
 <header>
   <div class="title-block">
-    <div class="eyebrow">County Returns &middot; Florida</div>
-    <h1>Florida County Returns</h1>
-    <p>Reads live from the production data files &mdash; no upload, this is a read-only production dashboard.</p>
+    <div class="eyebrow">Vote Tracking &middot; Florida</div>
+    <h1>Florida Vote Tracker 2026</h1>
+    <p>County by county voting data and county forecast ratings.</p>
   </div>
   <div class="upload-zone" id="statusZone" style="cursor:default;">
     <div class="upload-icon" id="refreshBtn" style="cursor:pointer;" title="Re-check for updated data now">
@@ -222,13 +246,15 @@
     <div class="bar-track">
       <div class="bar-d" id="barD" style="width:50%"></div>
       <div class="bar-r" id="barR" style="width:50%"></div>
+      <div class="bar-npa" id="barNPA" style="width:0%"></div>
     </div>
     <div class="bar-labels">
-      <span class="d" id="labelD">DEM &mdash;</span>
-      <span class="r" id="labelR">REP &mdash;</span>
+      <span class="d" id="labelD" style="left:25%">DEM &mdash;</span>
+      <span class="r" id="labelR" style="left:75%">REP &mdash;</span>
+      <span class="npa" id="labelNPA" style="left:99%">NPA &mdash;</span>
     </div>
     <div class="stat-cards">
-      <div class="stat-card"><div class="v" id="statTotal">&mdash;</div><div class="k">Total votes</div></div>
+      <div class="stat-card"><div class="v" id="statTotal">&mdash;</div><div class="k">Total votes</div><div class="sub" id="statTotalSub">&mdash;</div></div>
       <div class="stat-card"><div class="v" id="statCounties">&mdash;</div><div class="k">Counties reporting</div></div>
       <div class="stat-card"><div class="v" id="statInd">&mdash;</div><div class="k">IND + NPA + Other</div></div>
       <div class="stat-card"><div class="v" id="statMoved">&mdash;</div><div class="k">Rating changes</div></div>
@@ -260,15 +286,17 @@
     <div class="panel">
       <h2>County table</h2>
       <div class="table-wrap">
-        <table>
+        <table id="voteTable">
           <thead>
             <tr>
               <th data-key="county" class="sorted asc">County</th>
               <th data-key="leader">Leader</th>
               <th data-key="dem">DEM</th>
               <th data-key="rep">REP</th>
+              <th data-key="npa">NPA</th>
               <th data-key="diff">Diff</th>
               <th data-key="total">Total</th>
+              <th data-key="indShare">Ind %</th>
               <th data-key="marginPct">Margin</th>
               <th data-key="rating">Rating</th>
             </tr>
@@ -487,6 +515,7 @@ function buildCounties(rows){
     const total = num(pick(row,['TOTAL'])) || (dem+rep+ind+npa+other);
     const demShare = num(pick(row,['DEM %'])) || (total ? dem/total : 0);
     const repShare = num(pick(row,['REP %'])) || (total ? rep/total : 0);
+    const indShare = total ? (ind+npa+other)/total : 0;
     let signedMargin = pick(row,['Signed Margin']);
     signedMargin = signedMargin !== '' ? num(signedMargin) : (demShare - repShare);
     const leader = normName(pick(row,['Leader'])) || (signedMargin >= 0 ? 'D' : 'R');
@@ -506,7 +535,7 @@ function buildCounties(rows){
     const diff = Math.abs(dem - rep);
     const rec = {
       county:name, fips:FL_FIPS[name], code:normName(pick(row,['Code'])),
-      dem,rep,ind,npa,other,total,demShare,repShare,diff,
+      dem,rep,ind,npa,other,total,demShare,repShare,indShare,diff,
       marginPct: signedMargin, leader, rating,
       marginMove, ratingChanged, ratingMove,
       demNew, repNew, otherNew, totalNew,
@@ -530,20 +559,32 @@ async function ensureGeojson(){
 function renderStats(){
   const totalD = COUNTIES.reduce((s,c)=>s+c.dem,0);
   const totalR = COUNTIES.reduce((s,c)=>s+c.rep,0);
+  const totalNPA = COUNTIES.reduce((s,c)=>s+c.npa,0);
   const totalOther = COUNTIES.reduce((s,c)=>s+c.ind+c.npa+c.other,0);
   const total = totalD+totalR+totalOther;
   const dShare = total ? totalD/total : 0;
   const rShare = total ? totalR/total : 0;
+  const npaShare = total ? totalNPA/total : 0;
   const leader = totalD >= totalR ? 'D' : 'R';
 
   const leaderEl = document.getElementById('stateLeader');
   leaderEl.textContent = (leader === 'D' ? 'DEM' : 'REP') + ' +' + fmt(Math.abs(totalD-totalR));
   leaderEl.className = 'leader ' + leader;
 
-  document.getElementById('barD').style.width = (dShare*100).toFixed(2)+'%';
-  document.getElementById('barR').style.width = (rShare*100).toFixed(2)+'%';
-  document.getElementById('labelD').textContent = 'DEM ' + fmt(totalD) + ' (' + pct(dShare) + ')';
-  document.getElementById('labelR').textContent = 'REP ' + fmt(totalR) + ' (' + pct(rShare) + ')';
+  const dPct = dShare*100, rPct = rShare*100, npaPct = npaShare*100;
+  document.getElementById('barD').style.width = dPct.toFixed(2)+'%';
+  document.getElementById('barR').style.width = rPct.toFixed(2)+'%';
+  document.getElementById('barNPA').style.width = npaPct.toFixed(2)+'%';
+
+  const labelD = document.getElementById('labelD');
+  const labelR = document.getElementById('labelR');
+  const labelNPA = document.getElementById('labelNPA');
+  labelD.style.left = Math.min(96, Math.max(4, dPct/2)) + '%';
+  labelR.style.left = Math.min(96, Math.max(4, dPct + rPct/2)) + '%';
+  labelNPA.style.left = Math.min(97, Math.max(4, dPct + rPct + npaPct/2)) + '%';
+  labelD.textContent = 'DEM ' + fmt(totalD) + ' (' + pct(dShare) + ')';
+  labelR.textContent = 'REP ' + fmt(totalR) + ' (' + pct(rShare) + ')';
+  labelNPA.textContent = 'NPA ' + fmt(totalNPA) + ' (' + pct(npaShare) + ')';
 
   document.getElementById('statTotal').textContent = fmt(total);
   document.getElementById('statCounties').textContent = COUNTIES.length + ' / 67';
@@ -551,6 +592,11 @@ function renderStats(){
   document.getElementById('statMoved').textContent = COUNTIES.filter(c=>c.ratingChanged).length;
   const times = COUNTIES.map(c=>c.lastUpdated).filter(Boolean).sort();
   document.getElementById('statUpdated').textContent = times.length ? times[times.length-1] : '—';
+
+  const totalNewVotes = COUNTIES.reduce((s,c)=>s+(c.totalNew||0),0);
+  document.getElementById('statTotalSub').textContent = totalNewVotes > 0
+    ? '+' + fmt(totalNewVotes) + ' since last update'
+    : 'No additional votes at this time.';
 }
 
 const METRICS = {
@@ -573,7 +619,8 @@ async function renderMap(){
     `Rating: ${c.category}<br>` +
     `DEM ${fmt(c.dem)} (${pct(c.demShare)})<br>` +
     `REP ${fmt(c.rep)} (${pct(c.repShare)})<br>` +
-    `IND/NPA/Other ${fmt(c.ind+c.npa+c.other)}<br>` +
+    `NPA ${fmt(c.npa)}<br>` +
+    `IND/NPA/Other ${fmt(c.ind+c.npa+c.other)} (${pct(c.indShare)})<br>` +
     `Total ${fmt(c.total)}<br>` +
     `Margin ${(c.marginPct>=0?'+':'')}${pct(c.marginPct)}` +
     (c.ratingChanged ? `<br><i>${c.ratingMove}</i>` : '') +
@@ -645,8 +692,10 @@ function renderTable(){
       <td><span class="chip" style="background:${catColor(c.category)};color:${contrastText(catColor(c.category))}">${c.category}</span></td>
       <td class="num-d">${fmt(c.dem)}</td>
       <td class="num-r">${fmt(c.rep)}</td>
-      <td>${fmt(c.diff)}</td>
-      <td>${fmt(c.total)}</td>
+      <td class="num-npa">${fmt(c.npa)}</td>
+      <td class="num-diff">${fmt(c.diff)}</td>
+      <td class="num-total">${fmt(c.total)}</td>
+      <td class="num-ind">${pct(c.indShare)}</td>
       <td class="${c.marginPct>=0?'num-d':'num-r'}">${c.marginPct>=0?'+':''}${pct(c.marginPct)}</td>
       <td class="rating">${c.rating}</td>
     </tr>

@@ -170,18 +170,20 @@
     font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:10px;
   }
   .npa-slider-label .val{ color:var(--npa-text); font-weight:600; font-size:12.5px; }
-  #npaSlider{
+  .adj-slider{
     -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:3px;
-    background:linear-gradient(90deg, var(--rep) 0%, var(--safe) 50%, var(--dem) 100%);
     outline:none; cursor:pointer; display:block;
   }
-  #npaSlider::-webkit-slider-thumb{
+  .adj-slider::-webkit-slider-thumb{
     -webkit-appearance:none; appearance:none; width:18px; height:18px; border-radius:50%;
     background:var(--gold); border:2px solid #0a0e17; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.5);
   }
-  #npaSlider::-moz-range-thumb{
+  .adj-slider::-moz-range-thumb{
     width:18px; height:18px; border-radius:50%; background:var(--gold); border:2px solid #0a0e17; cursor:pointer;
   }
+  #npaSlider{ background:linear-gradient(90deg, var(--rep) 0%, var(--safe) 50%, var(--dem) 100%); }
+  #demLoyaltySlider{ background:linear-gradient(90deg, var(--dem-dim), var(--dem)); }
+  #repLoyaltySlider{ background:linear-gradient(90deg, var(--rep-dim), var(--rep)); }
   .npa-slider-ends{
     display:flex; justify-content:space-between; font-family:var(--mono); font-size:9.5px;
     color:var(--muted-2); margin-top:6px; letter-spacing:.03em; text-transform:uppercase;
@@ -331,8 +333,27 @@
           <span>If undecided/NPA voters lean one way, how far does it move the map?</span>
           <span class="val" id="npaSliderValue">Even split (50% D / 50% R)</span>
         </div>
-        <input type="range" id="npaSlider" min="0" max="100" step="0.1" value="50">
+        <input type="range" id="npaSlider" class="adj-slider" min="0" max="100" step="0.1" value="50">
         <div class="npa-slider-ends"><span>All NPA &rarr; R</span><span>Even split</span><span>All NPA &rarr; D</span></div>
+
+        <div class="npa-slider-label" style="margin-top:16px;">
+          <span>Democratic voter loyalty (share of DEM-registered voters who vote D)</span>
+          <span class="val" id="demLoyaltyValue">100.0% D (0.0% cross to R)</span>
+        </div>
+        <input type="range" id="demLoyaltySlider" class="adj-slider" min="65" max="100" step="0.1" value="100">
+        <div class="npa-slider-ends"><span>65% loyal</span><span>100% loyal</span></div>
+
+        <div class="npa-slider-label" style="margin-top:16px;">
+          <span>Republican voter loyalty (share of REP-registered voters who vote R)</span>
+          <span class="val" id="repLoyaltyValue">100.0% R (0.0% cross to D)</span>
+        </div>
+        <input type="range" id="repLoyaltySlider" class="adj-slider" min="65" max="100" step="0.1" value="100">
+        <div class="npa-slider-ends"><span>65% loyal</span><span>100% loyal</span></div>
+
+        <div class="npa-slider-label" style="margin-top:12px; margin-bottom:0; padding-top:12px; border-top:1px solid var(--border);">
+          <span>Statewide leader margin</span>
+          <span class="val" id="npaStatewideMargin">&mdash;</span>
+        </div>
       </div>
       <div id="map"></div>
       <div class="legend" id="mapLegend"></div>
@@ -429,16 +450,26 @@ function categoryFor(c){
 // "D vs R vs NPA" margin (0-100). 50 = even split / no skew. Controlled
 // by the slider shown on the D vs R vs NPA tab.
 let npaSplitToDem = 50;
+// Percent of DEM-registered / REP-registered voters who actually vote
+// for their own party's candidate (the rest "cross over" to the other
+// side). Both range 65-100; 100 = no crossover.
+let demLoyalty = 100;
+let repLoyalty = 100;
 
-// Reallocates a county's NPA votes according to the current slider split
-// and returns the resulting DEM-vs-REP margin as a fraction (-1..1).
+// Reallocates a county's DEM, REP, and NPA votes according to the current
+// slider settings (NPA split + DEM/REP crossover) and returns the
+// resulting DEM-vs-REP margin as a fraction (-1..1).
 function marginWithNpaSplit(c){
-  const npaDem = c.npa * (npaSplitToDem/100);
-  const npaRep = c.npa - npaDem;
-  const demAdj = c.dem + npaDem;
-  const repAdj = c.rep + npaRep;
-  const denom = demAdj + repAdj;
-  return denom ? (demAdj-repAdj)/denom : 0;
+  const demToD = c.dem * (demLoyalty/100);
+  const demToR = c.dem - demToD;
+  const repToR = c.rep * (repLoyalty/100);
+  const repToD = c.rep - repToR;
+  const npaToD = c.npa * (npaSplitToDem/100);
+  const npaToR = c.npa - npaToD;
+  const totalDCand = demToD + repToD + npaToD;
+  const totalRCand = repToR + demToR + npaToR;
+  const denom = totalDCand + totalRCand;
+  return denom ? (totalDCand-totalRCand)/denom : 0;
 }
 // Same rating tiers as categoryFor, but the tier is decided from the
 // slider-adjusted margin (NPA votes reallocated per the current split)
@@ -493,6 +524,36 @@ let highlightedCounty = null;
 // party's county-level vote share.
 let selectedParty = null;
 let barShares = { d:50, r:50, npa:0 };
+// Statewide DEM/REP/NPA raw vote totals, refreshed each time renderStats()
+// runs — used to compute the "Statewide leader margin" line as the NPA
+// split slider moves, independent of any single county.
+let statewideTotals = { dem:0, rep:0, npa:0 };
+
+// Reallocates the statewide NPA total per the current slider split and
+// reports the resulting DEM-vs-REP lead as both a percentage and a raw
+// vote count.
+function updateStatewideNpaMargin(){
+  const el = document.getElementById('npaStatewideMargin');
+  if(!el) return;
+  const demToD = statewideTotals.dem * (demLoyalty/100);
+  const demToR = statewideTotals.dem - demToD;
+  const repToR = statewideTotals.rep * (repLoyalty/100);
+  const repToD = statewideTotals.rep - repToR;
+  const npaToD = statewideTotals.npa * (npaSplitToDem/100);
+  const npaToR = statewideTotals.npa - npaToD;
+  const totalDCand = demToD + repToD + npaToD;
+  const totalRCand = repToR + demToR + npaToR;
+  const total = totalDCand + totalRCand;
+  const margin = total ? (totalDCand-totalRCand)/total : 0;
+  const voteLead = Math.round(Math.abs(totalDCand - totalRCand));
+  if(Math.abs(margin) < 0.0005){
+    el.innerHTML = 'Tied';
+    return;
+  }
+  const leader = margin > 0 ? 'DEM' : 'REP';
+  const color = margin > 0 ? 'var(--dem)' : 'var(--rep)';
+  el.innerHTML = `<span style="color:${color}">${leader} +${(Math.abs(margin)*100).toFixed(1)}%</span> &middot; ${fmt(voteLead)} votes`;
+}
 
 // ---- Auto-load config ----
 // Production-only data source: no manual upload. Every run, the Python
@@ -742,6 +803,9 @@ function renderStats(){
   barShares = { d:dPct, r:rPct, npa:npaPct };
   applyBarWidths();
 
+  statewideTotals = { dem:totalD, rep:totalR, npa:totalNPA };
+  updateStatewideNpaMargin();
+
   const labelD = document.getElementById('labelD');
   const labelR = document.getElementById('labelR');
   const labelNPA = document.getElementById('labelNPA');
@@ -811,13 +875,14 @@ function tooltipText(){
   }
   if(currentMetric === 'demrepnpa'){
     return COUNTIES.map(c => {
-      const npaDem = c.npa * (npaSplitToDem/100);
-      const npaRep = c.npa - npaDem;
+      const demToD = c.dem * (demLoyalty/100), demToR = c.dem - demToD;
+      const repToR = c.rep * (repLoyalty/100), repToD = c.rep - repToR;
+      const npaDem = c.npa * (npaSplitToDem/100), npaRep = c.npa - npaDem;
       const margin = marginWithNpaSplit(c);
       return `<b>${c.county}</b><br>` +
-        `Rating (NPA split ${npaSplitToDem.toFixed(0)}% D / ${(100-npaSplitToDem).toFixed(0)}% R): ${categoryForNpaMargin(c)}<br>` +
-        `DEM ${fmt(c.dem)} (${pct(c.demShare)})<br>` +
-        `REP ${fmt(c.rep)} (${pct(c.repShare)})<br>` +
+        `Rating: ${categoryForNpaMargin(c)}<br>` +
+        `DEM ${fmt(c.dem)} &rarr; ${fmt(Math.round(demToD))} D / ${fmt(Math.round(demToR))} R<br>` +
+        `REP ${fmt(c.rep)} &rarr; ${fmt(Math.round(repToR))} R / ${fmt(Math.round(repToD))} D<br>` +
         `NPA ${fmt(c.npa)} &rarr; ${fmt(Math.round(npaDem))} D / ${fmt(Math.round(npaRep))} R<br>` +
         `Total ${fmt(c.total)}<br>` +
         `Adjusted margin: ${marginLabel(margin)}`;
@@ -1020,9 +1085,36 @@ function updateNpaSliderLabel(){
 document.getElementById('npaSlider').addEventListener('input', e => {
   npaSplitToDem = parseFloat(e.target.value);
   updateNpaSliderLabel();
+  updateStatewideNpaMargin();
   if(COUNTIES.length && currentMetric === 'demrepnpa'){ renderMap(); renderTable(); }
 });
 updateNpaSliderLabel();
+
+function updateDemLoyaltyLabel(){
+  const cross = (100-demLoyalty);
+  document.getElementById('demLoyaltyValue').textContent =
+    `${demLoyalty.toFixed(1)}% D (${cross.toFixed(1)}% cross to R)`;
+}
+document.getElementById('demLoyaltySlider').addEventListener('input', e => {
+  demLoyalty = parseFloat(e.target.value);
+  updateDemLoyaltyLabel();
+  updateStatewideNpaMargin();
+  if(COUNTIES.length && currentMetric === 'demrepnpa'){ renderMap(); renderTable(); }
+});
+updateDemLoyaltyLabel();
+
+function updateRepLoyaltyLabel(){
+  const cross = (100-repLoyalty);
+  document.getElementById('repLoyaltyValue').textContent =
+    `${repLoyalty.toFixed(1)}% R (${cross.toFixed(1)}% cross to D)`;
+}
+document.getElementById('repLoyaltySlider').addEventListener('input', e => {
+  repLoyalty = parseFloat(e.target.value);
+  updateRepLoyaltyLabel();
+  updateStatewideNpaMargin();
+  if(COUNTIES.length && currentMetric === 'demrepnpa'){ renderMap(); renderTable(); }
+});
+updateRepLoyaltyLabel();
 
 document.getElementById('searchInput').addEventListener('input', () => { if(COUNTIES.length) renderTable(); });
 

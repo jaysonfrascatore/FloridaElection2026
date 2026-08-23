@@ -288,7 +288,8 @@
   <div class="controls">
     <div class="segmented" id="metricSelect">
       <button data-metric="rating" class="active">Rating</button>
-      <button data-metric="demrep">Dem vs Rep only</button>
+      <button data-metric="demrating">D vs R</button>
+      <button data-metric="demrepnpa">D vs R vs NPA</button>
       <button data-metric="total">Total turnout</button>
       <button data-metric="move">Margin move</button>
       <button data-metric="updated">Counties Updated</button>
@@ -540,12 +541,20 @@ function buildCounties(rows){
     const npa = num(pick(row,['NPA']));
     const other = num(pick(row,['OTHER']));
     const total = num(pick(row,['TOTAL'])) || (dem+rep+ind+npa+other);
-    const demShare = num(pick(row,['DEM %'])) || (total ? dem/total : 0);
-    const repShare = num(pick(row,['REP %'])) || (total ? rep/total : 0);
+    // Always derive shares from the raw vote counts rather than any
+    // pre-computed "DEM %" / "REP %" / "Signed Margin" columns in the CSV —
+    // those columns are sometimes stored as whole percentages (e.g. "45.2")
+    // rather than fractions (0.452), which was making tooltip percentages
+    // read well over 100%. Computing straight from counts guarantees
+    // demShare + repShare + indShare always sums to exactly 1.
+    const demShare = total ? dem/total : 0;
+    const repShare = total ? rep/total : 0;
     const npaShare = total ? npa/total : 0;
     const indShare = total ? (ind+npa+other)/total : 0;
-    let signedMargin = pick(row,['Signed Margin']);
-    signedMargin = signedMargin !== '' ? num(signedMargin) : (demShare - repShare);
+    const signedMargin = demShare - repShare;
+    // Margin recomputed with NPA folded into the denominator alongside DEM
+    // and REP (IND/OTHER excluded) — used by the "D vs R vs NPA" map.
+    const marginNpaAdj = (dem+rep+npa) ? (dem-rep)/(dem+rep+npa) : 0;
     const leader = normName(pick(row,['Leader'])) || (signedMargin >= 0 ? 'D' : 'R');
     const rating = normName(pick(row,['Rating'])) || '—';
     const marginMove = num(pick(row,['Margin Move']));
@@ -564,7 +573,7 @@ function buildCounties(rows){
     const rec = {
       county:name, fips:FL_FIPS[name], code:normName(pick(row,['Code'])),
       dem,rep,ind,npa,other,total,demShare,repShare,npaShare,indShare,diff,
-      marginPct: signedMargin, leader, rating,
+      marginPct: signedMargin, marginNpaAdj, leader, rating,
       marginMove, ratingChanged, ratingMove,
       demNew, repNew, otherNew, totalNew,
       lastUpdated: pick(row,['Last Updated']) || ''
@@ -689,15 +698,25 @@ function renderStats(){
 
 const METRICS = {
   rating: { title:'Rating by county', categorical:true, cats:RATING_CATS, catFn:categoryFor },
-  demrep: {
-    title:'DEM vs REP margin by county', symmetric:true, get:c=>c.marginPct,
+  // "D vs R" — the original county-by-county rating view, unchanged, with
+  // NPA left out of the tooltip entirely.
+  demrating: { title:'D vs R rating by county', categorical:true, cats:RATING_CATS, catFn:categoryFor },
+  // "D vs R vs NPA" — a margin that folds NPA into the denominator
+  // alongside DEM and REP, so a county with heavy NPA turnout shows a
+  // visibly smaller lean than the D-vs-R-only view.
+  demrepnpa: {
+    title:'DEM vs REP margin, adjusted for NPA', symmetric:true, get:c=>c.marginNpaAdj,
     scale:[[0,'#880d1e'],[0.5,'#e9c46a'],[1,'#03045e']]
   },
-  total: { title:'Total turnout by county', get:c=>c.total, scale:[[0,'#bce784'],[0.5,'#8ac926'],[1,'#007200']], range:cs=>Math.max(...cs.map(c=>c.total)) },
+  total: { title:'Total turnout by county', get:c=>c.total, scale:[[0,'#bce784'],[0.5,'#8ac926'],[1,'#007200']], range:cs=>Math.max(...cs.map(c=>c.total)), isCount:true },
   move: { title:'Counties with a forecast rating change', categorical:true, cats:MOVE_CATS, catFn:moveCategoryFor },
   updated: { title:'Counties updated (new votes reported)', categorical:true, cats:UPDATED_CATS, catFn:updatedCategoryFor },
-  'party-dem': { title:'Democratic vote share by county', get:c=>c.demShare, scale:[[0,'#90e0ef'],[0.5,'#00b4d8'],[1,'#03045e']], range:()=>1 },
-  'party-rep': { title:'Republican vote share by county', get:c=>c.repShare, scale:[[0,'#f49cbb'],[0.5,'#dd2d4a'],[1,'#880d1e']], range:()=>1 },
+  // Bar-click maps. D/R share scales are capped at 80% (rather than 100%)
+  // since raw county shares rarely approach 100% — capping increases color
+  // contrast across the range that actually gets used. NPA keeps its own
+  // dynamic range since its shares run much smaller.
+  'party-dem': { title:'Democratic vote share by county', get:c=>c.demShare, scale:[[0,'#90e0ef'],[0.5,'#00b4d8'],[1,'#03045e']], range:()=>0.8 },
+  'party-rep': { title:'Republican vote share by county', get:c=>c.repShare, scale:[[0,'#f49cbb'],[0.5,'#dd2d4a'],[1,'#880d1e']], range:()=>0.8 },
   'party-npa': { title:'NPA vote share by county', get:c=>c.npaShare, scale:[[0,'#e0c3fc'],[0.5,'#9d4edd'],[1,'#3a0ca3']], range:cs=>Math.max(0.01, ...cs.map(c=>c.npaShare)) }
 };
 
@@ -724,6 +743,30 @@ function tooltipText(){
       `<b>NPA votes: ${fmt(c.npa)} (${pct(c.npaShare)})</b><br>` +
       `DEM ${fmt(c.dem)} &middot; REP ${fmt(c.rep)} &middot; Ind/Other ${fmt(c.ind+c.other)}<br>` +
       `Total ${fmt(c.total)}`
+    );
+  }
+  if(currentMetric === 'demrating'){
+    // D vs R only — same rating breakdown as the main Rating map, but with
+    // the NPA/Ind line left out entirely.
+    return COUNTIES.map(c =>
+      `<b>${c.county}</b><br>` +
+      `Rating: ${c.category}<br>` +
+      `DEM ${fmt(c.dem)} (${pct(c.demShare)})<br>` +
+      `REP ${fmt(c.rep)} (${pct(c.repShare)})<br>` +
+      `Total ${fmt(c.total)}<br>` +
+      `Margin ${(c.marginPct>=0?'+':'')}${pct(c.marginPct)}` +
+      (c.ratingChanged ? `<br><i>${c.ratingMove}</i>` : '') +
+      (c.totalNew ? `<br>New votes this hour: +${fmt(c.totalNew)}` : '')
+    );
+  }
+  if(currentMetric === 'demrepnpa'){
+    return COUNTIES.map(c =>
+      `<b>${c.county}</b><br>` +
+      `DEM ${fmt(c.dem)} (${pct(c.demShare)})<br>` +
+      `REP ${fmt(c.rep)} (${pct(c.repShare)})<br>` +
+      `NPA ${fmt(c.npa)} (${pct(c.npaShare)})<br>` +
+      `Total ${fmt(c.total)}<br>` +
+      `Margin incl. NPA: ${(c.marginNpaAdj>=0?'+':'')}${pct(c.marginNpaAdj)}`
     );
   }
   return COUNTIES.map(c =>
@@ -774,7 +817,8 @@ async function renderMap(){
       featureidkey:'id', zmin:-maxAbs, zmax:maxAbs,
       colorscale: m.scale, marker:{line:{color:'#0a0e17', width:1}},
       text, hoverinfo:'text', hoverlabel:{bgcolor:'#151b28', bordercolor:'#212a3b', font:{family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5'}},
-      showscale:true, colorbar:{ tickfont:{color:'#7c879c', size:10}, thickness:12, len:0.6, outlinewidth:0 }
+      // Fractional values (-1 to 1) shown as signed percentages on the colorbar.
+      showscale:true, colorbar:{ tickfont:{color:'#7c879c', size:10}, thickness:12, len:0.6, outlinewidth:0, tickformat:'.0%' }
     };
     legendEl.style.display = 'none';
     legendEl.innerHTML = '';
@@ -782,12 +826,16 @@ async function renderMap(){
     const zmax = m.range(COUNTIES);
     const zmin = 0;
     const z = COUNTIES.map(m.get);
+    const colorbar = { tickfont:{color:'#7c879c', size:10}, thickness:12, len:0.6, outlinewidth:0 };
+    // Vote-share metrics (0 to ~1) are shown as percentages; raw counts
+    // (like turnout) keep plain comma-separated numbers.
+    if(!m.isCount) colorbar.tickformat = '.0%';
     trace = {
       type:'choropleth', geojson: geojsonFL, locations, z,
       featureidkey:'id', zmin, zmax,
       colorscale: m.scale, marker:{line:{color:'#0a0e17', width:1}},
       text, hoverinfo:'text', hoverlabel:{bgcolor:'#151b28', bordercolor:'#212a3b', font:{family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5'}},
-      showscale:true, colorbar:{ tickfont:{color:'#7c879c', size:10}, thickness:12, len:0.6, outlinewidth:0 }
+      showscale:true, colorbar
     };
     legendEl.style.display = 'none';
     legendEl.innerHTML = '';

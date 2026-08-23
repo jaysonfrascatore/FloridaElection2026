@@ -443,16 +443,16 @@ function marginWithNpaSplit(c){
 // Same rating tiers as categoryFor, but the tier is decided from the
 // slider-adjusted margin (NPA votes reallocated per the current split)
 // instead of the plain DEM-vs-REP margin — used by "D vs R vs NPA".
+// Thresholds match the Python script: <.03 Toss Up, <.08 Lean, <.15 Likely, else Safe.
 function categoryForNpaMargin(c){
   const margin = marginWithNpaSplit(c);
-  if(Math.abs(margin) < 0.0005) return 'Tie';
-  const leader = margin > 0 ? 'D' : 'R';
   const abs = Math.abs(margin);
+  if(abs < 0.03) return margin === 0 ? 'Tie' : 'Toss Up';
+  const leader = margin > 0 ? 'D' : 'R';
   let level;
-  if(abs >= 0.20) level = 'Safe';
-  else if(abs >= 0.10) level = 'Likely';
-  else if(abs >= 0.05) level = 'Lean';
-  else return 'Toss Up';
+  if(abs < 0.08) level = 'Lean';
+  else if(abs < 0.15) level = 'Likely';
+  else level = 'Safe';
   return level + ' ' + leader;
 }
 // "Even" / "D+4.7" / "R+12.3" style label for a fractional margin.

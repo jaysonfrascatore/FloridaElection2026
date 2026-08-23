@@ -1,8 +1,6 @@
 name: Update Florida Turnout Data
 
 on:
-  schedule:
-    - cron: "30 * * * *"
   workflow_dispatch:
 
 permissions:

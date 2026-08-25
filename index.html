@@ -181,13 +181,37 @@
   .adj-slider::-moz-range-thumb{
     width:18px; height:18px; border-radius:50%; background:var(--gold); border:2px solid #0a0e17; cursor:pointer;
   }
-  #npaSlider{ background:linear-gradient(90deg, var(--rep) 0%, var(--safe) 50%, var(--dem) 100%); }
+  #npaSlider{ background:linear-gradient(90deg, var(--dem) 0%, var(--safe) 50%, var(--rep) 100%); }
   #demLoyaltySlider{ background:linear-gradient(90deg, var(--dem-dim), var(--dem)); }
   #repLoyaltySlider{ background:linear-gradient(90deg, var(--rep-dim), var(--rep)); }
   .npa-slider-ends{
     display:flex; justify-content:space-between; font-family:var(--mono); font-size:9.5px;
     color:var(--muted-2); margin-top:6px; letter-spacing:.03em; text-transform:uppercase;
   }
+  .turnout-toggle-row{
+    display:flex; align-items:center; gap:8px; margin-top:16px; cursor:pointer;
+    font-family:var(--mono); font-size:11px; color:var(--text);
+  }
+  .turnout-toggle-row input{ width:15px; height:15px; accent-color:var(--gold); cursor:pointer; }
+  .turnout-row{ display:none; gap:20px; align-items:center; margin-top:12px; }
+  .turnout-row.active{ display:flex; }
+  .vertical-lever-col{ display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .vertical-lever-track{ height:140px; display:flex; align-items:center; justify-content:center; }
+  .vertical-lever{
+    -webkit-appearance: slider-vertical;
+    writing-mode: vertical-lr; direction: rtl;
+    width:8px; height:140px; border-radius:4px;
+    background:linear-gradient(0deg, var(--muted-2) 0%, var(--gold) 100%);
+    outline:none; cursor:pointer;
+  }
+  .vertical-lever::-webkit-slider-thumb{
+    -webkit-appearance:none; width:18px; height:18px; border-radius:50%;
+    background:var(--gold); border:2px solid #0a0e17; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.5);
+  }
+  .vertical-lever::-moz-range-thumb{
+    width:18px; height:18px; border-radius:50%; background:var(--gold); border:2px solid #0a0e17; cursor:pointer;
+  }
+  .vertical-lever-caption{ font-family:var(--mono); font-size:9px; color:var(--muted-2); text-transform:uppercase; letter-spacing:.05em; text-align:center; }
 
   .table-wrap{ max-height:596px; overflow-y:auto; overflow-x:auto; border-radius:8px; }
   table{ width:100%; min-width:600px; table-layout:fixed; border-collapse:collapse; font-size:11px; }
@@ -334,7 +358,7 @@
           <span class="val" id="npaSliderValue">Even split (50% D / 50% R)</span>
         </div>
         <input type="range" id="npaSlider" class="adj-slider" min="0" max="100" step="0.1" value="50">
-        <div class="npa-slider-ends"><span>All NPA &rarr; R</span><span>Even split</span><span>All NPA &rarr; D</span></div>
+        <div class="npa-slider-ends"><span>All NPA &rarr; D</span><span>Even split</span><span>All NPA &rarr; R</span></div>
 
         <div class="npa-slider-label" style="margin-top:16px;">
           <span>Democratic voter loyalty (share of DEM-registered voters who vote D)</span>
@@ -349,6 +373,29 @@
         </div>
         <input type="range" id="repLoyaltySlider" class="adj-slider" min="65" max="100" step="0.1" value="100">
         <div class="npa-slider-ends"><span>65% loyal</span><span>100% loyal</span></div>
+
+        <label class="turnout-toggle-row" for="turnoutToggle">
+          <input type="checkbox" id="turnoutToggle">
+          <span>Project statewide totals from registered voters instead of votes counted so far</span>
+        </label>
+        <div class="turnout-row" id="turnoutRow">
+          <div class="vertical-lever-col">
+            <div class="vertical-lever-track">
+              <input type="range" id="turnoutLever" class="vertical-lever" min="65" max="85" step="0.1" value="75">
+            </div>
+            <div class="vertical-lever-caption">Turnout<br>65%&ndash;85%</div>
+          </div>
+          <div style="flex:1; min-width:0;">
+            <div class="npa-slider-label" style="margin-bottom:6px;">
+              <span>Assumed statewide turnout</span>
+              <span class="val" id="turnoutValue">75.0% &middot; 10,069,905 voters</span>
+            </div>
+            <div class="npa-slider-label" style="margin-bottom:0;">
+              <span>vs. votes counted so far</span>
+              <span class="val" id="turnoutVsCounted">&mdash;</span>
+            </div>
+          </div>
+        </div>
 
         <div class="npa-slider-label" style="margin-top:12px; margin-bottom:0; padding-top:12px; border-top:1px solid var(--border);">
           <span>Statewide leader margin</span>
@@ -522,8 +569,38 @@ let highlightedCounty = null;
 // Bar-click state: null = show the normal proportional bar; 'dem'/'rep'/'npa'
 // = that segment is filling the whole bar and the map is showing that
 // party's county-level vote share.
+// Statewide voter registration figures (fixed), used only when the
+// "project from registered voters" toggle is on. Minor-party registrants
+// are folded into the NPA/IND/Other bucket, matching how the rest of the
+// dashboard treats third-party voters.
+const REGISTERED = { rep:5569028, dem:4040000, npa:3324324, minor:493188 };
+const REGISTERED_NPA_TOTAL = REGISTERED.npa + REGISTERED.minor;
+const REGISTERED_TOTAL = REGISTERED.rep + REGISTERED.dem + REGISTERED_NPA_TOTAL;
+
 let selectedParty = null;
 let barShares = { d:50, r:50, npa:0 };
+
+let turnoutProjectionOn = false;
+let turnoutPct = 75; // percent of registered voters assumed to vote, 65-85
+
+// Scales the fixed registered-voter pool by the current turnout % to get
+// a projected statewide DEM/REP/NPA vote total (independent of what's
+// actually been counted so far).
+function projectedStatewideTotals(){
+  const t = turnoutPct/100;
+  return { dem: REGISTERED.dem*t, rep: REGISTERED.rep*t, npa: REGISTERED_NPA_TOTAL*t };
+}
+
+function updateTurnoutLabels(){
+  const proj = projectedStatewideTotals();
+  const totalVoters = proj.dem + proj.rep + proj.npa;
+  document.getElementById('turnoutValue').textContent =
+    `${turnoutPct.toFixed(1)}% \u00b7 ${fmt(Math.round(totalVoters))} voters`;
+  const countedTotal = statewideTotals.dem + statewideTotals.rep + statewideTotals.npa;
+  const diff = totalVoters - countedTotal;
+  document.getElementById('turnoutVsCounted').textContent =
+    `${fmt(Math.round(countedTotal))} counted so far (${diff>=0?'+':''}${fmt(Math.round(diff))} vs. projection)`;
+}
 // Statewide DEM/REP/NPA raw vote totals, refreshed each time renderStats()
 // runs — used to compute the "Statewide leader margin" line as the NPA
 // split slider moves, independent of any single county.
@@ -535,12 +612,13 @@ let statewideTotals = { dem:0, rep:0, npa:0 };
 function updateStatewideNpaMargin(){
   const el = document.getElementById('npaStatewideMargin');
   if(!el) return;
-  const demToD = statewideTotals.dem * (demLoyalty/100);
-  const demToR = statewideTotals.dem - demToD;
-  const repToR = statewideTotals.rep * (repLoyalty/100);
-  const repToD = statewideTotals.rep - repToR;
-  const npaToD = statewideTotals.npa * (npaSplitToDem/100);
-  const npaToR = statewideTotals.npa - npaToD;
+  const base = turnoutProjectionOn ? projectedStatewideTotals() : statewideTotals;
+  const demToD = base.dem * (demLoyalty/100);
+  const demToR = base.dem - demToD;
+  const repToR = base.rep * (repLoyalty/100);
+  const repToD = base.rep - repToR;
+  const npaToD = base.npa * (npaSplitToDem/100);
+  const npaToR = base.npa - npaToD;
   const totalDCand = demToD + repToD + npaToD;
   const totalRCand = repToR + demToR + npaToR;
   const total = totalDCand + totalRCand;
@@ -548,11 +626,12 @@ function updateStatewideNpaMargin(){
   const voteLead = Math.round(Math.abs(totalDCand - totalRCand));
   if(Math.abs(margin) < 0.0005){
     el.innerHTML = 'Tied';
-    return;
+  }else{
+    const leader = margin > 0 ? 'DEM' : 'REP';
+    const color = margin > 0 ? 'var(--dem)' : 'var(--rep)';
+    el.innerHTML = `<span style="color:${color}">${leader} +${(Math.abs(margin)*100).toFixed(1)}%</span> &middot; ${fmt(voteLead)} votes`;
   }
-  const leader = margin > 0 ? 'DEM' : 'REP';
-  const color = margin > 0 ? 'var(--dem)' : 'var(--rep)';
-  el.innerHTML = `<span style="color:${color}">${leader} +${(Math.abs(margin)*100).toFixed(1)}%</span> &middot; ${fmt(voteLead)} votes`;
+  updateTurnoutLabels();
 }
 
 // ---- Auto-load config ----
@@ -853,7 +932,7 @@ function tooltipText(){
     return COUNTIES.map(c =>
       `<b>${c.county}</b><br>` +
       `<b>DEM votes: ${fmt(c.dem)} (${pct(c.demShare)})</b><br>` +
-      `REP ${fmt(c.rep)} &middot; NPA ${fmt(c.npa)} &middot; Ind/Other ${fmt(c.ind+c.other)}<br>` +
+      `REP ${fmt(c.rep)} · NPA ${fmt(c.npa)} · Ind/Other ${fmt(c.ind+c.other)}<br>` +
       `Total ${fmt(c.total)}`
     );
   }
@@ -861,7 +940,7 @@ function tooltipText(){
     return COUNTIES.map(c =>
       `<b>${c.county}</b><br>` +
       `<b>REP votes: ${fmt(c.rep)} (${pct(c.repShare)})</b><br>` +
-      `DEM ${fmt(c.dem)} &middot; NPA ${fmt(c.npa)} &middot; Ind/Other ${fmt(c.ind+c.other)}<br>` +
+      `DEM ${fmt(c.dem)} · NPA ${fmt(c.npa)} · Ind/Other ${fmt(c.ind+c.other)}<br>` +
       `Total ${fmt(c.total)}`
     );
   }
@@ -869,7 +948,7 @@ function tooltipText(){
     return COUNTIES.map(c =>
       `<b>${c.county}</b><br>` +
       `<b>NPA votes: ${fmt(c.npa)} (${pct(c.npaShare)})</b><br>` +
-      `DEM ${fmt(c.dem)} &middot; REP ${fmt(c.rep)} &middot; Ind/Other ${fmt(c.ind+c.other)}<br>` +
+      `DEM ${fmt(c.dem)} · REP ${fmt(c.rep)} · Ind/Other ${fmt(c.ind+c.other)}<br>` +
       `Total ${fmt(c.total)}`
     );
   }
@@ -881,9 +960,9 @@ function tooltipText(){
       const margin = marginWithNpaSplit(c);
       return `<b>${c.county}</b><br>` +
         `Rating: ${categoryForNpaMargin(c)}<br>` +
-        `DEM ${fmt(c.dem)} &rarr; ${fmt(Math.round(demToD))} D / ${fmt(Math.round(demToR))} R<br>` +
-        `REP ${fmt(c.rep)} &rarr; ${fmt(Math.round(repToR))} R / ${fmt(Math.round(repToD))} D<br>` +
-        `NPA ${fmt(c.npa)} &rarr; ${fmt(Math.round(npaDem))} D / ${fmt(Math.round(npaRep))} R<br>` +
+        `DEM ${fmt(c.dem)} \u2192 ${fmt(Math.round(demToD))} D / ${fmt(Math.round(demToR))} R<br>` +
+        `REP ${fmt(c.rep)} \u2192 ${fmt(Math.round(repToR))} R / ${fmt(Math.round(repToD))} D<br>` +
+        `NPA ${fmt(c.npa)} \u2192 ${fmt(Math.round(npaDem))} D / ${fmt(Math.round(npaRep))} R<br>` +
         `Total ${fmt(c.total)}<br>` +
         `Adjusted margin: ${marginLabel(margin)}`;
     });
@@ -1083,7 +1162,9 @@ function updateNpaSliderLabel(){
       : `${marginLabel(margin)} split (${npaSplitToDem.toFixed(1)}% D / ${(100-npaSplitToDem).toFixed(1)}% R)`;
 }
 document.getElementById('npaSlider').addEventListener('input', e => {
-  npaSplitToDem = parseFloat(e.target.value);
+  // Slider is now oriented Dem (left, low raw value) to Rep (right, high raw
+  // value), so the raw 0-100 value is inverted to get the %-to-Dem figure.
+  npaSplitToDem = 100 - parseFloat(e.target.value);
   updateNpaSliderLabel();
   updateStatewideNpaMargin();
   if(COUNTIES.length && currentMetric === 'demrepnpa'){ renderMap(); renderTable(); }
@@ -1115,6 +1196,17 @@ document.getElementById('repLoyaltySlider').addEventListener('input', e => {
   if(COUNTIES.length && currentMetric === 'demrepnpa'){ renderMap(); renderTable(); }
 });
 updateRepLoyaltyLabel();
+
+document.getElementById('turnoutToggle').addEventListener('change', e => {
+  turnoutProjectionOn = e.target.checked;
+  document.getElementById('turnoutRow').classList.toggle('active', turnoutProjectionOn);
+  updateStatewideNpaMargin();
+});
+document.getElementById('turnoutLever').addEventListener('input', e => {
+  turnoutPct = parseFloat(e.target.value);
+  updateStatewideNpaMargin();
+});
+updateTurnoutLabels();
 
 document.getElementById('searchInput').addEventListener('input', () => { if(COUNTIES.length) renderTable(); });
 

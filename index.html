@@ -139,6 +139,50 @@
     display:flex; justify-content:space-between; align-items:center; gap:16px;
     flex-wrap:wrap; margin-bottom:14px;
   }
+  .mode-tabs{
+    display:flex; gap:8px; margin-bottom:18px; border-bottom:1px solid var(--border);
+  }
+  .mode-tab{
+    font-family:var(--mono); font-size:12.5px; letter-spacing:.03em; color:var(--muted);
+    background:none; border:none; padding:10px 4px 12px; cursor:pointer;
+    border-bottom:2px solid transparent; margin-bottom:-1px;
+  }
+  .mode-tab:hover{ color:var(--text); }
+  .mode-tab.active{ color:var(--gold); border-bottom-color:var(--gold); }
+  #simDashboard{ display:none; }
+  #simDashboard.active{ display:block; }
+  .sim-editor{
+    background:var(--panel-2); border:1px solid var(--border); border-radius:10px;
+    padding:14px 16px; margin-bottom:14px;
+  }
+  .sim-editor .sim-editor-title{
+    font-family:var(--serif); font-size:16px; margin-bottom:2px;
+  }
+  .sim-editor .sim-editor-sub{
+    font-family:var(--mono); font-size:10.5px; color:var(--muted); margin-bottom:12px;
+  }
+  .sim-editor .sim-row{
+    display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap;
+    font-family:var(--mono); font-size:11.5px; color:var(--muted); margin-top:10px;
+  }
+  .sim-editor .sim-row .val{ color:var(--text); font-weight:600; }
+  .sim-checkpoint{
+    margin-top:12px; padding:10px 12px; border-radius:8px; background:var(--panel);
+    border:1px solid var(--border); font-family:var(--mono); font-size:11.5px; line-height:1.5;
+  }
+  .sim-editor-actions{ display:flex; gap:8px; margin-top:14px; }
+  .sim-btn{
+    font-family:var(--mono); font-size:11px; color:var(--text); background:var(--panel);
+    border:1px solid var(--border); border-radius:7px; padding:7px 12px; cursor:pointer;
+  }
+  .sim-btn:hover{ border-color:var(--gold); }
+  .sim-placeholder{
+    font-family:var(--mono); font-size:12px; color:var(--muted); text-align:center; padding:28px 12px;
+  }
+  .sim-turnout-strip{
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:14px;
+  }
+  .sim-turnout-strip .adj-slider{ max-width:280px; }
   .segmented{ display:flex; background:var(--panel); border:1px solid var(--border); border-radius:9px; padding:3px; gap:2px; flex-wrap:wrap; }
   .segmented button{
     font-family:var(--mono); font-size:11.5px; color:var(--muted); background:none; border:none;
@@ -274,6 +318,11 @@
   </div>
 </header>
 
+<div class="mode-tabs">
+  <button class="mode-tab active" id="modeLiveBtn">Live Results</button>
+  <button class="mode-tab" id="modeSimBtn">Build Your Own Map</button>
+</div>
+
 <div class="error-msg" id="errorMsg"></div>
 
 <div class="empty-state" id="emptyState">
@@ -400,6 +449,93 @@
   </div>
 
   <footer id="footerNote"></footer>
+</div>
+
+<div id="simDashboard">
+
+  <div class="margin-strip">
+    <div class="row">
+      <span class="label">Hypothetical statewide margin</span>
+      <span class="leader" id="simStateLeader">&mdash;</span>
+    </div>
+    <div class="bar-track">
+      <div class="bar-seg bar-d" id="simBarD" style="width:50%"></div>
+      <div class="bar-seg bar-r" id="simBarR" style="width:50%"></div>
+    </div>
+    <div class="bar-labels" id="simBarLabels">
+      <span class="d" id="simLabelD" style="left:25%">DEM &mdash;</span>
+      <span class="r" id="simLabelR" style="left:75%">REP &mdash;</span>
+    </div>
+    <div class="stat-cards">
+      <div class="stat-card"><div class="v" id="simStatTotal">&mdash;</div><div class="k">Total votes (this turnout)</div></div>
+      <div class="stat-card"><div class="v" id="simStatCounties">&mdash;</div><div class="k">Counties moved off 50/50</div></div>
+      <div class="stat-card"><div class="v" id="simStatRating">&mdash;</div><div class="k">Statewide rating</div></div>
+    </div>
+  </div>
+
+  <div class="panel sim-turnout-strip">
+    <div style="flex:1; min-width:220px;">
+      <div class="npa-slider-label" style="margin-bottom:8px;">
+        <span>Statewide turnout (share of registered voters who vote)</span>
+        <span class="val" id="simTurnoutValue">75.0% &middot; &mdash; voters</span>
+      </div>
+      <input type="range" id="simTurnoutSlider" class="adj-slider" min="65" max="85" step="0.1" value="75">
+      <div class="npa-slider-ends"><span>65%</span><span>85%</span></div>
+    </div>
+    <button class="sim-btn" id="simResetAllBtn">Reset all counties to 50/50</button>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>Click a county to set its margin</h2>
+      <div id="simMap" style="height:480px;"></div>
+      <div class="legend" id="simMapLegend"></div>
+
+      <div id="simEditor" class="sim-editor" style="display:none;">
+        <div class="sim-editor-title" id="simEditorCounty">&mdash;</div>
+        <div class="sim-editor-sub" id="simEditorVoters">&mdash;</div>
+
+        <div class="npa-slider-label" style="margin-top:6px; margin-bottom:8px;">
+          <span>Democratic share of the two-party vote</span>
+          <span class="val" id="simDemPctLabel">50.0% D / 50.0% R</span>
+        </div>
+        <input type="range" id="simDemSlider" class="adj-slider" min="0" max="100" step="0.1" value="50">
+        <div class="npa-slider-ends"><span>All R</span><span>Tie</span><span>All D</span></div>
+
+        <div class="sim-row"><span>Result</span><span class="val" id="simEditorResult">Tie</span></div>
+        <div class="sim-row"><span>DEM votes</span><span class="val" id="simEditorDemVotes">&mdash;</span></div>
+        <div class="sim-row"><span>REP votes</span><span class="val" id="simEditorRepVotes">&mdash;</span></div>
+
+        <div class="sim-checkpoint" id="simCheckpoint"></div>
+
+        <div class="sim-editor-actions">
+          <button class="sim-btn" id="simResetCountyBtn">Reset this county to 50/50</button>
+        </div>
+      </div>
+      <div class="sim-placeholder" id="simPlaceholder">Click any county on the map or in the table to set its margin.</div>
+    </div>
+
+    <div class="panel">
+      <h2>County table</h2>
+      <div class="table-wrap">
+        <table id="simTable">
+          <thead>
+            <tr>
+              <th data-key="county">County</th>
+              <th data-key="voters">Registered</th>
+              <th data-key="turnoutTotal">Turnout votes</th>
+              <th data-key="demPct">DEM %</th>
+              <th data-key="repPct">REP %</th>
+              <th data-key="rating">Rating</th>
+            </tr>
+          </thead>
+          <tbody id="simTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <footer>Registration figures: Republican, Democratic, and Other (NPA + minor parties) share by county, Florida Division of Elections via Neurelect, as of Jun 2026 &middot; hypothetical scenario only, not a forecast</footer>
 </div>
 
 <script>
@@ -1131,6 +1267,280 @@ document.querySelectorAll('#voteTable thead th').forEach(th => {
     th.classList.add('sorted'); if(sortAsc) th.classList.add('asc');
     if(COUNTIES.length) renderTable();
   });
+});
+
+// ==================== Build Your Own Map ====================
+// A hypothetical/scenario tab: every county starts tied 50/50. Pick a
+// statewide turnout % (65-85% of each county's registered voters),
+// click any county, and drag its DEM share of the two-party vote —
+// the map, table, and statewide margin all update live, plus a
+// checkpoint that tells you what this county alone would need to
+// deliver (all other counties held as currently set) to tie Florida.
+//
+// Registered-voter counts and REP/DEM share by county, sourced from the
+// Florida Division of Elections (via Neurelect), snapshot as of Jun
+// 2026. The remainder of each county is NPA + minor parties, folded
+// together the same way the rest of this dashboard treats third parties
+// — but this tab only ever splits the two-party (D vs R) vote.
+const SIM_REG = {
+  "Alachua":[164612,29,44],"Baker":[17721,71,16],"Bay":[125440,59,18],"Bradford":[16669,64,21],
+  "Brevard":[437809,47,25],"Broward":[1080000,25,43],"Calhoun":[7531,64,25],"Charlotte":[152475,55,19],
+  "Citrus":[118959,59,17],"Clay":[153078,57,20],"Collier":[261257,55,19],"Columbia":[41207,59,23],
+  "DeSoto":[15845,52,26],"Dixie":[9905,68,16],"Duval":[645017,37,37],"Escambia":[203517,49,29],
+  "Flagler":[98247,51,24],"Franklin":[7592,54,28],"Gadsden":[26580,22,65],"Gilchrist":[12811,71,13],
+  "Glades":[6758,60,21],"Gulf":[10991,64,20],"Hamilton":[7042,53,33],"Hardee":[11358,58,21],
+  "Hendry":[18975,50,29],"Hernando":[136021,52,22],"Highlands":[61984,56,22],"Hillsborough":[803277,36,33],
+  "Holmes":[11286,74,13],"Indian River":[117710,53,22],"Jackson":[26905,59,29],"Jefferson":[9858,48,38],
+  "Lafayette":[4225,78,14],"Lake":[277802,48,25],"Lee":[491877,49,21],"Leon":[182560,30,48],
+  "Levy":[29894,62,20],"Liberty":[4529,63,26],"Madison":[10410,50,37],"Manatee":[281127,50,24],
+  "Marion":[264971,52,25],"Martin":[115410,55,20],"Miami-Dade":[1280000,35,32],"Monroe":[54543,46,27],
+  "Nassau":[80572,61,17],"Okaloosa":[145673,59,16],"Okeechobee":[20531,60,21],"Orange":[800873,28,39],
+  "Osceola":[230795,30,35],"Palm Beach":[872887,34,35],"Pasco":[398441,45,25],"Pinellas":[602909,40,31],
+  "Polk":[451355,42,29],"Putnam":[44652,58,23],"St. Johns":[238385,56,20],"St. Lucie":[240652,39,33],
+  "Santa Rosa":[141227,64,14],"Sarasota":[327834,49,24],"Seminole":[338647,36,31],"Sumter":[127470,60,18],
+  "Suwannee":[26529,64,19],"Taylor":[11611,65,25],"Union":[7217,68,21],"Volusia":[394801,43,27],
+  "Wakulla":[25507,55,25],"Walton":[62119,69,12],"Washington":[14684,68,18]
+};
+const SIM_COUNTY_NAMES = Object.keys(SIM_REG).sort();
+
+// Current hypothetical DEM share of the two-party vote per county
+// (0-100). 50 = tied. Keyed by county name.
+let simDemPct = {};
+let simTurnoutPct = 75;
+let selectedSimCounty = null;
+let simInitialized = false;
+
+function simResetAll(){
+  simDemPct = {};
+  SIM_COUNTY_NAMES.forEach(name => { simDemPct[name] = 50; });
+}
+
+function simCountyTotal(name){
+  return Math.round(SIM_REG[name][0] * (simTurnoutPct/100));
+}
+
+function simRatingFor(margin){
+  const abs = Math.abs(margin);
+  if(abs < 0.0005) return 'Tie';
+  if(abs < 0.03) return 'Toss Up';
+  const leader = margin > 0 ? 'D' : 'R';
+  let level;
+  if(abs < 0.08) level = 'Lean';
+  else if(abs < 0.15) level = 'Likely';
+  else level = 'Safe';
+  return level + ' ' + leader;
+}
+
+function simCountyStats(name){
+  const total = simCountyTotal(name);
+  const demPct = simDemPct[name];
+  const demVotes = Math.round(total * (demPct/100));
+  const repVotes = total - demVotes;
+  const margin = total ? (demVotes-repVotes)/total : 0;
+  return { total, demPct, repPct: 100-demPct, demVotes, repVotes, margin, rating: simRatingFor(margin) };
+}
+
+function simStatewide(){
+  let dem = 0, rep = 0, total = 0, movedCount = 0;
+  SIM_COUNTY_NAMES.forEach(name => {
+    const s = simCountyStats(name);
+    dem += s.demVotes; rep += s.repVotes; total += s.total;
+    if(Math.abs(simDemPct[name]-50) > 0.05) movedCount++;
+  });
+  const margin = total ? (dem-rep)/total : 0;
+  return { dem, rep, total, movedCount, margin, rating: simRatingFor(margin) };
+}
+
+function initSim(){
+  simResetAll();
+  document.getElementById('simTurnoutSlider').value = simTurnoutPct;
+  renderSim();
+}
+
+async function renderSimMap(){
+  await ensureGeojson();
+  const locations = SIM_COUNTY_NAMES.map(name => FL_FIPS[name]);
+  const n = RATING_CATS.length;
+  const z = SIM_COUNTY_NAMES.map(name => RATING_CATS.findIndex(cat=>cat.key===simCountyStats(name).rating) + 0.5);
+  const text = SIM_COUNTY_NAMES.map(name => {
+    const s = simCountyStats(name);
+    return `<b>${name}</b><br>Rating: ${s.rating}<br>DEM ${fmt(s.demVotes)} (${s.demPct.toFixed(1)}%)<br>REP ${fmt(s.repVotes)} (${s.repPct.toFixed(1)}%)<br>Turnout votes ${fmt(s.total)}<br><i>click to edit</i>`;
+  });
+  const trace = {
+    type:'choropleth', geojson: geojsonFL, locations, z,
+    featureidkey:'id', zmin:0, zmax:n,
+    colorscale: stepColorscale(RATING_CATS), marker:{line:{color:'#0a0e17', width: selectedSimCounty ? 1 : 1}},
+    text, hoverinfo:'text', hoverlabel:{bgcolor:'#151b28', bordercolor:'#212a3b', font:{family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5'}},
+    showscale:false
+  };
+  const layout = {
+    geo:{ scope:'usa', fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' },
+    paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+    margin:{t:10,b:10,l:10,r:10}, font:{family:'Inter, sans-serif'}
+  };
+  Plotly.newPlot('simMap', [trace], layout, {displayModeBar:false, responsive:true});
+  document.getElementById('simMap').on('plotly_click', ev => {
+    const fips = ev.points[0].location;
+    const name = SIM_COUNTY_NAMES.find(n => FL_FIPS[n] === fips);
+    if(name) selectSimCounty(name);
+  });
+
+  const legendEl = document.getElementById('simMapLegend');
+  legendEl.innerHTML = RATING_CATS.map(cat => {
+    const count = SIM_COUNTY_NAMES.filter(name => simCountyStats(name).rating === cat.key).length;
+    if(!count) return '';
+    return `<span class="swatch" style="background:${cat.color};color:${contrastText(cat.color)}">${cat.key} · ${count}</span>`;
+  }).join('');
+}
+
+function renderSimTable(){
+  const body = document.getElementById('simTableBody');
+  body.innerHTML = SIM_COUNTY_NAMES.map(name => {
+    const s = simCountyStats(name);
+    return `
+    <tr data-county="${name}" class="${name===selectedSimCounty?'hl':''}">
+      <td class="county-name">${name}</td>
+      <td>${fmt(SIM_REG[name][0])}</td>
+      <td class="num-total">${fmt(s.total)}</td>
+      <td class="num-d">${s.demPct.toFixed(1)}%</td>
+      <td class="num-r">${s.repPct.toFixed(1)}%</td>
+      <td><span class="chip" style="background:${catColor(s.rating)};color:${contrastText(catColor(s.rating))}">${s.rating}</span></td>
+    </tr>`;
+  }).join('');
+  body.querySelectorAll('tr').forEach(tr => {
+    tr.addEventListener('click', () => selectSimCounty(tr.dataset.county));
+  });
+}
+
+function renderSimStats(){
+  const sw = simStatewide();
+  const leaderEl = document.getElementById('simStateLeader');
+  const leader = sw.dem >= sw.rep ? 'D' : 'R';
+  leaderEl.textContent = (leader==='D'?'DEM':'REP') + ' +' + fmt(Math.abs(sw.dem-sw.rep)) + ' \u00b7 ' + sw.rating;
+  leaderEl.className = 'leader ' + leader;
+
+  const dPct = sw.total ? (sw.dem/sw.total)*100 : 50;
+  const rPct = sw.total ? (sw.rep/sw.total)*100 : 50;
+  document.getElementById('simBarD').style.width = dPct.toFixed(3)+'%';
+  document.getElementById('simBarR').style.width = rPct.toFixed(3)+'%';
+  document.getElementById('simLabelD').style.left = Math.min(96,Math.max(4,dPct/2))+'%';
+  document.getElementById('simLabelR').style.left = Math.min(96,Math.max(4,dPct+rPct/2))+'%';
+  document.getElementById('simLabelD').textContent = 'DEM ' + fmt(sw.dem) + ' (' + dPct.toFixed(1) + '%)';
+  document.getElementById('simLabelR').textContent = 'REP ' + fmt(sw.rep) + ' (' + rPct.toFixed(1) + '%)';
+
+  document.getElementById('simStatTotal').textContent = fmt(sw.total);
+  document.getElementById('simStatCounties').textContent = sw.movedCount + ' / ' + SIM_COUNTY_NAMES.length;
+  document.getElementById('simStatRating').textContent = sw.rating;
+}
+
+function updateSimTurnoutLabel(){
+  const totalVoters = SIM_COUNTY_NAMES.reduce((s,name)=>s+simCountyTotal(name),0);
+  document.getElementById('simTurnoutValue').textContent = `${simTurnoutPct.toFixed(1)}% \u00b7 ${fmt(totalVoters)} voters`;
+}
+
+function selectSimCounty(name){
+  selectedSimCounty = name;
+  document.getElementById('simPlaceholder').style.display = 'none';
+  document.getElementById('simEditor').style.display = 'block';
+  document.getElementById('simDemSlider').value = simDemPct[name];
+  renderSimEditor();
+  renderSimTable();
+}
+
+function renderSimEditor(){
+  if(!selectedSimCounty) return;
+  const name = selectedSimCounty;
+  const reg = SIM_REG[name];
+  const s = simCountyStats(name);
+
+  document.getElementById('simEditorCounty').textContent = name + ' County';
+  document.getElementById('simEditorVoters').textContent =
+    `${fmt(reg[0])} registered voters \u00b7 ${fmt(s.total)} voting at ${simTurnoutPct.toFixed(1)}% turnout`;
+  document.getElementById('simDemPctLabel').textContent = `${s.demPct.toFixed(1)}% D / ${s.repPct.toFixed(1)}% R`;
+  document.getElementById('simEditorResult').textContent = s.rating + ' (' + marginLabel(s.margin) + ')';
+  document.getElementById('simEditorDemVotes').textContent = fmt(s.demVotes);
+  document.getElementById('simEditorRepVotes').textContent = fmt(s.repVotes);
+
+  // Checkpoint: what DEM % would this county alone need — holding every
+  // other county exactly as currently set — to tie Florida statewide.
+  let otherDem = 0, otherRep = 0;
+  SIM_COUNTY_NAMES.forEach(n => {
+    if(n === name) return;
+    const os = simCountyStats(n);
+    otherDem += os.demVotes; otherRep += os.repVotes;
+  });
+  const thisTotal = s.total;
+  const el = document.getElementById('simCheckpoint');
+  if(thisTotal === 0){
+    el.textContent = 'No projected turnout in this county at the current turnout setting.';
+  }else{
+    const neededDemVotes = (otherRep - otherDem + thisTotal) / 2;
+    const neededPct = (neededDemVotes/thisTotal)*100;
+    if(neededPct <= 0){
+      el.innerHTML = `Democrats already win Florida statewide regardless of ${name} County, given how every other county is currently set.`;
+    }else if(neededPct >= 100){
+      el.innerHTML = `Even 100% of the two-party vote here isn't enough to tie Florida statewide, given how every other county is currently set \u2014 Democrats would need to gain ground elsewhere too.`;
+    }else if(s.demPct >= neededPct){
+      el.innerHTML = `Democrats already have enough here to tie Florida statewide \u2014 they only needed <b>${neededPct.toFixed(1)}%</b>, and this county is set to <b>${s.demPct.toFixed(1)}%</b>.`;
+    }else{
+      el.innerHTML = `Democrats need <b>${neededPct.toFixed(1)}%</b> of the two-party vote here to tie Florida statewide (currently set to ${s.demPct.toFixed(1)}%).`;
+    }
+  }
+}
+
+function renderSim(){
+  renderSimStats();
+  renderSimMap();
+  renderSimTable();
+  updateSimTurnoutLabel();
+  if(selectedSimCounty) renderSimEditor();
+}
+
+function switchMode(mode){
+  document.getElementById('modeLiveBtn').classList.toggle('active', mode==='live');
+  document.getElementById('modeSimBtn').classList.toggle('active', mode==='sim');
+  if(mode === 'sim'){
+    document.getElementById('dashboard').classList.remove('active');
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('errorMsg').style.display = 'none';
+    document.getElementById('simDashboard').classList.add('active');
+    if(!simInitialized){ simInitialized = true; initSim(); }
+  }else{
+    document.getElementById('simDashboard').classList.remove('active');
+    if(COUNTIES.length){
+      document.getElementById('dashboard').classList.add('active');
+    }else{
+      document.getElementById('emptyState').style.display = 'block';
+    }
+  }
+}
+document.getElementById('modeLiveBtn').addEventListener('click', () => switchMode('live'));
+document.getElementById('modeSimBtn').addEventListener('click', () => switchMode('sim'));
+
+document.getElementById('simTurnoutSlider').addEventListener('input', e => {
+  simTurnoutPct = parseFloat(e.target.value);
+  renderSim();
+});
+document.getElementById('simDemSlider').addEventListener('input', e => {
+  if(!selectedSimCounty) return;
+  simDemPct[selectedSimCounty] = parseFloat(e.target.value);
+  renderSimStats();
+  renderSimMap();
+  renderSimTable();
+  renderSimEditor();
+});
+document.getElementById('simResetCountyBtn').addEventListener('click', () => {
+  if(!selectedSimCounty) return;
+  simDemPct[selectedSimCounty] = 50;
+  document.getElementById('simDemSlider').value = 50;
+  renderSim();
+});
+document.getElementById('simResetAllBtn').addEventListener('click', () => {
+  simResetAll();
+  selectedSimCounty = null;
+  document.getElementById('simEditor').style.display = 'none';
+  document.getElementById('simPlaceholder').style.display = 'block';
+  renderSim();
 });
 </script>
 </body>

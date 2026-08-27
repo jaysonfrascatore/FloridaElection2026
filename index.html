@@ -406,16 +406,16 @@
 
         <div class="npa-slider-label" style="margin-top:16px;">
           <span>Democratic voter loyalty (share of DEM-registered voters who vote D)</span>
-          <span class="val" id="demLoyaltyValue">100.0% D (0.0% cross to R)</span>
+          <span class="val" id="demLoyaltyValue">95.0% D (5.0% cross to R)</span>
         </div>
-        <input type="range" id="demLoyaltySlider" class="adj-slider" min="65" max="100" step="0.1" value="100">
+        <input type="range" id="demLoyaltySlider" class="adj-slider" min="65" max="100" step="0.1" value="95">
         <div class="npa-slider-ends"><span>65% loyal</span><span>100% loyal</span></div>
 
         <div class="npa-slider-label" style="margin-top:16px;">
           <span>Republican voter loyalty (share of REP-registered voters who vote R)</span>
-          <span class="val" id="repLoyaltyValue">100.0% R (0.0% cross to D)</span>
+          <span class="val" id="repLoyaltyValue">95.0% R (5.0% cross to D)</span>
         </div>
-        <input type="range" id="repLoyaltySlider" class="adj-slider" min="65" max="100" step="0.1" value="100">
+        <input type="range" id="repLoyaltySlider" class="adj-slider" min="65" max="100" step="0.1" value="95">
         <div class="npa-slider-ends"><span>65% loyal</span><span>100% loyal</span></div>
 
         <div class="npa-slider-label" style="margin-top:12px; margin-bottom:0; padding-top:12px; border-top:1px solid var(--border);">
@@ -502,6 +502,19 @@
       <input type="range" id="simTurnoutSlider" class="adj-slider" min="65" max="85" step="0.1" value="75">
       <div class="npa-slider-ends"><span>65%</span><span>85%</span></div>
     </div>
+    <div class="sim-checkpoint-mode" style="margin-top:0;">
+      <label for="simCheckpointMode">Map mode</label>
+      <select id="simCheckpointMode">
+        <option value="tie">Tie &mdash; build the map by hand</option>
+        <option value="dem">Democratic Checkpoint</option>
+        <option value="rep">Republican Checkpoint</option>
+      </select>
+      <select id="simCheckpointTier" style="display:none;">
+        <option value="lean">Lean</option>
+        <option value="likely">Likely</option>
+        <option value="safe">Safe</option>
+      </select>
+    </div>
     <button class="sim-btn" id="simResetAllBtn">Reset all counties to 50/50</button>
     <div class="sim-csv-row">
       <span class="sim-csv-label">Scenario file</span>
@@ -532,14 +545,6 @@
         <div class="sim-row"><span>DEM votes</span><span class="val" id="simEditorDemVotes">&mdash;</span></div>
         <div class="sim-row"><span>REP votes</span><span class="val" id="simEditorRepVotes">&mdash;</span></div>
 
-        <div class="sim-checkpoint-mode">
-          <label for="simCheckpointMode">Checkpoint view</label>
-          <select id="simCheckpointMode">
-            <option value="tie">Tie (what ties Florida statewide)</option>
-            <option value="dem">Democratic Checkpoints</option>
-            <option value="rep">Republican Checkpoints</option>
-          </select>
-        </div>
         <div class="sim-checkpoint" id="simCheckpoint"></div>
 
         <div class="sim-editor-actions">
@@ -621,9 +626,10 @@ function categoryFor(c){
 let npaSplitToDem = 50;
 // Percent of DEM-registered / REP-registered voters who actually vote
 // for their own party's candidate (the rest "cross over" to the other
-// side). Both range 65-100; 100 = no crossover.
-let demLoyalty = 100;
-let repLoyalty = 100;
+// side). Both range 65-100; default 95 (a modest, realistic crossover
+// baseline) rather than a no-crossover 100.
+let demLoyalty = 95;
+let repLoyalty = 95;
 
 // Reallocates a county's DEM, REP, and NPA votes according to the current
 // slider settings (NPA split + DEM/REP crossover) and returns the
@@ -1344,6 +1350,7 @@ let simTurnoutPct = 75;
 let selectedSimCounty = null;
 let simInitialized = false;
 let simCheckpointMode = 'tie';
+let simCheckpointTier = 'lean'; // 'lean' | 'likely' | 'safe' — which threshold the checkpoint modes lock every county to
 
 function simResetAll(){
   simDemPct = {};
@@ -1352,6 +1359,18 @@ function simResetAll(){
 
 function simCountyTotal(name){
   return Math.round(SIM_REG[name][0] * (simTurnoutPct/100));
+}
+
+// In "Tie" mode this is just whatever the user hand-set for this county
+// (50 by default). In "Democratic Checkpoint" / "Republican Checkpoint"
+// mode, every county is locked to that party's Lean/Likely/Safe threshold
+// instead — this is what actually redraws the whole map, not just the
+// one selected county.
+const TIER_MARGIN = { lean:0.03, likely:0.08, safe:0.15 };
+function simEffectiveDemPct(name){
+  if(simCheckpointMode === 'tie') return simDemPct[name];
+  const margin = TIER_MARGIN[simCheckpointTier];
+  return simCheckpointMode === 'dem' ? (50 + margin*50) : (50 - margin*50);
 }
 
 function simRatingFor(margin){
@@ -1368,26 +1387,31 @@ function simRatingFor(margin){
 
 function simCountyStats(name){
   const total = simCountyTotal(name);
-  const demPct = simDemPct[name];
+  const demPct = simEffectiveDemPct(name);
   const demVotes = Math.round(total * (demPct/100));
   const repVotes = total - demVotes;
   const margin = total ? (demVotes-repVotes)/total : 0;
   return { total, demPct, repPct: 100-demPct, demVotes, repVotes, margin, rating: simRatingFor(margin) };
 }
 
-// This county's registrant pools at the current turnout setting: how many
-// of its DEM-registered, REP-registered, and NPA/minor-registered voters
-// are expected to turn out (their eventual candidate choice is what the
-// checkpoint math below solves for).
-function simCountyPools(name){
-  const reg = SIM_REG[name];
-  const t = simTurnoutPct/100;
-  const demRegPct = reg[1], repRegPct = reg[2], npaRegPct = Math.max(0, 100-reg[1]-reg[2]);
-  return {
-    dem: reg[0]*(demRegPct/100)*t,
-    rep: reg[0]*(repRegPct/100)*t,
-    npa: reg[0]*(npaRegPct/100)*t
-  };
+// This county's Lean/Likely/Safe vote-count checkpoints for both parties,
+// at the current turnout setting — a plain reference table, always based
+// on the selected turnout (not on 100% registration).
+function simCountyCheckpointTable(name){
+  const total = simCountyTotal(name);
+  const tiers = [
+    { key:'lean',   label:'Lean',   margin:0.03 },
+    { key:'likely', label:'Likely', margin:0.08 },
+    { key:'safe',   label:'Safe',   margin:0.15 }
+  ];
+  return tiers.map(t => {
+    const demPct = 50 + t.margin*50, repPct = 50 - t.margin*50;
+    return {
+      ...t,
+      demVotes: Math.round(total*(demPct/100)), demPct,
+      repVotes: Math.round(total*(repPct/100)), repPct
+    };
+  });
 }
 
 function simStatewide(){
@@ -1395,7 +1419,7 @@ function simStatewide(){
   SIM_COUNTY_NAMES.forEach(name => {
     const s = simCountyStats(name);
     dem += s.demVotes; rep += s.repVotes; total += s.total;
-    if(Math.abs(simDemPct[name]-50) > 0.05) movedCount++;
+    if(Math.abs(simEffectiveDemPct(name)-50) > 0.05) movedCount++;
   });
   const margin = total ? (dem-rep)/total : 0;
   return { dem, rep, total, movedCount, margin, rating: simRatingFor(margin) };
@@ -1492,100 +1516,34 @@ function selectSimCounty(name){
   selectedSimCounty = name;
   document.getElementById('simPlaceholder').style.display = 'none';
   document.getElementById('simEditor').style.display = 'block';
-  document.getElementById('simDemSlider').value = simDemPct[name];
+  document.getElementById('simDemSlider').value = simEffectiveDemPct(name);
+  document.getElementById('simDemSlider').disabled = (simCheckpointMode !== 'tie');
   renderSimEditor();
   renderSimTable();
-}
-
-// Party-tier vote-count checkpoints for the selected county, at the
-// current turnout setting: the DEM (or REP) vote total needed to reach
-// each rating tier, expressed as a recipe against that party's own
-// registrant pool, then NPA, then crossover from the opposing party's
-// registrants — in that order, since that's the most plausible path to
-// those votes.
-function simPartyCheckpoints(name, party){
-  const s = simCountyStats(name);
-  const pools = simCountyPools(name);
-  const total = s.total;
-  const ownPool = party === 'dem' ? pools.dem : pools.rep;
-  const oppPool = party === 'dem' ? pools.rep : pools.dem;
-  const tiers = [
-    { key:'lean',   label:'Lean',   margin:0.03 },
-    { key:'likely', label:'Likely', margin:0.08 },
-    { key:'safe',   label:'Safe',   margin:0.15 }
-  ];
-  return tiers.map(t => {
-    // votes needed = total * (50 + margin*50)/100, i.e. the two-party pct
-    // checkpoint converted into an actual vote count for this county.
-    const neededVotes = total * (0.5 + t.margin/2);
-    if(!total){
-      return { ...t, neededVotes:0, neededPct:0, achievable:false, recipe:'No projected turnout in this county at the current turnout setting.' };
-    }
-    const neededPct = (neededVotes/total)*100;
-    let remaining = neededVotes;
-    const fromOwn = Math.min(remaining, ownPool);
-    remaining -= fromOwn;
-    const fromNpa = Math.min(remaining, pools.npa);
-    remaining -= fromNpa;
-    const fromOpp = Math.min(remaining, oppPool);
-    remaining -= fromOpp;
-    const achievable = remaining <= 0.5;
-    const ownPct = ownPool ? (fromOwn/ownPool)*100 : 0;
-    const npaPct = pools.npa ? (fromNpa/pools.npa)*100 : 0;
-    const oppPct = oppPool ? (fromOpp/oppPool)*100 : 0;
-    const ownLabel = party === 'dem' ? 'DEM-registered' : 'REP-registered';
-    const oppLabel = party === 'dem' ? 'REP-registered' : 'DEM-registered';
-    let recipe = `${ownPct.toFixed(0)}% of ${ownLabel} (${fmt(Math.round(fromOwn))})`;
-    if(fromNpa > 0.5) recipe += ` + ${npaPct.toFixed(0)}% of NPA/minor (${fmt(Math.round(fromNpa))})`;
-    if(fromOpp > 0.5) recipe += ` + ${oppPct.toFixed(0)}% crossover from ${oppLabel} (${fmt(Math.round(fromOpp))})`;
-    if(!achievable) recipe += ` \u2014 still short by ${fmt(Math.round(remaining))} even with 100% of both pools`;
-    return { ...t, neededVotes, neededPct, achievable, recipe };
-  });
 }
 
 function renderSimCheckpoint(){
   if(!selectedSimCounty) return;
   const name = selectedSimCounty;
   const el = document.getElementById('simCheckpoint');
+  const rows = simCountyCheckpointTable(name);
+  const mode = simCheckpointMode;
 
-  if(simCheckpointMode === 'tie'){
-    const s = simCountyStats(name);
-    let otherDem = 0, otherRep = 0;
-    SIM_COUNTY_NAMES.forEach(n => {
-      if(n === name) return;
-      const os = simCountyStats(n);
-      otherDem += os.demVotes; otherRep += os.repVotes;
-    });
-    const thisTotal = s.total;
-    if(thisTotal === 0){
-      el.textContent = 'No projected turnout in this county at the current turnout setting.';
-      return;
-    }
-    const neededDemVotes = (otherRep - otherDem + thisTotal) / 2;
-    const neededPct = (neededDemVotes/thisTotal)*100;
-    if(neededPct <= 0){
-      el.innerHTML = `Democrats already win Florida statewide regardless of ${name} County, given how every other county is currently set.`;
-    }else if(neededPct >= 100){
-      el.innerHTML = `Even 100% of the two-party vote here isn't enough to tie Florida statewide, given how every other county is currently set \u2014 Democrats would need to gain ground elsewhere too.`;
-    }else if(s.demPct >= neededPct){
-      el.innerHTML = `Democrats already have enough here to tie Florida statewide \u2014 they only needed <b>${neededPct.toFixed(1)}%</b>, and this county is set to <b>${s.demPct.toFixed(1)}%</b>.`;
-    }else{
-      el.innerHTML = `Democrats need <b>${neededPct.toFixed(1)}%</b> of the two-party vote here to tie Florida statewide (currently set to ${s.demPct.toFixed(1)}%).`;
-    }
-    return;
-  }
+  const header = mode === 'tie'
+    ? `Reference checkpoints in ${name} County at ${simTurnoutPct.toFixed(1)}% turnout (${fmt(simCountyTotal(name))} votes):`
+    : `${name} County is locked to the ${mode==='dem'?'Democratic':'Republican'} ${simCheckpointTier} checkpoint on the map right now.`;
 
-  const party = simCheckpointMode; // 'dem' or 'rep'
-  const tiers = simPartyCheckpoints(name, party);
-  const partyLabel = party === 'dem' ? 'Democratic' : 'Republican';
   el.innerHTML =
-    `<div style="margin-bottom:6px; color:var(--muted);">${partyLabel} checkpoints in ${name} County at ${simTurnoutPct.toFixed(1)}% turnout:</div>` +
-    tiers.map(t => `
+    `<div style="margin-bottom:6px; color:var(--muted);">${header}</div>` +
+    rows.map(t => `
       <div class="sim-checkpoint-tier">
-        <span class="tier-name">${t.label} ${party==='dem'?'D':'R'}</span>
-        <span>${t.neededPct.toFixed(1)}% \u00b7 ${fmt(Math.round(t.neededVotes))} votes</span>
+        <span class="tier-name" style="color:var(--dem)">${t.label} D</span>
+        <span>${t.demPct.toFixed(1)}% \u00b7 ${fmt(t.demVotes)} votes</span>
       </div>
-      <div class="sim-checkpoint-recipe">${t.recipe}</div>
+      <div class="sim-checkpoint-tier">
+        <span class="tier-name" style="color:var(--rep)">${t.label} R</span>
+        <span>${t.repPct.toFixed(1)}% \u00b7 ${fmt(t.repVotes)} votes</span>
+      </div>
     `).join('');
 }
 
@@ -1594,11 +1552,15 @@ function renderSimEditor(){
   const name = selectedSimCounty;
   const reg = SIM_REG[name];
   const s = simCountyStats(name);
+  const editable = simCheckpointMode === 'tie';
 
   document.getElementById('simEditorCounty').textContent = name + ' County';
   document.getElementById('simEditorVoters').textContent =
     `${fmt(reg[0])} registered voters \u00b7 ${fmt(s.total)} voting at ${simTurnoutPct.toFixed(1)}% turnout`;
-  document.getElementById('simDemPctLabel').textContent = `${s.demPct.toFixed(1)}% D / ${s.repPct.toFixed(1)}% R`;
+  document.getElementById('simDemPctLabel').textContent =
+    `${s.demPct.toFixed(1)}% D / ${s.repPct.toFixed(1)}% R` + (editable ? '' : ' (set by map mode, not editable)');
+  document.getElementById('simDemSlider').disabled = !editable;
+  document.getElementById('simResetCountyBtn').disabled = !editable;
   document.getElementById('simEditorResult').textContent = s.rating + ' (' + marginLabel(s.margin) + ')';
   document.getElementById('simEditorDemVotes').textContent = fmt(s.demVotes);
   document.getElementById('simEditorRepVotes').textContent = fmt(s.repVotes);
@@ -1640,7 +1602,7 @@ document.getElementById('simTurnoutSlider').addEventListener('input', e => {
   renderSim();
 });
 document.getElementById('simDemSlider').addEventListener('input', e => {
-  if(!selectedSimCounty) return;
+  if(!selectedSimCounty || simCheckpointMode !== 'tie') return;
   simDemPct[selectedSimCounty] = parseFloat(e.target.value);
   renderSimStats();
   renderSimMap();
@@ -1649,7 +1611,18 @@ document.getElementById('simDemSlider').addEventListener('input', e => {
 });
 document.getElementById('simCheckpointMode').addEventListener('change', e => {
   simCheckpointMode = e.target.value;
-  renderSimCheckpoint();
+  document.getElementById('simCheckpointTier').style.display = (simCheckpointMode === 'tie') ? 'none' : 'inline-block';
+  if(selectedSimCounty){
+    document.getElementById('simDemSlider').value = simEffectiveDemPct(selectedSimCounty);
+  }
+  renderSim();
+});
+document.getElementById('simCheckpointTier').addEventListener('change', e => {
+  simCheckpointTier = e.target.value;
+  if(selectedSimCounty){
+    document.getElementById('simDemSlider').value = simEffectiveDemPct(selectedSimCounty);
+  }
+  renderSim();
 });
 document.getElementById('simResetCountyBtn').addEventListener('click', () => {
   if(!selectedSimCounty) return;
@@ -1661,7 +1634,10 @@ document.getElementById('simResetAllBtn').addEventListener('click', () => {
   simResetAll();
   selectedSimCounty = null;
   simCheckpointMode = 'tie';
+  simCheckpointTier = 'lean';
   document.getElementById('simCheckpointMode').value = 'tie';
+  document.getElementById('simCheckpointTier').value = 'lean';
+  document.getElementById('simCheckpointTier').style.display = 'none';
   document.getElementById('simEditor').style.display = 'none';
   document.getElementById('simPlaceholder').style.display = 'block';
   renderSim();

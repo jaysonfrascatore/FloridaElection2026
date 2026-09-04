@@ -493,7 +493,7 @@
     </div>
   </div>
 
-  <div class="panel sim-turnout-strip">
+  <div class="panel sim-turnout-strip" id="simTurnoutStrip">
     <div style="flex:1; min-width:220px;">
       <div class="npa-slider-label" style="margin-bottom:8px;">
         <span>Statewide turnout (share of registered voters who vote)</span>
@@ -506,13 +506,8 @@
       <label for="simCheckpointMode">Map mode</label>
       <select id="simCheckpointMode">
         <option value="tie">Tie &mdash; build the map by hand</option>
-        <option value="dem">Democratic Checkpoint</option>
-        <option value="rep">Republican Checkpoint</option>
-      </select>
-      <select id="simCheckpointTier" style="display:none;">
-        <option value="lean">Lean</option>
-        <option value="likely">Likely</option>
-        <option value="safe">Safe</option>
+        <option value="y2018">2018 Governor's Race (actual)</option>
+        <option value="y2022">2022 Governor's Race (actual)</option>
       </select>
     </div>
     <button class="sim-btn" id="simResetAllBtn">Reset all counties to 50/50</button>
@@ -526,7 +521,7 @@
 
   <div class="grid">
     <div class="panel">
-      <h2>Click a county to set its margin</h2>
+      <h2 id="simMapHeader">Click a county to set its margin</h2>
       <div id="simMap" style="height:480px;"></div>
       <div class="legend" id="simMapLegend"></div>
 
@@ -534,12 +529,14 @@
         <div class="sim-editor-title" id="simEditorCounty">&mdash;</div>
         <div class="sim-editor-sub" id="simEditorVoters">&mdash;</div>
 
-        <div class="npa-slider-label" style="margin-top:6px; margin-bottom:8px;">
-          <span>Democratic share of the two-party vote</span>
-          <span class="val" id="simDemPctLabel">50.0% D / 50.0% R</span>
+        <div id="simEditableBlock">
+          <div class="npa-slider-label" style="margin-top:6px; margin-bottom:8px;">
+            <span>Democratic share of the two-party vote</span>
+            <span class="val" id="simDemPctLabel">50.0% D / 50.0% R</span>
+          </div>
+          <input type="range" id="simDemSlider" class="adj-slider" min="0" max="100" step="0.1" value="50">
+          <div class="npa-slider-ends"><span>All R</span><span>Tie</span><span>All D</span></div>
         </div>
-        <input type="range" id="simDemSlider" class="adj-slider" min="0" max="100" step="0.1" value="50">
-        <div class="npa-slider-ends"><span>All R</span><span>Tie</span><span>All D</span></div>
 
         <div class="sim-row"><span>Result</span><span class="val" id="simEditorResult">Tie</span></div>
         <div class="sim-row"><span>DEM votes</span><span class="val" id="simEditorDemVotes">&mdash;</span></div>
@@ -547,7 +544,7 @@
 
         <div class="sim-checkpoint" id="simCheckpoint"></div>
 
-        <div class="sim-editor-actions">
+        <div class="sim-editor-actions" id="simEditorActions">
           <button class="sim-btn" id="simResetCountyBtn">Reset this county to 50/50</button>
         </div>
       </div>
@@ -574,7 +571,7 @@
     </div>
   </div>
 
-  <footer>Registration figures: Republican, Democratic, and Other (NPA + minor parties) share by county, Florida Division of Elections via Neurelect, as of Jun 2026 &middot; hypothetical scenario only, not a forecast</footer>
+  <footer>Registration figures: Republican, Democratic, and Other (NPA + minor parties) share by county, Florida Division of Elections via Neurelect, as of Jun 2026. 2018 and 2022 results: certified county-level Florida Governor's race totals. &middot; hypothetical scenario only, not a forecast</footer>
 </div>
 
 <script>
@@ -1310,18 +1307,13 @@ document.querySelectorAll('#voteTable thead th').forEach(th => {
 });
 
 // ==================== Build Your Own Map ====================
-// A hypothetical/scenario tab: every county starts tied 50/50. Pick a
-// statewide turnout % (65-85% of each county's registered voters),
-// click any county, and drag its DEM share of the two-party vote —
-// the map, table, and statewide margin all update live, plus a
-// checkpoint that tells you what this county alone would need to
-// deliver (all other counties held as currently set) to tie Florida.
-//
-// Registered-voter counts and REP/DEM share by county, sourced from the
-// Florida Division of Elections (via Neurelect), snapshot as of Jun
-// 2026. The remainder of each county is NPA + minor parties, folded
-// together the same way the rest of this dashboard treats third parties
-// — but this tab only ever splits the two-party (D vs R) vote.
+// Registered-voter counts and REP/DEM registration share by county,
+// sourced from the Florida Division of Elections (via Neurelect),
+// snapshot as of Jun 2026. Used only by "Tie" mode to scale a
+// hypothetical turnout — the remainder of each county is NPA + minor
+// parties, folded together the same way the rest of this dashboard
+// treats third parties, but this tab only ever splits the two-party
+// (D vs R) vote.
 const SIM_REG = {
   "Alachua":[164612,29,44],"Baker":[17721,71,16],"Bay":[125440,59,18],"Bradford":[16669,64,21],
   "Brevard":[437809,47,25],"Broward":[1080000,25,43],"Calhoun":[7531,64,25],"Charlotte":[152475,55,19],
@@ -1343,14 +1335,62 @@ const SIM_REG = {
 };
 const SIM_COUNTY_NAMES = Object.keys(SIM_REG).sort();
 
+// Actual certified county-level results, 2018 and 2022 Florida Governor's
+// races (Gillum-DeSantis, Crist-DeSantis). Used by the "2018" / "2022"
+// map modes to show real historical results, and as reference points
+// while hand-building a hypothetical map in Tie mode.
+const SIM_2018 = {
+  "Alachua":[72711,41278],"Baker":[1760,8687],"Bay":[16757,45709],"Bradford":[2671,7698],
+  "Brevard":[114921,162213],"Broward":[482152,222012],"Calhoun":[923,3576],
+  "Charlotte":[31248,54102],"Citrus":[21197,47729],"Clay":[28150,64401],
+  "Collier":[53594,100303],"Columbia":[7105,17426],"DeSoto":[3059,5663],"Dixie":[1008,4663],
+  "Duval":[196612,179902],"Escambia":[52835,74719],"Flagler":[21183,30951],
+  "Franklin":[1790,3508],"Gadsden":[13712,6200],"Gilchrist":[1282,5975],"Glades":[1095,2647],
+  "Gulf":[1511,4265],"Hamilton":[1591,2908],"Hardee":[1802,4486],"Hendry":[3516,5177],
+  "Hernando":[29426,49671],"Highlands":[12783,26285],"Hillsborough":[281598,234835],
+  "Holmes":[737,5940],"Indian River":[28460,44925],"Jackson":[5019,10771],
+  "Jefferson":[3375,3877],"Lafayette":[419,2364],"Lake":[60289,92633],"Lee":[111172,174085],
+  "Leon":[88764,49942],"Levy":[4718,12084],"Liberty":[527,2060],"Madison":[3235,4345],
+  "Manatee":[67629,93246],"Marion":[57392,94901],"Martin":[29133,47820],
+  "Miami-Dade":[478958,311581],"Monroe":[17176,18509],"Nassau":[11472,31704],
+  "Okaloosa":[22408,59940],"Okeechobee":[3306,7730],"Orange":[296257,174228],
+  "Osceola":[68707,44627],"Palm Beach":[341409,241016],"Pasco":[86384,120753],
+  "Pinellas":[220818,207677],"Polk":[104057,136711],"Putnam":[9011,18721],
+  "Santa Rosa":[18207,56148],"Sarasota":[94986,113211],"Seminole":[100197,96622],
+  "St. Johns":[46206,83658],"St. Lucie":[63605,58990],"Sumter":[21843,51798],
+  "Suwannee":[3450,12234],"Taylor":[1877,5942],"Union":[972,3841],"Volusia":[100478,124819],
+  "Wakulla":[4194,9802],"Walton":[7019,22925],"Washington":[1865,7017]
+};
+const SIM_2022 = {
+  "Alachua":[40321,54796],"Baker":[1092,9594],"Bay":[14091,52590],"Bradford":[1852,8346],
+  "Brevard":[95131,170562],"Broward":[343286,251238],"Calhoun":[657,4180],
+  "Charlotte":[27005,65357],"Citrus":[19100,56283],"Clay":[22187,67292],
+  "Collier":[45815,117477],"Columbia":[4789,18790],"DeSoto":[2023,6637],"Dixie":[735,5394],
+  "Duval":[143837,182569],"Escambia":[40076,74608],"Flagler":[19177,39183],
+  "Franklin":[1406,4003],"Gadsden":[10805,6511],"Gilchrist":[1017,6806],"Glades":[721,3091],
+  "Gulf":[1247,5150],"Hamilton":[1120,3145],"Hardee":[949,4558],"Hendry":[2052,6134],
+  "Hernando":[23700,56247],"Highlands":[9994,29518],"Hillsborough":[217349,261936],
+  "Holmes":[533,6214],"Indian River":[24744,52269],"Jackson":[3835,12412],
+  "Jefferson":[2776,4310],"Lafayette":[294,2617],"Lake":[52579,106578],"Lee":[84739,189335],
+  "Leon":[67535,49244],"Levy":[3758,14049],"Liberty":[371,2234],"Madison":[2293,4661],
+  "Manatee":[59801,111109],"Marion":[47129,108027],"Martin":[23748,53595],
+  "Miami-Dade":[312972,393532],"Monroe":[13314,20479],"Nassau":[10973,36551],
+  "Okaloosa":[18569,61715],"Okeechobee":[2079,8746],"Orange":[216221,187653],
+  "Osceola":[47387,54330],"Palm Beach":[262655,278454],"Pasco":[75342,148083],
+  "Pinellas":[189563,231284],"Polk":[80172,148254],"Putnam":[6196,20217],
+  "Santa Rosa":[15096,60091],"Sarasota":[84614,133354],"Seminole":[79664,102191],
+  "St. Johns":[42873,101066],"St. Lucie":[49009,72354],"Sumter":[23718,65496],
+  "Suwannee":[2650,13649],"Taylor":[1276,6308],"Union":[544,3995],"Volusia":[79965,144768],
+  "Wakulla":[3920,11033],"Walton":[6112,28647],"Washington":[1285,7786]
+};
+
 // Current hypothetical DEM share of the two-party vote per county
-// (0-100). 50 = tied. Keyed by county name.
+// (0-100). 50 = tied. Keyed by county name. Only used in Tie mode.
 let simDemPct = {};
 let simTurnoutPct = 75;
 let selectedSimCounty = null;
 let simInitialized = false;
-let simCheckpointMode = 'tie';
-let simCheckpointTier = 'lean'; // 'lean' | 'likely' | 'safe' — which threshold the checkpoint modes lock every county to
+let simCheckpointMode = 'tie'; // 'tie' | 'y2018' | 'y2022'
 
 function simResetAll(){
   simDemPct = {};
@@ -1359,18 +1399,6 @@ function simResetAll(){
 
 function simCountyTotal(name){
   return Math.round(SIM_REG[name][0] * (simTurnoutPct/100));
-}
-
-// In "Tie" mode this is just whatever the user hand-set for this county
-// (50 by default). In "Democratic Checkpoint" / "Republican Checkpoint"
-// mode, every county is locked to that party's Lean/Likely/Safe threshold
-// instead — this is what actually redraws the whole map, not just the
-// one selected county.
-const TIER_MARGIN = { lean:0.03, likely:0.08, safe:0.15 };
-function simEffectiveDemPct(name){
-  if(simCheckpointMode === 'tie') return simDemPct[name];
-  const margin = TIER_MARGIN[simCheckpointTier];
-  return simCheckpointMode === 'dem' ? (50 + margin*50) : (50 - margin*50);
 }
 
 function simRatingFor(margin){
@@ -1385,33 +1413,26 @@ function simRatingFor(margin){
   return level + ' ' + leader;
 }
 
+// Real historical stats for a county in a given actual election
+// (SIM_2018 or SIM_2022) — fixed vote totals, not turnout-scaled.
+function simHistoricalStats(name, yearData){
+  const row = yearData[name];
+  const dem = row ? row[0] : 0, rep = row ? row[1] : 0;
+  const total = dem + rep;
+  const demPct = total ? (dem/total)*100 : 50;
+  const margin = total ? (dem-rep)/total : 0;
+  return { total, demPct, repPct: 100-demPct, demVotes:dem, repVotes:rep, margin, rating: simRatingFor(margin) };
+}
+
 function simCountyStats(name){
+  if(simCheckpointMode === 'y2018') return simHistoricalStats(name, SIM_2018);
+  if(simCheckpointMode === 'y2022') return simHistoricalStats(name, SIM_2022);
   const total = simCountyTotal(name);
-  const demPct = simEffectiveDemPct(name);
+  const demPct = simDemPct[name];
   const demVotes = Math.round(total * (demPct/100));
   const repVotes = total - demVotes;
   const margin = total ? (demVotes-repVotes)/total : 0;
   return { total, demPct, repPct: 100-demPct, demVotes, repVotes, margin, rating: simRatingFor(margin) };
-}
-
-// This county's Lean/Likely/Safe vote-count checkpoints for both parties,
-// at the current turnout setting — a plain reference table, always based
-// on the selected turnout (not on 100% registration).
-function simCountyCheckpointTable(name){
-  const total = simCountyTotal(name);
-  const tiers = [
-    { key:'lean',   label:'Lean',   margin:0.03 },
-    { key:'likely', label:'Likely', margin:0.08 },
-    { key:'safe',   label:'Safe',   margin:0.15 }
-  ];
-  return tiers.map(t => {
-    const demPct = 50 + t.margin*50, repPct = 50 - t.margin*50;
-    return {
-      ...t,
-      demVotes: Math.round(total*(demPct/100)), demPct,
-      repVotes: Math.round(total*(repPct/100)), repPct
-    };
-  });
 }
 
 function simStatewide(){
@@ -1419,7 +1440,7 @@ function simStatewide(){
   SIM_COUNTY_NAMES.forEach(name => {
     const s = simCountyStats(name);
     dem += s.demVotes; rep += s.repVotes; total += s.total;
-    if(Math.abs(simEffectiveDemPct(name)-50) > 0.05) movedCount++;
+    if(simCheckpointMode === 'tie' && Math.abs(simDemPct[name]-50) > 0.05) movedCount++;
   });
   const margin = total ? (dem-rep)/total : 0;
   return { dem, rep, total, movedCount, margin, rating: simRatingFor(margin) };
@@ -1436,14 +1457,16 @@ async function renderSimMap(){
   const locations = SIM_COUNTY_NAMES.map(name => FL_FIPS[name]);
   const n = RATING_CATS.length;
   const z = SIM_COUNTY_NAMES.map(name => RATING_CATS.findIndex(cat=>cat.key===simCountyStats(name).rating) + 0.5);
+  const clickable = simCheckpointMode === 'tie';
   const text = SIM_COUNTY_NAMES.map(name => {
     const s = simCountyStats(name);
-    return `<b>${name}</b><br>Rating: ${s.rating}<br>DEM ${fmt(s.demVotes)} (${s.demPct.toFixed(1)}%)<br>REP ${fmt(s.repVotes)} (${s.repPct.toFixed(1)}%)<br>Turnout votes ${fmt(s.total)}<br><i>click to edit</i>`;
+    return `<b>${name}</b><br>Rating: ${s.rating}<br>DEM ${fmt(s.demVotes)} (${s.demPct.toFixed(1)}%)<br>REP ${fmt(s.repVotes)} (${s.repPct.toFixed(1)}%)<br>${simCheckpointMode==='tie' ? 'Turnout votes' : 'Total votes'} ${fmt(s.total)}` +
+      (clickable ? `<br><i>click to edit</i>` : `<br><i>click for details</i>`);
   });
   const trace = {
     type:'choropleth', geojson: geojsonFL, locations, z,
     featureidkey:'id', zmin:0, zmax:n,
-    colorscale: stepColorscale(RATING_CATS), marker:{line:{color:'#0a0e17', width: selectedSimCounty ? 1 : 1}},
+    colorscale: stepColorscale(RATING_CATS), marker:{line:{color:'#0a0e17', width:1}},
     text, hoverinfo:'text', hoverlabel:{bgcolor:'#151b28', bordercolor:'#212a3b', font:{family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5'}},
     showscale:false
   };
@@ -1503,7 +1526,7 @@ function renderSimStats(){
   document.getElementById('simLabelR').textContent = 'REP ' + fmt(sw.rep) + ' (' + rPct.toFixed(1) + '%)';
 
   document.getElementById('simStatTotal').textContent = fmt(sw.total);
-  document.getElementById('simStatCounties').textContent = sw.movedCount + ' / ' + SIM_COUNTY_NAMES.length;
+  document.getElementById('simStatCounties').textContent = simCheckpointMode === 'tie' ? (sw.movedCount + ' / ' + SIM_COUNTY_NAMES.length) : '\u2014';
   document.getElementById('simStatRating').textContent = sw.rating;
 }
 
@@ -1516,35 +1539,46 @@ function selectSimCounty(name){
   selectedSimCounty = name;
   document.getElementById('simPlaceholder').style.display = 'none';
   document.getElementById('simEditor').style.display = 'block';
-  document.getElementById('simDemSlider').value = simEffectiveDemPct(name);
-  document.getElementById('simDemSlider').disabled = (simCheckpointMode !== 'tie');
+  if(simCheckpointMode === 'tie'){
+    document.getElementById('simDemSlider').value = simDemPct[name];
+  }
   renderSimEditor();
   renderSimTable();
 }
 
+// Shows this county's real 2018 and 2022 results as reference points —
+// "the goal to exceed" — whichever mode is active. In Tie mode this
+// compares against the hand-set hypothetical value; in 2018/2022 mode it
+// just shows the other year for comparison ("see the shift").
 function renderSimCheckpoint(){
   if(!selectedSimCounty) return;
   const name = selectedSimCounty;
   const el = document.getElementById('simCheckpoint');
-  const rows = simCountyCheckpointTable(name);
-  const mode = simCheckpointMode;
+  const h18 = simHistoricalStats(name, SIM_2018);
+  const h22 = simHistoricalStats(name, SIM_2022);
+  const shiftPts = h22.demPct - h18.demPct;
+  const shiftLine = `<div class="sim-checkpoint-recipe" style="margin-top:6px;">Shift 2018 &rarr; 2022: ${shiftPts>=0?'+':''}${shiftPts.toFixed(1)} pts ${shiftPts>=0?'toward D':'toward R'}.</div>`;
 
-  const header = mode === 'tie'
-    ? `Reference checkpoints in ${name} County at ${simTurnoutPct.toFixed(1)}% turnout (${fmt(simCountyTotal(name))} votes):`
-    : `${name} County is locked to the ${mode==='dem'?'Democratic':'Republican'} ${simCheckpointTier} checkpoint on the map right now.`;
+  if(simCheckpointMode !== 'tie'){
+    const other = simCheckpointMode === 'y2018' ? h22 : h18;
+    const otherLabel = simCheckpointMode === 'y2018' ? '2022' : '2018';
+    el.innerHTML =
+      `<div class="sim-checkpoint-tier"><span class="tier-name">2018 result</span><span>${marginLabel(h18.margin)} (${h18.demPct.toFixed(1)}% D)</span></div>` +
+      `<div class="sim-checkpoint-tier"><span class="tier-name">2022 result</span><span>${marginLabel(h22.margin)} (${h22.demPct.toFixed(1)}% D)</span></div>` +
+      shiftLine;
+    return;
+  }
+
+  const s = simCountyStats(name);
+  const beat18 = s.demPct > h18.demPct;
+  const beat22 = s.demPct > h22.demPct;
+  const goalLine = `Your setting (${s.demPct.toFixed(1)}% D) ${beat18?'exceeds':'falls short of'} 2018 and ${beat22?'exceeds':'falls short of'} 2022 for Democrats here.`;
 
   el.innerHTML =
-    `<div style="margin-bottom:6px; color:var(--muted);">${header}</div>` +
-    rows.map(t => `
-      <div class="sim-checkpoint-tier">
-        <span class="tier-name" style="color:var(--dem)">${t.label} D</span>
-        <span>${t.demPct.toFixed(1)}% \u00b7 ${fmt(t.demVotes)} votes</span>
-      </div>
-      <div class="sim-checkpoint-tier">
-        <span class="tier-name" style="color:var(--rep)">${t.label} R</span>
-        <span>${t.repPct.toFixed(1)}% \u00b7 ${fmt(t.repVotes)} votes</span>
-      </div>
-    `).join('');
+    `<div class="sim-checkpoint-tier"><span class="tier-name">2018 result (goal to exceed)</span><span>${marginLabel(h18.margin)} (${h18.demPct.toFixed(1)}% D)</span></div>` +
+    `<div class="sim-checkpoint-tier"><span class="tier-name">2022 result (goal to exceed)</span><span>${marginLabel(h22.margin)} (${h22.demPct.toFixed(1)}% D)</span></div>` +
+    shiftLine +
+    `<div class="sim-checkpoint-recipe" style="margin-top:6px;">${goalLine}</div>`;
 }
 
 function renderSimEditor(){
@@ -1554,13 +1588,18 @@ function renderSimEditor(){
   const s = simCountyStats(name);
   const editable = simCheckpointMode === 'tie';
 
+  document.getElementById('simEditableBlock').style.display = editable ? 'block' : 'none';
+  document.getElementById('simEditorActions').style.display = editable ? 'flex' : 'none';
+
   document.getElementById('simEditorCounty').textContent = name + ' County';
-  document.getElementById('simEditorVoters').textContent =
-    `${fmt(reg[0])} registered voters \u00b7 ${fmt(s.total)} voting at ${simTurnoutPct.toFixed(1)}% turnout`;
-  document.getElementById('simDemPctLabel').textContent =
-    `${s.demPct.toFixed(1)}% D / ${s.repPct.toFixed(1)}% R` + (editable ? '' : ' (set by map mode, not editable)');
-  document.getElementById('simDemSlider').disabled = !editable;
-  document.getElementById('simResetCountyBtn').disabled = !editable;
+  if(editable){
+    document.getElementById('simEditorVoters').textContent =
+      `${fmt(reg[0])} registered voters \u00b7 ${fmt(s.total)} voting at ${simTurnoutPct.toFixed(1)}% turnout`;
+  }else{
+    const yearLabel = simCheckpointMode === 'y2018' ? '2018' : '2022';
+    document.getElementById('simEditorVoters').textContent = `Actual ${yearLabel} Governor's race result \u00b7 ${fmt(s.total)} votes cast`;
+  }
+  document.getElementById('simDemPctLabel').textContent = `${s.demPct.toFixed(1)}% D / ${s.repPct.toFixed(1)}% R`;
   document.getElementById('simEditorResult').textContent = s.rating + ' (' + marginLabel(s.margin) + ')';
   document.getElementById('simEditorDemVotes').textContent = fmt(s.demVotes);
   document.getElementById('simEditorRepVotes').textContent = fmt(s.repVotes);
@@ -1573,6 +1612,11 @@ function renderSim(){
   renderSimMap();
   renderSimTable();
   updateSimTurnoutLabel();
+  document.getElementById('simTurnoutStrip').querySelectorAll('.adj-slider')[0].closest('div').style.opacity = simCheckpointMode === 'tie' ? '1' : '.4';
+  document.getElementById('simTurnoutSlider').disabled = simCheckpointMode !== 'tie';
+  document.getElementById('simMapHeader').textContent = simCheckpointMode === 'tie'
+    ? 'Click a county to set its margin'
+    : `Actual ${simCheckpointMode === 'y2018' ? '2018' : '2022'} Governor's race results by county`;
   if(selectedSimCounty) renderSimEditor();
 }
 
@@ -1611,21 +1655,13 @@ document.getElementById('simDemSlider').addEventListener('input', e => {
 });
 document.getElementById('simCheckpointMode').addEventListener('change', e => {
   simCheckpointMode = e.target.value;
-  document.getElementById('simCheckpointTier').style.display = (simCheckpointMode === 'tie') ? 'none' : 'inline-block';
-  if(selectedSimCounty){
-    document.getElementById('simDemSlider').value = simEffectiveDemPct(selectedSimCounty);
-  }
-  renderSim();
-});
-document.getElementById('simCheckpointTier').addEventListener('change', e => {
-  simCheckpointTier = e.target.value;
-  if(selectedSimCounty){
-    document.getElementById('simDemSlider').value = simEffectiveDemPct(selectedSimCounty);
+  if(selectedSimCounty && simCheckpointMode === 'tie'){
+    document.getElementById('simDemSlider').value = simDemPct[selectedSimCounty];
   }
   renderSim();
 });
 document.getElementById('simResetCountyBtn').addEventListener('click', () => {
-  if(!selectedSimCounty) return;
+  if(!selectedSimCounty || simCheckpointMode !== 'tie') return;
   simDemPct[selectedSimCounty] = 50;
   document.getElementById('simDemSlider').value = 50;
   renderSim();
@@ -1634,10 +1670,7 @@ document.getElementById('simResetAllBtn').addEventListener('click', () => {
   simResetAll();
   selectedSimCounty = null;
   simCheckpointMode = 'tie';
-  simCheckpointTier = 'lean';
   document.getElementById('simCheckpointMode').value = 'tie';
-  document.getElementById('simCheckpointTier').value = 'lean';
-  document.getElementById('simCheckpointTier').style.display = 'none';
   document.getElementById('simEditor').style.display = 'none';
   document.getElementById('simPlaceholder').style.display = 'block';
   renderSim();
@@ -1645,12 +1678,13 @@ document.getElementById('simResetAllBtn').addEventListener('click', () => {
 
 // Download the current scenario (every county's hypothetical DEM/REP
 // split, at the current turnout setting) as a CSV the user can save and
-// re-upload later.
+// re-upload later. In 2018/2022 mode this exports the actual historical
+// results instead.
 document.getElementById('simDownloadCsvBtn').addEventListener('click', () => {
   const rows = [['County','Registered','TurnoutPct','DEM_Pct','REP_Pct','DEM_Votes','REP_Votes','Rating']];
   SIM_COUNTY_NAMES.forEach(name => {
     const s = simCountyStats(name);
-    rows.push([name, SIM_REG[name][0], simTurnoutPct.toFixed(1), s.demPct.toFixed(1), s.repPct.toFixed(1), s.demVotes, s.repVotes, s.rating]);
+    rows.push([name, SIM_REG[name][0], simCheckpointMode==='tie' ? simTurnoutPct.toFixed(1) : simCheckpointMode, s.demPct.toFixed(1), s.repPct.toFixed(1), s.demVotes, s.repVotes, s.rating]);
   });
   const csv = rows.map(r => r.map(v => {
     const str = String(v);
@@ -1660,7 +1694,7 @@ document.getElementById('simDownloadCsvBtn').addEventListener('click', () => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `florida-build-your-own-map-${simTurnoutPct.toFixed(0)}pct.csv`;
+  a.download = `florida-build-your-own-map-${simCheckpointMode}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -1668,8 +1702,8 @@ document.getElementById('simDownloadCsvBtn').addEventListener('click', () => {
 });
 
 // Upload a previously downloaded (or hand-edited) scenario CSV and apply
-// its County / DEM_Pct values back onto the map. TurnoutPct is applied
-// too if every row shares the same value.
+// its County / DEM_Pct values back onto the map (Tie mode only).
+// TurnoutPct is applied too if every row shares the same numeric value.
 document.getElementById('simCsvFileInput').addEventListener('change', e => {
   const file = e.target.files[0];
   if(!file) return;
@@ -1696,6 +1730,8 @@ document.getElementById('simCsvFileInput').addEventListener('change', e => {
         simTurnoutPct = parseFloat([...turnoutValues][0]);
         document.getElementById('simTurnoutSlider').value = simTurnoutPct;
       }
+      simCheckpointMode = 'tie';
+      document.getElementById('simCheckpointMode').value = 'tie';
       selectedSimCounty = null;
       document.getElementById('simEditor').style.display = 'none';
       document.getElementById('simPlaceholder').style.display = 'block';

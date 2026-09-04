@@ -299,11 +299,12 @@
 
   /* updates panel */
   #updatesPanel .updates-table-wrap{ max-height:420px; overflow-y:auto; border-radius:8px; }
-  #updatesPanel table th:nth-child(1){ width:26%; }
+  #updatesPanel table th:nth-child(1){ width:22%; }
   #updatesPanel table th:nth-child(2),
   #updatesPanel table th:nth-child(3),
   #updatesPanel table th:nth-child(4),
-  #updatesPanel table th:nth-child(5){ width:18.5%; }
+  #updatesPanel table th:nth-child(5){ width:15%; }
+  #updatesPanel table th:nth-child(6){ width:18%; }
   #updatesPanel table{ font-size:13px; }
   #updatesPanel thead th{ font-size:11px; padding:10px 8px; }
   #updatesPanel tbody td{ padding:11px 8px; }
@@ -386,6 +387,7 @@
       <button data-metric="total">Total turnout</button>
       <button data-metric="move">Margin move</button>
       <button data-metric="updated">Counties Updated</button>
+      <button data-metric="dropwinner">Drop Winners</button>
     </div>
     <div class="search-box">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7c879c" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -461,6 +463,7 @@
             <th>REP +</th>
             <th>Other +</th>
             <th>Total +</th>
+            <th>Winner</th>
           </tr>
         </thead>
         <tbody id="updatesBody"></tbody>
@@ -610,6 +613,20 @@ const UPDATED_CATS = [
   { key:'No new votes', color:'#141a26' },
   { key:'Updated',      color:'#0ead69' }
 ];
+// Which party won each county's most recent hourly vote drop (not the
+// county's overall standing — just the incremental batch of votes added
+// this run).
+const DROP_WINNER_CATS = [
+  { key:'No new votes', color:'#141a26' },
+  { key:'Tied drop',    color:'#e9c46a' },
+  { key:'D won drop',   color:'#00b4d8' },
+  { key:'R won drop',   color:'#dd2d4a' }
+];
+function dropWinnerCategoryFor(c){
+  if(!c.totalNew) return 'No new votes';
+  if(c.demNew === c.repNew) return 'Tied drop';
+  return c.demNew > c.repNew ? 'D won drop' : 'R won drop';
+}
 function categoryFor(c){
   if(c.marginPct === 0) return 'Tie';
   const r = c.rating.toLowerCase();
@@ -667,7 +684,7 @@ function marginLabel(margin){
 function moveCategoryFor(c){ return c.ratingChanged ? 'Changed' : 'Unchanged'; }
 function updatedCategoryFor(c){ return c.totalNew ? 'Updated' : 'No new votes'; }
 function catColor(catKey){
-  const cat = RATING_CATS.find(c=>c.key===catKey) || MOVE_CATS.find(c=>c.key===catKey) || UPDATED_CATS.find(c=>c.key===catKey);
+  const cat = RATING_CATS.find(c=>c.key===catKey) || MOVE_CATS.find(c=>c.key===catKey) || UPDATED_CATS.find(c=>c.key===catKey) || DROP_WINNER_CATS.find(c=>c.key===catKey);
   return cat ? cat.color : '#3a4356';
 }
 function contrastText(hex){
@@ -1015,6 +1032,9 @@ const METRICS = {
   total: { title:'Total turnout by county', get:c=>c.total, scale:[[0,'#bce784'],[0.5,'#8ac926'],[1,'#007200']], range:cs=>Math.max(...cs.map(c=>c.total)), isCount:true },
   move: { title:'Counties with a forecast rating change', categorical:true, cats:MOVE_CATS, catFn:moveCategoryFor },
   updated: { title:'Counties updated (new votes reported)', categorical:true, cats:UPDATED_CATS, catFn:updatedCategoryFor },
+  // Which party won each county's latest hourly vote drop specifically —
+  // not the county's overall standing, just this run's incremental batch.
+  dropwinner: { title:'Who won this update, by county', categorical:true, cats:DROP_WINNER_CATS, catFn:dropWinnerCategoryFor },
   // Bar-click maps. D/R share scales are capped at 80% (rather than 100%)
   // since raw county shares rarely approach 100% — capping increases color
   // contrast across the range that actually gets used. NPA keeps its own
@@ -1025,6 +1045,18 @@ const METRICS = {
 };
 
 function tooltipText(){
+  if(currentMetric === 'dropwinner'){
+    return COUNTIES.map(c => {
+      if(!c.totalNew){
+        return `<b>${c.county}</b><br>No additional votes at this time.`;
+      }
+      const winner = c.demNew === c.repNew ? 'Tied' : (c.demNew > c.repNew ? 'Democrats' : 'Republicans');
+      return `<b>${c.county}</b><br>` +
+        `<b>${winner} won this drop</b><br>` +
+        `DEM +${fmt(c.demNew)} &middot; REP +${fmt(c.repNew)} &middot; Other +${fmt(c.otherNew)}<br>` +
+        `Total +${fmt(c.totalNew)}`;
+    });
+  }
   if(currentMetric === 'party-dem'){
     return COUNTIES.map(c =>
       `<b>${c.county}</b><br>` +
@@ -1198,15 +1230,19 @@ function renderUpdatesTable(){
     .sort((a,b) => b.totalNew - a.totalNew);
 
   const body = document.getElementById('updatesBody');
-  body.innerHTML = updated.length ? updated.map(c => `
+  body.innerHTML = updated.length ? updated.map(c => {
+    const cat = dropWinnerCategoryFor(c);
+    return `
     <tr>
       <td class="county-name">${c.county}</td>
       <td class="num-d">${c.demNew>=0?'+':''}${fmt(c.demNew)}</td>
       <td class="num-r">${c.repNew>=0?'+':''}${fmt(c.repNew)}</td>
       <td>${c.otherNew>=0?'+':''}${fmt(c.otherNew)}</td>
       <td style="font-weight:600;">+${fmt(c.totalNew)}</td>
+      <td><span class="chip" style="background:${catColor(cat)};color:${contrastText(catColor(cat))}">${cat}</span></td>
     </tr>
-  `).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">No new votes this update</td></tr>';
+  `;
+  }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">No additional votes at this time.</td></tr>';
 
   const top3 = updated.slice(0,3);
   const medals = ['🥇','🥈','🥉'];
@@ -1362,7 +1398,7 @@ const SIM_2018 = {
   "Wakulla":[4194,9802],"Walton":[7019,22925],"Washington":[1865,7017]
 };
 const SIM_2022 = {
-  "Alachua":[40321,54796],"Baker":[1092,9594],"Bay":[14091,52590],"Bradford":[1852,8346],
+  "Alachua":[54796,40321],"Baker":[1092,9594],"Bay":[14091,52590],"Bradford":[1852,8346],
   "Brevard":[95131,170562],"Broward":[343286,251238],"Calhoun":[657,4180],
   "Charlotte":[27005,65357],"Citrus":[19100,56283],"Clay":[22187,67292],
   "Collier":[45815,117477],"Columbia":[4789,18790],"DeSoto":[2023,6637],"Dixie":[735,5394],
@@ -1422,6 +1458,21 @@ function simHistoricalStats(name, yearData){
   const demPct = total ? (dem/total)*100 : 50;
   const margin = total ? (dem-rep)/total : 0;
   return { total, demPct, repPct: 100-demPct, demVotes:dem, repVotes:rep, margin, rating: simRatingFor(margin) };
+}
+
+// The currently-loaded LIVE/preliminary two-party result for this county
+// (from the Live Results tab's COUNTIES array), if any votes have been
+// counted yet. Used to compare "what's coming in so far" against the
+// 2018 and 2022 baselines — null if no live data is loaded or this
+// county hasn't reported any D/R votes yet.
+function simPreliminaryStats(name){
+  const c = COUNTIES.find(x => x.county === name);
+  if(!c) return null;
+  const total = c.dem + c.rep;
+  if(!total) return null;
+  const demPct = (c.dem/total)*100;
+  const margin = (c.dem-c.rep)/total;
+  return { total, demPct, repPct:100-demPct, demVotes:c.dem, repVotes:c.rep, margin, rating: simRatingFor(margin) };
 }
 
 function simCountyStats(name){
@@ -1559,13 +1610,27 @@ function renderSimCheckpoint(){
   const shiftPts = h22.demPct - h18.demPct;
   const shiftLine = `<div class="sim-checkpoint-recipe" style="margin-top:6px;">Shift 2018 &rarr; 2022: ${shiftPts>=0?'+':''}${shiftPts.toFixed(1)} pts ${shiftPts>=0?'toward D':'toward R'}.</div>`;
 
+  // Compares whatever's currently loaded on the Live Results tab against
+  // both historical baselines, so patterns/similarities are easy to spot
+  // as preliminary votes come in.
+  const prelim = simPreliminaryStats(name);
+  let prelimBlock;
+  if(prelim){
+    const shift18toNow = prelim.demPct - h18.demPct;
+    const shift22toNow = prelim.demPct - h22.demPct;
+    prelimBlock =
+      `<div class="sim-checkpoint-tier"><span class="tier-name">Preliminary (live) result</span><span>${marginLabel(prelim.margin)} (${prelim.demPct.toFixed(1)}% D)</span></div>` +
+      `<div class="sim-checkpoint-recipe" style="margin-top:2px;">Shift 2018 &rarr; Preliminary: ${shift18toNow>=0?'+':''}${shift18toNow.toFixed(1)} pts ${shift18toNow>=0?'toward D':'toward R'}.<br>` +
+      `Shift 2022 &rarr; Preliminary: ${shift22toNow>=0?'+':''}${shift22toNow.toFixed(1)} pts ${shift22toNow>=0?'toward D':'toward R'}.</div>`;
+  }else{
+    prelimBlock = `<div class="sim-checkpoint-recipe" style="margin-top:6px; color:var(--muted);">No live preliminary results loaded yet for this county.</div>`;
+  }
+
   if(simCheckpointMode !== 'tie'){
-    const other = simCheckpointMode === 'y2018' ? h22 : h18;
-    const otherLabel = simCheckpointMode === 'y2018' ? '2022' : '2018';
     el.innerHTML =
       `<div class="sim-checkpoint-tier"><span class="tier-name">2018 result</span><span>${marginLabel(h18.margin)} (${h18.demPct.toFixed(1)}% D)</span></div>` +
       `<div class="sim-checkpoint-tier"><span class="tier-name">2022 result</span><span>${marginLabel(h22.margin)} (${h22.demPct.toFixed(1)}% D)</span></div>` +
-      shiftLine;
+      shiftLine + prelimBlock;
     return;
   }
 
@@ -1577,7 +1642,7 @@ function renderSimCheckpoint(){
   el.innerHTML =
     `<div class="sim-checkpoint-tier"><span class="tier-name">2018 result (goal to exceed)</span><span>${marginLabel(h18.margin)} (${h18.demPct.toFixed(1)}% D)</span></div>` +
     `<div class="sim-checkpoint-tier"><span class="tier-name">2022 result (goal to exceed)</span><span>${marginLabel(h22.margin)} (${h22.demPct.toFixed(1)}% D)</span></div>` +
-    shiftLine +
+    shiftLine + prelimBlock +
     `<div class="sim-checkpoint-recipe" style="margin-top:6px;">${goalLine}</div>`;
 }
 

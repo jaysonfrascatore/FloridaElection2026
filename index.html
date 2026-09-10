@@ -679,21 +679,15 @@ function categoryForNpaMargin(c){
 // ------------------------------------------------------------
 // "Not Updated" pending state for the D vs R vs NPA view
 // ------------------------------------------------------------
-// A county's per-county reporting site sometimes hasn't actually posted
-// fresh results yet — it's either reporting 0, or still serving the same
-// (or a smaller) total than what was already known as of the frozen
-// Aug 23 snapshot. Rather than plot that as a real rating, the D vs R vs
-// NPA map/table show it as "Not Updated" (colored #cad2c5) with 0 votes,
-// until the live total actually moves past the Aug 23 baseline.
+// A county counts as pending simply if its live feed hasn't reported any
+// votes yet (total is 0) — i.e. that county's site hasn't actually been
+// scraped/updated for this cycle. Rather than plot that as a real rating,
+// the D vs R vs NPA map/table show it as "Not Updated" (colored #cad2c5)
+// with 0 votes, until the live total is greater than 0.
 const NOT_UPDATED_COLOR = '#cad2c5';
 
-function staticTotalFor(countyName){
-  const rec = STATIC_DVR_COUNTIES.find(s => s.county === countyName);
-  return rec ? rec.total : 0;
-}
 function isCountyPending(c){
-  const baseline = staticTotalFor(c.county);
-  return c.total <= 0 || c.total <= baseline;
+  return c.total <= 0;
 }
 // Same rating tiers as categoryForNpaMargin, but returns 'Not Updated'
 // for counties still in the pending state above.

@@ -894,7 +894,7 @@ async function loadStaticDvr(){
     const scraped = buildCountyRecords(rows);
     if(scraped.length){
       STATIC_DVR_COUNTIES = fillMissingCountiesAtZero(scraped);
-      if(currentMetric === 'rating'){ renderMap(); renderTable(); }
+      if(currentMetric === 'rating'){ renderStats(); renderMap(); renderTable(); }
     }
   }catch(e){
     // Snapshot file not reachable yet — leave the zero-filled placeholder
@@ -1092,16 +1092,17 @@ function toggleBarParty(party){
   renderTable();
 }
 
-// This top summary bar always reflects the LIVE feed (starts at 0 votes
-// for every county, fills in as data/previous_turnout.csv is updated from
-// each county's reporting link) — independent of which metric/tab is
-// currently selected below it, and independent of the frozen "D vs R"
-// snapshot.
+// This top summary bar now follows whichever tab is selected: on "D vs R"
+// it shows the frozen Aug 23 snapshot's totals (so you can still see/play
+// with that data's numbers up top), and on every other tab (including
+// "D vs R vs NPA") it shows the live feed, which starts at 0 votes per
+// county and fills in as data/previous_turnout.csv updates.
 function renderStats(){
-  const totalD = COUNTIES.reduce((s,c)=>s+c.dem,0);
-  const totalR = COUNTIES.reduce((s,c)=>s+c.rep,0);
-  const totalNPA = COUNTIES.reduce((s,c)=>s+c.npa,0);
-  const totalOther = COUNTIES.reduce((s,c)=>s+c.ind+c.npa+c.other,0);
+  const activeCounties = activeCountiesFor(currentMetric);
+  const totalD = activeCounties.reduce((s,c)=>s+c.dem,0);
+  const totalR = activeCounties.reduce((s,c)=>s+c.rep,0);
+  const totalNPA = activeCounties.reduce((s,c)=>s+c.npa,0);
+  const totalOther = activeCounties.reduce((s,c)=>s+c.ind+c.npa+c.other,0);
   const total = totalD+totalR+totalOther;
   const dShare = total ? totalD/total : 0;
   const rShare = total ? totalR/total : 0;
@@ -1138,13 +1139,13 @@ function renderStats(){
   labelNPA.textContent = 'NPA ' + fmt(totalNPA) + ' (' + pct(npaShare) + ')';
 
   document.getElementById('statTotal').textContent = fmt(total);
-  document.getElementById('statCounties').textContent = COUNTIES.filter(c=>c.total>0).length + ' / 67';
+  document.getElementById('statCounties').textContent = activeCounties.filter(c=>c.total>0).length + ' / 67';
   document.getElementById('statInd').textContent = fmt(totalOther);
-  document.getElementById('statMoved').textContent = COUNTIES.filter(c=>c.ratingChanged).length;
-  const times = COUNTIES.map(c=>c.lastUpdated).filter(Boolean).sort();
+  document.getElementById('statMoved').textContent = activeCounties.filter(c=>c.ratingChanged).length;
+  const times = activeCounties.map(c=>c.lastUpdated).filter(Boolean).sort();
   document.getElementById('statUpdated').textContent = times.length ? times[times.length-1] : '—';
 
-  const totalNewVotes = COUNTIES.reduce((s,c)=>s+(c.totalNew||0),0);
+  const totalNewVotes = activeCounties.reduce((s,c)=>s+(c.totalNew||0),0);
   document.getElementById('statTotalSub').textContent = totalNewVotes > 0
     ? '+' + fmt(totalNewVotes) + ' since last update'
     : 'No additional votes at this time.';
@@ -1433,6 +1434,7 @@ document.getElementById('metricSelect').addEventListener('click', e => {
   document.querySelectorAll('#metricSelect button').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   currentMetric = btn.dataset.metric;
+  renderStats();
   renderMap();
   renderTable();
 });

@@ -869,6 +869,19 @@ function initLiveCounties(){
   COUNTIES = Object.keys(FL_FIPS).map(zeroCountyRecord);
 }
 
+// Fills in a full 67-county array from whatever this run's CSV actually
+// contained: any county missing from the scrape (its site failed to
+// respond, or hasn't started reporting yet) defaults to a zero record
+// rather than silently disappearing from the map/table. This is the
+// "0 as the base" check — every county starts at 0, and only counties
+// whose site was actually, successfully scraped this run get overlaid
+// with real numbers.
+function fillMissingCountiesAtZero(scrapedRecords){
+  const byName = {};
+  scrapedRecords.forEach(rec => { byName[rec.county] = rec; });
+  return Object.keys(FL_FIPS).map(name => byName[name] || zeroCountyRecord(name));
+}
+
 // Fetches the ONE pinned archive file for the frozen "D vs R" snapshot.
 // Runs once at startup (not on the 60s interval — this file never
 // changes, so there's nothing to re-check). Falls back to a zero-filled
@@ -878,9 +891,9 @@ function initLiveCounties(){
 async function loadStaticDvr(){
   try{
     const rows = await fetchCSV(STATIC_DVR_PATH);
-    const recs = buildCountyRecords(rows);
-    if(recs.length){
-      STATIC_DVR_COUNTIES = recs;
+    const scraped = buildCountyRecords(rows);
+    if(scraped.length){
+      STATIC_DVR_COUNTIES = fillMissingCountiesAtZero(scraped);
       if(currentMetric === 'rating'){ renderMap(); renderTable(); }
     }
   }catch(e){
@@ -1009,9 +1022,12 @@ function buildCountyRecords(rows){
 }
 
 function buildCounties(rows){
-  const out = buildCountyRecords(rows);
-  if(out.length === 0) return; // keep whatever's already loaded (e.g. the zero baseline) rather than wiping it
-  COUNTIES = out;
+  const scraped = buildCountyRecords(rows);
+  if(scraped.length === 0) return; // no usable data at all; keep whatever's already loaded
+  // Any county missing from this run's CSV (its site failed to scrape, or
+  // simply hasn't reported yet) defaults to 0 / "Not Updated" instead of
+  // vanishing from the live map/table entirely.
+  COUNTIES = fillMissingCountiesAtZero(scraped);
 }
 
 async function ensureGeojson(){

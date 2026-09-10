@@ -1,6 +1,6 @@
 import requests
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, date
 from zoneinfo import ZoneInfo
 import os
 import json
@@ -20,6 +20,60 @@ BROWARD_URL = (
     "https://my.browardvotes.gov/"
     "TEDElectionLink/TurnOutWidget/dashboard/view/turnout-party"
 )
+
+
+# ============================================================
+# ELECTION CYCLE (date-based)
+# ------------------------------------------------------------
+# ELECTION_ID is no longer a single hardcoded string -- it's derived
+# automatically from today's date against the windows defined below.
+# Whenever the resolved id changes from what's stored in the last run's
+# data/latest.json (i.e. today crossed one of these date boundaries),
+# the script treats it as a new cycle and resets the vote-drop guardrail
+# for exactly that one run -- the same mechanism as before, just driven
+# by dates instead of a manual string edit.
+#
+# Each entry is (election_id, start_date_inclusive_or_None, end_date_exclusive).
+#   - start=None means "everything before end".
+#   - end=None means "everything from start onward, with nothing defined after".
+# Keep entries in chronological order and non-overlapping. Add a new
+# entry whenever a new election needs to be tracked.
+# ============================================================
+
+ELECTION_PERIODS = [
+
+    ("FL-2026-Primary", None,               date(2026, 8, 23)),
+    ("FL-2026-General", date(2026, 8, 23),   date(2026, 11, 15)),
+
+    # Nothing is defined on/after November 15, 2026 yet -- add the next
+    # election's window here (e.g. a 2026 runoff, or the next cycle)
+    # once it's known. Until then, resolve_election_id() falls back to
+    # a dated placeholder below rather than crashing.
+
+]
+
+
+def resolve_election_id(today):
+
+    for election_id, start, end in ELECTION_PERIODS:
+
+        if start is not None and today < start:
+
+            continue
+
+        if end is not None and today >= end:
+
+            continue
+
+        return election_id
+
+    # No configured window covers today -- most likely because a new
+    # election period hasn't been added to ELECTION_PERIODS yet. Falls
+    # back to a label that's guaranteed to differ from any prior
+    # election_id (so it still triggers exactly one guardrail reset,
+    # then holds steady run-to-run) instead of erroring out.
+
+    return f"FL-{today.year}-Unassigned-{today.isoformat()}"
 
 
 # ============================================================
@@ -206,11 +260,92 @@ RUN_TIME = (
 )
 
 
+ELECTION_ID = resolve_election_id(
+    RUN_NOW.date()
+)
+
+
+# ============================================================
+# DETECT A NEW ELECTION CYCLE
+# ------------------------------------------------------------
+# Reads whichever election_id the last run stored in latest.json. If it's
+# missing, or doesn't match ELECTION_ID above, this run is treated as the
+# first run of a brand-new cycle: the old previous_turnout.csv and
+# county_tracker.csv are NOT loaded for comparison purposes (even though
+# the files themselves still exist on disk), so the vote-drop sanity
+# check further down can't reject this run's real, legitimately-lower
+# numbers as if they were a scraping glitch.
+# ============================================================
+
+previous_election_id = None
+
+if os.path.exists(LATEST_JSON_FILE):
+
+    try:
+
+        with open(
+            LATEST_JSON_FILE,
+            "r",
+            encoding="utf-8"
+        ) as file:
+
+            previous_election_id = json.load(file).get("election_id")
+
+    except Exception:
+
+        previous_election_id = None
+
+
+NEW_ELECTION_CYCLE = (
+    previous_election_id
+    !=
+    ELECTION_ID
+)
+
+
+if NEW_ELECTION_CYCLE:
+
+    print(
+        "\n================================="
+    )
+
+    print(
+        "NEW ELECTION CYCLE DETECTED"
+    )
+
+    print(
+        "================================="
+    )
+
+    print(
+        f"Previous election_id: {previous_election_id}"
+    )
+
+    print(
+        f"Current election_id:  {ELECTION_ID}"
+    )
+
+    print(
+        "Ignoring previous_turnout.csv and county_tracker.csv "
+        "from the old cycle for comparison purposes.\n"
+        "This run's real numbers will be written through as-is, "
+        "even if they're much lower than the last cycle's totals."
+    )
+
+
 # ============================================================
 # LOAD MEMORY FILES
 # ============================================================
 
-if os.path.exists(PREVIOUS_FILE):
+if (
+
+    not NEW_ELECTION_CYCLE
+
+    and
+
+    os.path.exists(PREVIOUS_FILE)
+
+):
 
     previous = pd.read_csv(
         PREVIOUS_FILE
@@ -221,7 +356,15 @@ else:
     previous = None
 
 
-if os.path.exists(TRACKER_FILE):
+if (
+
+    not NEW_ELECTION_CYCLE
+
+    and
+
+    os.path.exists(TRACKER_FILE)
+
+):
 
     tracker = pd.read_csv(
         TRACKER_FILE
@@ -861,6 +1004,10 @@ df = df.fillna(0)
 
 # ============================================================
 # COUNTY UPDATE SANITY CHECK
+# ------------------------------------------------------------
+# Skipped entirely when NEW_ELECTION_CYCLE is True (previous is None in
+# that case), so a legitimate reset to near-0 turnout at the start of a
+# new cycle is never mistaken for a scraping error.
 # ============================================================
 
 rejected_counties = []
@@ -1457,7 +1604,12 @@ if previous is not None:
 else:
 
     print(
-        "\nFirst run detected."
+        "\nFirst run detected"
+        + (
+            " for this election cycle."
+            if NEW_ELECTION_CYCLE
+            else "."
+        )
     )
 
     print(
@@ -1580,7 +1732,15 @@ if history_rows:
     )
 
 
-    if os.path.exists(HISTORY_FILE):
+    if (
+
+        not NEW_ELECTION_CYCLE
+
+        and
+
+        os.path.exists(HISTORY_FILE)
+
+    ):
 
         old_history = pd.read_csv(
             HISTORY_FILE
@@ -1647,6 +1807,9 @@ df.to_csv(
 # ============================================================
 
 latest_json = {
+
+    "election_id":
+        ELECTION_ID,
 
     "run_time":
         RUN_TIME,
@@ -1839,6 +2002,12 @@ print(
 
 print(
     "================================="
+)
+
+
+print(
+    "\nElection ID:",
+    ELECTION_ID
 )
 
 
@@ -2290,6 +2459,9 @@ report = f"""
 =================================
 FLORIDA TURNOUT UPDATE
 =================================
+
+Election ID:
+{ELECTION_ID}
 
 Run Time:
 {RUN_TIME} Eastern Time

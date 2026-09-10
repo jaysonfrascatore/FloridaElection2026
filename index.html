@@ -346,7 +346,7 @@
 
 <div class="error-msg" id="errorMsg"></div>
 
-<div class="empty-state" id="emptyState">
+<div class="empty-state" id="emptyState" style="display:none;">
   <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#7c879c" stroke-width="1.2"><path d="M3 9l6-3 6 3 6-3v12l-6 3-6-3-6 3V9z"/><path d="M9 6v12M15 9v12"/></svg>
   <div class="t1" id="emptyTitle">Looking for results&hellip;</div>
   <div class="t2" id="emptyText">Waiting on data/previous_turnout.csv and data/latest.json to appear in this repo.</div>
@@ -382,8 +382,8 @@
 
   <div class="controls">
     <div class="segmented" id="metricSelect">
-      <button data-metric="rating" class="active">D vs R</button>
-      <button data-metric="demrepnpa">D vs R vs NPA</button>
+      <button data-metric="rating">D vs R</button>
+      <button data-metric="demrepnpa" class="active">D vs R vs NPA</button>
       <button data-metric="total">Total turnout</button>
       <button data-metric="move">Margin move</button>
       <button data-metric="updated">Counties Updated</button>
@@ -702,9 +702,19 @@ function stepColorscale(cats){
   return scale;
 }
 
+// ============================================================
+// FROZEN "D vs R" SNAPSHOT
+// ------------------------------------------------------------
+// This is a fixed snapshot (previous_turnout.csv as of Aug 23, 2026)
+// used ONLY by the "D vs R" metric. It is embedded here and never
+// touched by the auto-refresh/fetch logic below, so this view no
+// longer moves once new data starts coming in live.
+// ============================================================
+const STATIC_DVR_COUNTIES = [{"county":"Alachua","fips":"12001","code":"ALA","dem":25658,"rep":14449,"ind":398,"npa":4140,"other":178,"total":44823,"demShare":0.5724293331548536,"repShare":0.3223568257367869,"npaShare":0.09236329562947594,"indShare":0.10521384110835955,"diff":11209,"marginPct":0.25007250741806664,"marginNpaAdj":0.2533279092367844,"leader":"D","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe D"},{"county":"Baker","fips":"12003","code":"BAK","dem":803,"rep":5206,"ind":23,"npa":229,"other":23,"total":6284,"demShare":0.1277848504137492,"repShare":0.828453214513049,"npaShare":0.0364417568427753,"indShare":0.04376193507320178,"diff":4403,"marginPct":-0.7006683640992998,"marginNpaAdj":-0.7058352035908945,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Bay","fips":"12005","code":"BAY","dem":6506,"rep":24583,"ind":258,"npa":2025,"other":121,"total":33493,"demShare":0.1942495446809781,"repShare":0.7339742632788941,"npaShare":0.06046039470934225,"indShare":0.07177619204012779,"diff":18077,"marginPct":-0.539724718597916,"marginNpaAdj":-0.5459020353928852,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Bradford","fips":"12007","code":"BRA","dem":820,"rep":3746,"ind":7,"npa":58,"other":3,"total":4634,"demShare":0.17695295640914976,"repShare":0.808372895986189,"npaShare":0.012516184721622789,"indShare":0.0146741476046612,"diff":2926,"marginPct":-0.6314199395770392,"marginNpaAdj":-0.6327854671280276,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Brevard","fips":"12009","code":"BRE","dem":36712,"rep":67944,"ind":1359,"npa":11171,"other":370,"total":117556,"demShare":0.3122937153356698,"repShare":0.5779713498247644,"npaShare":0.09502705093742557,"indShare":0.10973493483956583,"diff":31232,"marginPct":-0.2656776344890946,"marginNpaAdj":-0.26964352007735676,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Broward","fips":"12011","code":"BRO","dem":138706,"rep":58154,"ind":0,"npa":23696,"other":2407,"total":222963,"demShare":0.6221032189197311,"repShare":0.2608235447136969,"npaShare":0.10627772320968053,"indShare":0.11707323636657203,"diff":80552,"marginPct":0.3612796742060342,"marginNpaAdj":0.36522243783891617,"leader":"D","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe D"},{"county":"Calhoun","fips":"12013","code":"CAL","dem":661,"rep":2379,"ind":2,"npa":101,"other":3,"total":3146,"demShare":0.21010807374443738,"repShare":0.756198347107438,"npaShare":0.032104259376986646,"indShare":0.033693579148124604,"diff":1718,"marginPct":-0.5460902733630006,"marginNpaAdj":-0.5469595670168736,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Charlotte","fips":"12015","code":"CHA","dem":10499,"rep":28005,"ind":637,"npa":4261,"other":148,"total":43550,"demShare":0.24107921928817452,"repShare":0.6430539609644087,"npaShare":0.09784156142365097,"indShare":0.11586681974741676,"diff":17506,"marginPct":-0.40197474167623415,"marginNpaAdj":-0.40935344323629136,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Citrus","fips":"12017","code":"CIT","dem":8001,"rep":27558,"ind":589,"npa":3959,"other":158,"total":40265,"demShare":0.1987085558177077,"repShare":0.684415745684838,"npaShare":0.0983236061095244,"indShare":0.11687569849745437,"diff":19557,"marginPct":-0.4857071898671303,"marginNpaAdj":-0.4948884052836682,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Clay","fips":"12019","code":"CLA","dem":8279,"rep":27905,"ind":258,"npa":2357,"other":132,"total":38931,"demShare":0.2126582928771416,"repShare":0.7167809714623308,"npaShare":0.06054301199558193,"indShare":0.0705607356605276,"diff":19626,"marginPct":-0.5041226785851891,"marginNpaAdj":-0.5092239433330739,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Collier","fips":"12021","code":"CLL","dem":14867,"rep":47389,"ind":646,"npa":6118,"other":169,"total":69189,"demShare":0.2148751969243666,"repShare":0.6849210134558962,"npaShare":0.08842446053563428,"indShare":0.10020378961973724,"diff":32522,"marginPct":-0.47004581653152955,"marginNpaAdj":-0.4756486383713107,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Columbia","fips":"12023","code":"CLM","dem":3146,"rep":9069,"ind":73,"npa":722,"other":46,"total":13056,"demShare":0.24096200980392157,"repShare":0.6946231617647058,"npaShare":0.055300245098039214,"indShare":0.06441482843137254,"diff":5923,"marginPct":-0.45366115196078427,"marginNpaAdj":-0.4578341191930123,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"DeSoto","fips":"12027","code":"DES","dem":941,"rep":2476,"ind":0,"npa":0,"other":0,"total":3417,"demShare":0.27538776704711737,"repShare":0.7246122329528827,"npaShare":0.0,"indShare":0.0,"diff":1535,"marginPct":-0.4492244659057653,"marginNpaAdj":-0.4492244659057653,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Dixie","fips":"12029","code":"DIX","dem":676,"rep":3461,"ind":25,"npa":274,"other":14,"total":4450,"demShare":0.15191011235955057,"repShare":0.7777528089887641,"npaShare":0.06157303370786517,"indShare":0.0703370786516854,"diff":2785,"marginPct":-0.6258426966292135,"marginNpaAdj":-0.6313761051915665,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Duval","fips":"12031","code":"DUV","dem":69095,"rep":68800,"ind":1230,"npa":11146,"other":563,"total":150834,"demShare":0.45808637309890343,"repShare":0.45613058063831763,"npaShare":0.0738958059853879,"indShare":0.08578304626277895,"diff":295,"marginPct":0.0019557924605858035,"marginNpaAdj":0.00197932112640146,"leader":"D","rating":"Toss Up","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Toss Up"},{"county":"Escambia","fips":"12033","code":"ESC","dem":18165,"rep":32532,"ind":510,"npa":4263,"other":202,"total":55672,"demShare":0.3262861043253341,"repShare":0.5843511998850409,"npaShare":0.0765735019399339,"indShare":0.08936269578962494,"diff":14367,"marginPct":-0.2580650955597068,"marginNpaAdj":-0.2614082969432314,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Flagler","fips":"12035","code":"FLA","dem":8956,"rep":17499,"ind":296,"npa":2779,"other":102,"total":29632,"demShare":0.3022408207343413,"repShare":0.5905440064794817,"npaShare":0.09378374730021598,"indShare":0.10721517278617711,"diff":8543,"marginPct":-0.2883031857451404,"marginNpaAdj":-0.29222822740644455,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Franklin","fips":"12037","code":"FRA","dem":755,"rep":1657,"ind":32,"npa":161,"other":6,"total":2611,"demShare":0.28916124090386824,"repShare":0.6346227499042513,"npaShare":0.06166219839142091,"indShare":0.0762160091918805,"diff":902,"marginPct":-0.345461509000383,"marginNpaAdj":-0.35056354450058297,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Gadsden","fips":"12039","code":"GAD","dem":7014,"rep":2285,"ind":25,"npa":338,"other":25,"total":9687,"demShare":0.7240631774543203,"repShare":0.2358831423557345,"npaShare":0.034892123464436875,"indShare":0.04005368018994529,"diff":4729,"marginPct":0.48818003509858576,"marginNpaAdj":0.49071287745148906,"leader":"D","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe D"},{"county":"Gilchrist","fips":"12041","code":"GIL","dem":578,"rep":4022,"ind":45,"npa":215,"other":15,"total":4875,"demShare":0.11856410256410256,"repShare":0.825025641025641,"npaShare":0.0441025641025641,"indShare":0.05641025641025641,"diff":3444,"marginPct":-0.7064615384615385,"marginNpaAdj":-0.7152647975077882,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Glades","fips":"12043","code":"GLA","dem":491,"rep":1668,"ind":21,"npa":156,"other":7,"total":2343,"demShare":0.2095603926589842,"repShare":0.7119078104993598,"npaShare":0.06658130601792574,"indShare":0.078531796841656,"diff":1177,"marginPct":-0.5023474178403756,"marginNpaAdj":-0.5084233261339093,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Gulf","fips":"12045","code":"GUL","dem":845,"rep":3140,"ind":14,"npa":53,"other":5,"total":4057,"demShare":0.20828198175992113,"repShare":0.7739709144688193,"npaShare":0.013063840276066059,"indShare":0.017747103771259553,"diff":2295,"marginPct":-0.5656889327088981,"marginNpaAdj":-0.5683506686478454,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Hamilton","fips":"12047","code":"HAM","dem":761,"rep":1653,"ind":14,"npa":73,"other":9,"total":2510,"demShare":0.30318725099601596,"repShare":0.6585657370517928,"npaShare":0.02908366533864542,"indShare":0.03824701195219123,"diff":892,"marginPct":-0.3553784860557768,"marginNpaAdj":-0.3586650583031765,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Hardee","fips":"12049","code":"HAR","dem":570,"rep":2381,"ind":13,"npa":113,"other":15,"total":3092,"demShare":0.18434670116429497,"repShare":0.7700517464424321,"npaShare":0.036545924967658475,"indShare":0.04560155239327296,"diff":1811,"marginPct":-0.5857050452781372,"marginNpaAdj":-0.5910574412532638,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Hendry","fips":"12051","code":"HEN","dem":1358,"rep":3238,"ind":31,"npa":363,"other":22,"total":5012,"demShare":0.2709497206703911,"repShare":0.6460494812450119,"npaShare":0.07242617717478053,"indShare":0.08300079808459697,"diff":1880,"marginPct":-0.37509976057462086,"marginNpaAdj":-0.3791086912684009,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Hernando","fips":"12053","code":"HER","dem":10064,"rep":23470,"ind":419,"npa":3714,"other":145,"total":37812,"demShare":0.2661588913572411,"repShare":0.6207024225113721,"npaShare":0.09822278641701047,"indShare":0.11313868613138686,"diff":13406,"marginPct":-0.354543531154131,"marginNpaAdj":-0.359911941580756,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Highlands","fips":"12055","code":"HIG","dem":3434,"rep":12070,"ind":162,"npa":1259,"other":67,"total":16992,"demShare":0.20209510357815444,"repShare":0.710334274952919,"npaShare":0.0740936911487759,"indShare":0.08757062146892655,"diff":8636,"marginPct":-0.5082391713747646,"marginNpaAdj":-0.5151822466145678,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Hillsborough","fips":"12057","code":"HIL","dem":87014,"rep":93004,"ind":2188,"npa":23498,"other":677,"total":206381,"demShare":0.42161826912361117,"repShare":0.450642258735058,"npaShare":0.11385738028209962,"indShare":0.12773947214133083,"diff":5990,"marginPct":-0.02902398961144681,"marginNpaAdj":-0.02943257532577291,"leader":"R","rating":"Lean","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Lean R"},{"county":"Holmes","fips":"12059","code":"HOL","dem":447,"rep":3426,"ind":10,"npa":132,"other":8,"total":4023,"demShare":0.1111111111111111,"repShare":0.8516032811334825,"npaShare":0.03281133482475764,"indShare":0.037285607755406416,"diff":2979,"marginPct":-0.7404921700223714,"marginNpaAdj":-0.7438202247191011,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Indian River","fips":"12061","code":"IND","dem":8963,"rep":22301,"ind":373,"npa":2563,"other":94,"total":34294,"demShare":0.2613576718959585,"repShare":0.6502886802356097,"npaShare":0.07473610544118504,"indShare":0.08835364786843179,"diff":13338,"marginPct":-0.3889310083396512,"marginNpaAdj":-0.39430041091435836,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Jackson","fips":"12063","code":"JAC","dem":2499,"rep":6243,"ind":14,"npa":112,"other":16,"total":8884,"demShare":0.2812922107158937,"repShare":0.7027239981990094,"npaShare":0.012606933813597478,"indShare":0.015983791085096802,"diff":3744,"marginPct":-0.4214317874831157,"marginNpaAdj":-0.422859724418342,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Jefferson","fips":"12065","code":"JEF","dem":1752,"rep":2278,"ind":21,"npa":137,"other":5,"total":4193,"demShare":0.417839255902695,"repShare":0.5432864297638922,"npaShare":0.03267350345814453,"indShare":0.03887431433341283,"diff":526,"marginPct":-0.1254471738611972,"marginNpaAdj":-0.12622990160787137,"leader":"R","rating":"Likely","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Likely R"},{"county":"Lafayette","fips":"12067","code":"LAF","dem":245,"rep":1681,"ind":3,"npa":25,"other":2,"total":1956,"demShare":0.1252556237218814,"repShare":0.8594069529652352,"npaShare":0.01278118609406953,"indShare":0.015337423312883436,"diff":1436,"marginPct":-0.7341513292433538,"marginNpaAdj":-0.7360328036904151,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Lake","fips":"12069","code":"LAK","dem":12119,"rep":17947,"ind":344,"npa":3401,"other":67,"total":33878,"demShare":0.35772477714150774,"repShare":0.5297538225397013,"npaShare":0.10038963339040086,"indShare":0.11252140031879096,"diff":5828,"marginPct":-0.17202904539819353,"marginNpaAdj":-0.17414169181581857,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Lee","fips":"12071","code":"LEE","dem":36591,"rep":84697,"ind":1785,"npa":17800,"other":432,"total":141305,"demShare":0.2589504971515516,"repShare":0.5993913874243657,"npaShare":0.12596864937546443,"indShare":0.14165811542408266,"diff":48106,"marginPct":-0.3404408902728141,"marginNpaAdj":-0.3458673645461866,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Leon","fips":"12073","code":"LEO","dem":39753,"rep":22783,"ind":673,"npa":7154,"other":230,"total":70593,"demShare":0.5631294887595087,"repShare":0.32273738189338885,"npaShare":0.10134149278257051,"indShare":0.1141331293471024,"diff":16970,"marginPct":0.2403921068661199,"marginNpaAdj":0.24350695939159134,"leader":"D","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe D"},{"county":"Levy","fips":"12075","code":"LEV","dem":1937,"rep":7107,"ind":77,"npa":466,"other":50,"total":9637,"demShare":0.20099616063090173,"repShare":0.7374701670644391,"npaShare":0.04835529729168828,"indShare":0.06153367230465913,"diff":5170,"marginPct":-0.5364740064335374,"marginNpaAdj":-0.5436382754994742,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Liberty","fips":"12077","code":"LIB","dem":442,"rep":1644,"ind":0,"npa":89,"other":3,"total":2178,"demShare":0.20293847566574838,"repShare":0.7548209366391184,"npaShare":0.04086317722681359,"indShare":0.04224058769513315,"diff":1202,"marginPct":-0.55188246097337,"marginNpaAdj":-0.5526436781609195,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Madison","fips":"12079","code":"MAD","dem":1314,"rep":2518,"ind":8,"npa":132,"other":7,"total":3979,"demShare":0.3302337270671023,"repShare":0.6328223171651168,"npaShare":0.033174164362905254,"indShare":0.036943955767780846,"diff":1204,"marginPct":-0.30258859009801453,"marginNpaAdj":-0.30373360242179614,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Manatee","fips":"12081","code":"MAN","dem":22561,"rep":46160,"ind":275,"npa":2536,"other":55,"total":71587,"demShare":0.3151549862405185,"repShare":0.6448098118373448,"npaShare":0.035425426404235405,"indShare":0.0400352019221367,"diff":23599,"marginPct":-0.32965482559682624,"marginNpaAdj":-0.33118149795809537,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Marion","fips":"12083","code":"MRN","dem":19678,"rep":46611,"ind":667,"npa":4721,"other":219,"total":71896,"demShare":0.2737009013018805,"repShare":0.6483114498720374,"npaShare":0.06566429286747524,"indShare":0.07798764882608211,"diff":26933,"marginPct":-0.37461054857015685,"marginNpaAdj":-0.3792846078017181,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Martin","fips":"12085","code":"MRT","dem":8976,"rep":21037,"ind":457,"npa":2888,"other":99,"total":33457,"demShare":0.26828466389694233,"repShare":0.6287772364527603,"npaShare":0.0863197537137221,"indShare":0.10293809965029739,"diff":12061,"marginPct":-0.36049257255581796,"marginNpaAdj":-0.3665846022917237,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Miami-Dade","fips":"12086","code":"DAD","dem":114661,"rep":92066,"ind":2333,"npa":35113,"other":420,"total":244593,"demShare":0.46878283515881486,"repShare":0.37640488484952556,"npaShare":0.14355684749767983,"indShare":0.1548122799916596,"diff":22595,"marginPct":0.0923779503092893,"marginNpaAdj":0.09342954019186239,"leader":"D","rating":"Likely","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Likely D"},{"county":"Monroe","fips":"12087","code":"MON","dem":6643,"rep":8232,"ind":270,"npa":2355,"other":106,"total":17606,"demShare":0.3773145518573214,"repShare":0.4675678745882086,"npaShare":0.13376121776667046,"indShare":0.15511757355447006,"diff":1589,"marginPct":-0.09025332273088721,"marginNpaAdj":-0.0922228670922809,"leader":"R","rating":"Likely","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Likely R"},{"county":"Nassau","fips":"12089","code":"NAS","dem":4837,"rep":16991,"ind":364,"npa":2290,"other":108,"total":24590,"demShare":0.1967059780398536,"repShare":0.690971939812932,"npaShare":0.0931272875152501,"indShare":0.11232208214721431,"diff":12154,"marginPct":-0.49426596177307847,"marginNpaAdj":-0.5039389667468281,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Okaloosa","fips":"12091","code":"OKA","dem":5660,"rep":24268,"ind":214,"npa":1739,"other":88,"total":31969,"demShare":0.1770465138102537,"repShare":0.7591103881885577,"npaShare":0.05439644655760268,"indShare":0.06384309800118865,"diff":18608,"marginPct":-0.582063874378304,"marginNpaAdj":-0.5876148672119241,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Okeechobee","fips":"12093","code":"OKE","dem":829,"rep":3818,"ind":0,"npa":0,"other":0,"total":4647,"demShare":0.1783946632235851,"repShare":0.8216053367764149,"npaShare":0.0,"indShare":0.0,"diff":2989,"marginPct":-0.6432106735528298,"marginNpaAdj":-0.6432106735528298,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Orange","fips":"12095","code":"ORA","dem":91091,"rep":62003,"ind":2080,"npa":24476,"other":797,"total":180447,"demShare":0.5048075058050286,"repShare":0.34360781836217835,"npaShare":0.13564093611974706,"indShare":0.151584675832793,"diff":29088,"marginPct":0.1611996874428503,"marginNpaAdj":0.1638114546376077,"leader":"D","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe D"},{"county":"Osceola","fips":"12097","code":"OSC","dem":18392,"rep":17097,"ind":408,"npa":5773,"other":211,"total":41881,"demShare":0.43914901745421553,"repShare":0.40822807478331463,"npaShare":0.1378429359375373,"indShare":0.15262290776246987,"diff":1295,"marginPct":0.030920942670900897,"marginNpaAdj":0.031384809267607,"leader":"D","rating":"Lean","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Lean D"},{"county":"Palm Beach","fips":"12099","code":"PAL","dem":105832,"rep":83004,"ind":2484,"npa":20806,"other":483,"total":212609,"demShare":0.4977776105432978,"repShare":0.3904068030986459,"npaShare":0.09786039161089136,"indShare":0.11181558635805634,"diff":22828,"marginPct":0.10737080744465188,"marginNpaAdj":0.10889039410041881,"leader":"D","rating":"Likely","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Likely D"},{"county":"Pasco","fips":"12101","code":"PAS","dem":27366,"rep":49414,"ind":913,"npa":8240,"other":310,"total":86243,"demShare":0.3173127094372877,"repShare":0.5729624433287339,"npaShare":0.0955439861785884,"indShare":0.1097248472339784,"diff":22048,"marginPct":-0.25564973389144624,"marginNpaAdj":-0.25932721712538226,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Pinellas","fips":"12103","code":"PIN","dem":78167,"rep":84500,"ind":2388,"npa":25816,"other":738,"total":191609,"demShare":0.407950565996378,"repShare":0.4410022493724199,"npaShare":0.13473271088518807,"indShare":0.1510471846312021,"diff":6333,"marginPct":-0.03305168337604186,"marginNpaAdj":-0.03359984720107384,"leader":"R","rating":"Lean","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Lean R"},{"county":"Polk","fips":"12105","code":"POL","dem":32010,"rep":53702,"ind":950,"npa":7826,"other":312,"total":94800,"demShare":0.3376582278481013,"repShare":0.5664767932489452,"npaShare":0.08255274261603375,"indShare":0.09586497890295359,"diff":21692,"marginPct":-0.2288185654008439,"marginNpaAdj":-0.23190574953494836,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Putnam","fips":"12107","code":"PUT","dem":2993,"rep":8792,"ind":48,"npa":465,"other":35,"total":12333,"demShare":0.24268223465499067,"repShare":0.7128841320035677,"npaShare":0.037703721722208705,"indShare":0.04443363334144166,"diff":5799,"marginPct":-0.47020189734857704,"marginNpaAdj":-0.47338775510204084,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Santa Rosa","fips":"12113","code":"SAN","dem":4737,"rep":25323,"ind":240,"npa":1738,"other":102,"total":32140,"demShare":0.14738643434971999,"repShare":0.7878967019290604,"npaShare":0.054075917859365275,"indShare":0.06471686372121967,"diff":20586,"marginPct":-0.6405102675793404,"marginNpaAdj":-0.6473992074973268,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Sarasota","fips":"12115","code":"SAR","dem":37163,"rep":58058,"ind":1479,"npa":12393,"other":298,"total":109391,"demShare":0.33972630289511935,"repShare":0.5307383605598267,"npaShare":0.11329085573767494,"indShare":0.12953533654505398,"diff":20895,"marginPct":-0.19101205766470736,"marginNpaAdj":-0.1941661865556526,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Seminole","fips":"12117","code":"SEM","dem":30633,"rep":36858,"ind":849,"npa":8952,"other":280,"total":77572,"demShare":0.39489764347960604,"repShare":0.4751456711184448,"npaShare":0.11540246480688908,"indShare":0.12995668540194916,"diff":6225,"marginPct":-0.08024802763883876,"marginNpaAdj":-0.08143322475570032,"leader":"R","rating":"Likely","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Likely R"},{"county":"St. Johns","fips":"12109","code":"STJ","dem":16682,"rep":43152,"ind":493,"npa":4652,"other":185,"total":65164,"demShare":0.25600024553434414,"repShare":0.6622061260818857,"npaShare":0.07138911055183844,"indShare":0.08179362838377018,"diff":26470,"marginPct":-0.40620588054754153,"marginNpaAdj":-0.4104766926154514,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"St. Lucie","fips":"12111","code":"STL","dem":22681,"rep":28179,"ind":819,"npa":6184,"other":213,"total":58076,"demShare":0.3905399820924306,"repShare":0.48520903643501617,"npaShare":0.10648116261450513,"indShare":0.1242509814725532,"diff":5498,"marginPct":-0.09466905434258555,"marginNpaAdj":-0.09638174041091088,"leader":"R","rating":"Likely","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Likely R"},{"county":"Sumter","fips":"12119","code":"SUM","dem":9865,"rep":32551,"ind":359,"npa":3039,"other":80,"total":45894,"demShare":0.21495184555715344,"repShare":0.7092648276463154,"npaShare":0.0662178062491829,"indShare":0.07578332679653113,"diff":22686,"marginPct":-0.49431298208916197,"marginNpaAdj":-0.4990870091299087,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Suwannee","fips":"12121","code":"SUW","dem":1458,"rep":6473,"ind":23,"npa":167,"other":15,"total":8136,"demShare":0.17920353982300885,"repShare":0.7955998033431662,"npaShare":0.02052605703048181,"indShare":0.025196656833824976,"diff":5015,"marginPct":-0.6163962635201573,"marginNpaAdj":-0.619288713262534,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Taylor","fips":"12123","code":"TAY","dem":736,"rep":2860,"ind":9,"npa":41,"other":4,"total":3650,"demShare":0.20164383561643837,"repShare":0.7835616438356164,"npaShare":0.011232876712328766,"indShare":0.014794520547945205,"diff":2124,"marginPct":-0.581917808219178,"marginNpaAdj":-0.5839978003849327,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Union","fips":"12125","code":"UNI","dem":365,"rep":1968,"ind":12,"npa":56,"other":7,"total":2408,"demShare":0.151578073089701,"repShare":0.8172757475083057,"npaShare":0.023255813953488372,"indShare":0.031146179401993355,"diff":1603,"marginPct":-0.6656976744186047,"marginNpaAdj":-0.6709920468815403,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Volusia","fips":"12127","code":"VOL","dem":34795,"rep":58526,"ind":1546,"npa":13412,"other":425,"total":108704,"demShare":0.32008941713276423,"repShare":0.5383978510450398,"npaShare":0.1233809243450103,"indShare":0.14151273182219606,"diff":23731,"marginPct":-0.21830843391227556,"marginNpaAdj":-0.22233985740117865,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Wakulla","fips":"12129","code":"WAK","dem":2032,"rep":5279,"ind":53,"npa":384,"other":27,"total":7775,"demShare":0.26135048231511254,"repShare":0.6789710610932476,"npaShare":0.04938906752411575,"indShare":0.059678456591639874,"diff":3247,"marginPct":-0.417620578778135,"marginNpaAdj":-0.42196231319038335,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Walton","fips":"12131","code":"WAL","dem":1895,"rep":13766,"ind":86,"npa":629,"other":55,"total":16431,"demShare":0.11533077718945894,"repShare":0.8378065851135049,"npaShare":0.03828129754731909,"indShare":0.04686263769703609,"diff":11871,"marginPct":-0.722475807924046,"marginNpaAdj":-0.7287292817679558,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"},{"county":"Washington","fips":"12133","code":"WAS","dem":919,"rep":4438,"ind":25,"npa":189,"other":13,"total":5584,"demShare":0.16457736389684813,"repShare":0.7947707736389685,"npaShare":0.033846704871060174,"indShare":0.04065186246418338,"diff":3519,"marginPct":-0.6301934097421205,"marginNpaAdj":-0.6345113595384061,"leader":"R","rating":"Safe","marginMove":0.0,"ratingChanged":false,"ratingMove":"","demNew":0,"repNew":0,"otherNew":0,"totalNew":0,"lastUpdated":"Updated at August 23rd, 2026 at 12:19am","category":"Safe R"}];
+
 let COUNTIES = [];
 let geojsonFL = null;
-let currentMetric = 'rating';
+let currentMetric = 'demrepnpa';
 let sortKey = 'county', sortAsc = true;
 let highlightedCounty = null;
 
@@ -720,6 +730,16 @@ let barShares = { d:50, r:50, npa:0 };
 // derived from whatever votes are currently loaded, i.e. the votes that
 // are in are treated as the current turnout.
 let statewideTotals = { dem:0, rep:0, npa:0 };
+
+// Returns whichever county list should drive the map/table/tooltip for a
+// given metric. "D vs R" is pinned to the frozen snapshot above; every
+// other metric (including "D vs R vs NPA") reads the live, auto-refreshing
+// COUNTIES array, which starts at zero votes for every county until the
+// live feed (data/previous_turnout.csv, refreshed from each county's
+// reporting link) brings in real numbers.
+function activeCountiesFor(metric){
+  return metric === 'rating' ? STATIC_DVR_COUNTIES : COUNTIES;
+}
 
 // Reallocates the statewide NPA total per the current slider split and
 // reports the resulting DEM-vs-REP lead as both a percentage and a raw
@@ -749,11 +769,13 @@ function updateStatewideNpaMargin(){
 }
 
 // ---- Auto-load config ----
-// Production-only data source: no manual upload. Every run, the Python
-// script writes data/previous_turnout.csv (fixed name, overwritten each
-// time) AND a timestamped archive/florida_turnout_*.csv, then records
-// which archive file is newest in data/latest.json (since the archive
-// filename changes every run, the page needs that pointer to find it).
+// Live source for everything EXCEPT the frozen "D vs R" snapshot above:
+// every run, the Python script writes data/previous_turnout.csv (fixed
+// name, overwritten each time) by pulling live numbers from each county's
+// reporting link (plus Broward's dashboard page) AND a timestamped
+// archive/florida_turnout_*.csv, then records which archive file is
+// newest in data/latest.json (since the archive filename changes every
+// run, the page needs that pointer to find it).
 // On load, we fetch all three, and use whichever of previous_turnout.csv
 // / the pointed-to archive file has the newer "Timestamp" value — this
 // protects against the two files landing in a repo out of order (e.g. a
@@ -789,6 +811,28 @@ function pick(row, keys){
   return '';
 }
 function normName(s){ return (s||'').toString().trim(); }
+
+// Builds a zero-vote placeholder record for a county, in the same shape
+// buildCounties() produces from a live CSV row. Used to seed the live
+// COUNTIES array at 0 for every county before any data has been ingested
+// from the reporting links, and to reset it back to 0 if needed.
+function zeroCountyRecord(name){
+  const rec = {
+    county:name, fips:FL_FIPS[name], code:'',
+    dem:0, rep:0, ind:0, npa:0, other:0, total:0,
+    demShare:0, repShare:0, npaShare:0, indShare:0, diff:0,
+    marginPct:0, marginNpaAdj:0, leader:'D', rating:'Toss Up',
+    marginMove:0, ratingChanged:false, ratingMove:'',
+    demNew:0, repNew:0, otherNew:0, totalNew:0,
+    lastUpdated:''
+  };
+  rec.category = categoryFor(rec);
+  return rec;
+}
+
+function initLiveCounties(){
+  COUNTIES = Object.keys(FL_FIPS).map(zeroCountyRecord);
+}
 
 async function loadLatestCSV(isManualRefresh){
   const loadStatus = document.getElementById('loadStatus');
@@ -837,17 +881,16 @@ async function loadLatestCSV(isManualRefresh){
     document.getElementById('errorMsg').style.display = 'none';
     render();
   }catch(e){
-    if(COUNTIES.length){
-      // Already showing data — a failed background refresh shouldn't blow that away.
-      if(isManualRefresh){ loadStatus.textContent = 'Live \u00b7 ' + activeSourceLabel; }
-      return;
-    }
+    // No live feed yet (or the refresh failed) — keep showing whatever's
+    // currently loaded (which starts at 0 for every county) rather than
+    // hiding the dashboard behind the empty state.
     autoLoadFailed = true;
-    loadStatus.textContent = 'No results file yet';
-    fileMeta.textContent = 'looking for ' + PREVIOUS_PATH;
-    document.getElementById('emptyTitle').textContent = 'No results file found yet';
-    document.getElementById('emptyText').textContent =
-      `Waiting on "${PREVIOUS_PATH}" and "${MANIFEST_PATH}" to appear in this repo. This page will pick them up automatically once the script has run.`;
+    if(!lastLoadedAt){
+      loadStatus.textContent = 'Live \u00b7 awaiting first update';
+      fileMeta.textContent = 'looking for ' + PREVIOUS_PATH;
+    }else if(isManualRefresh){
+      loadStatus.textContent = 'Live \u00b7 ' + activeSourceLabel;
+    }
   }
 }
 
@@ -902,7 +945,7 @@ function buildCounties(rows){
     rec.category = categoryFor(rec);
     out.push(rec);
   });
-  if(out.length === 0) throw new Error('no matching Florida counties found in this file');
+  if(out.length === 0) return; // keep whatever's already loaded (e.g. the zero baseline) rather than wiping it
   COUNTIES = out;
 }
 
@@ -954,21 +997,25 @@ function applyBarWidths(){
 }
 
 function toggleBarParty(party){
-  if(!COUNTIES.length) return;
   selectedParty = (selectedParty === party) ? null : party;
   applyBarWidths();
   document.querySelectorAll('#metricSelect button').forEach(b=>b.classList.remove('active'));
   if(selectedParty){
     currentMetric = 'party-' + selectedParty;
   }else{
-    currentMetric = 'rating';
-    const ratingBtn = document.querySelector('#metricSelect button[data-metric="rating"]');
-    if(ratingBtn) ratingBtn.classList.add('active');
+    currentMetric = 'demrepnpa';
+    const defaultBtn = document.querySelector('#metricSelect button[data-metric="demrepnpa"]');
+    if(defaultBtn) defaultBtn.classList.add('active');
   }
   renderMap();
   renderTable();
 }
 
+// This top summary bar always reflects the LIVE feed (starts at 0 votes
+// for every county, fills in as data/previous_turnout.csv is updated from
+// each county's reporting link) — independent of which metric/tab is
+// currently selected below it, and independent of the frozen "D vs R"
+// snapshot.
 function renderStats(){
   const totalD = COUNTIES.reduce((s,c)=>s+c.dem,0);
   const totalR = COUNTIES.reduce((s,c)=>s+c.rep,0);
@@ -990,8 +1037,8 @@ function renderStats(){
   // independently-rounded fraction, so the three always sum to exactly
   // 100% with no leftover grey sliver from floating-point rounding.
   const barDenom = totalD + totalR + totalNPA;
-  const dPct = barDenom ? (totalD/barDenom)*100 : 0;
-  const rPct = barDenom ? (totalR/barDenom)*100 : 0;
+  const dPct = barDenom ? (totalD/barDenom)*100 : 50;
+  const rPct = barDenom ? (totalR/barDenom)*100 : 50;
   const npaPct = barDenom ? Math.max(0, 100 - dPct - rPct) : 0;
   barShares = { d:dPct, r:rPct, npa:npaPct };
   applyBarWidths();
@@ -1010,7 +1057,7 @@ function renderStats(){
   labelNPA.textContent = 'NPA ' + fmt(totalNPA) + ' (' + pct(npaShare) + ')';
 
   document.getElementById('statTotal').textContent = fmt(total);
-  document.getElementById('statCounties').textContent = COUNTIES.length + ' / 67';
+  document.getElementById('statCounties').textContent = COUNTIES.filter(c=>c.total>0).length + ' / 67';
   document.getElementById('statInd').textContent = fmt(totalOther);
   document.getElementById('statMoved').textContent = COUNTIES.filter(c=>c.ratingChanged).length;
   const times = COUNTIES.map(c=>c.lastUpdated).filter(Boolean).sort();
@@ -1023,13 +1070,15 @@ function renderStats(){
 }
 
 const METRICS = {
-  // "D vs R" — this is the same rating map that used to be called "Rating".
+  // "D vs R" — pinned to the frozen snapshot (STATIC_DVR_COUNTIES), never
+  // touched by the live auto-refresh.
   rating: { title:'D vs R rating by county', categorical:true, cats:RATING_CATS, catFn:categoryFor },
-  // "D vs R vs NPA" — same rating-tier styling as D vs R, but the tier is
-  // decided from a margin that folds NPA into the denominator alongside
-  // DEM and REP, so heavy-NPA counties can show a lighter lean.
+  // "D vs R vs NPA" — live, starts at 0 votes for every county and fills
+  // in as the live feed updates. Same rating-tier styling as D vs R, but
+  // the tier is decided from a margin that folds NPA into the denominator
+  // alongside DEM and REP, so heavy-NPA counties can show a lighter lean.
   demrepnpa: { title:'D vs R vs NPA rating by county', categorical:true, cats:RATING_CATS, catFn:categoryForNpaMargin },
-  total: { title:'Total turnout by county', get:c=>c.total, scale:[[0,'#bce784'],[0.5,'#8ac926'],[1,'#007200']], range:cs=>Math.max(...cs.map(c=>c.total)), isCount:true },
+  total: { title:'Total turnout by county', get:c=>c.total, scale:[[0,'#bce784'],[0.5,'#8ac926'],[1,'#007200']], range:cs=>Math.max(1,...cs.map(c=>c.total)), isCount:true },
   move: { title:'Counties with a forecast rating change', categorical:true, cats:MOVE_CATS, catFn:moveCategoryFor },
   updated: { title:'Counties updated (new votes reported)', categorical:true, cats:UPDATED_CATS, catFn:updatedCategoryFor },
   // Which party won each county's latest hourly vote drop specifically —
@@ -1044,9 +1093,9 @@ const METRICS = {
   'party-npa': { title:'NPA vote share by county', get:c=>c.npaShare, scale:[[0,'#e0c3fc'],[0.5,'#9d4edd'],[1,'#3a0ca3']], range:cs=>Math.max(0.01, ...cs.map(c=>c.npaShare)) }
 };
 
-function tooltipText(){
+function tooltipText(list){
   if(currentMetric === 'dropwinner'){
-    return COUNTIES.map(c => {
+    return list.map(c => {
       if(!c.totalNew){
         return `<b>${c.county}</b><br>No additional votes at this time.`;
       }
@@ -1058,7 +1107,7 @@ function tooltipText(){
     });
   }
   if(currentMetric === 'party-dem'){
-    return COUNTIES.map(c =>
+    return list.map(c =>
       `<b>${c.county}</b><br>` +
       `<b>DEM votes: ${fmt(c.dem)} (${pct(c.demShare)})</b><br>` +
       `REP ${fmt(c.rep)} · NPA ${fmt(c.npa)} · Ind/Other ${fmt(c.ind+c.other)}<br>` +
@@ -1066,7 +1115,7 @@ function tooltipText(){
     );
   }
   if(currentMetric === 'party-rep'){
-    return COUNTIES.map(c =>
+    return list.map(c =>
       `<b>${c.county}</b><br>` +
       `<b>REP votes: ${fmt(c.rep)} (${pct(c.repShare)})</b><br>` +
       `DEM ${fmt(c.dem)} · NPA ${fmt(c.npa)} · Ind/Other ${fmt(c.ind+c.other)}<br>` +
@@ -1074,7 +1123,7 @@ function tooltipText(){
     );
   }
   if(currentMetric === 'party-npa'){
-    return COUNTIES.map(c =>
+    return list.map(c =>
       `<b>${c.county}</b><br>` +
       `<b>NPA votes: ${fmt(c.npa)} (${pct(c.npaShare)})</b><br>` +
       `DEM ${fmt(c.dem)} · REP ${fmt(c.rep)} · Ind/Other ${fmt(c.ind+c.other)}<br>` +
@@ -1082,7 +1131,7 @@ function tooltipText(){
     );
   }
   if(currentMetric === 'demrepnpa'){
-    return COUNTIES.map(c => {
+    return list.map(c => {
       const demToD = c.dem * (demLoyalty/100), demToR = c.dem - demToD;
       const repToR = c.rep * (repLoyalty/100), repToD = c.rep - repToR;
       const npaDem = c.npa * (npaSplitToDem/100), npaRep = c.npa - npaDem;
@@ -1096,7 +1145,7 @@ function tooltipText(){
         `Adjusted margin: ${marginLabel(margin)}`;
     });
   }
-  return COUNTIES.map(c =>
+  return list.map(c =>
     `<b>${c.county}</b><br>` +
     `Rating: ${c.category}<br>` +
     `DEM ${fmt(c.dem)} (${pct(c.demShare)})<br>` +
@@ -1112,18 +1161,19 @@ function tooltipText(){
 async function renderMap(){
   await ensureGeojson();
   const m = METRICS[currentMetric];
+  const activeCounties = activeCountiesFor(currentMetric);
   document.getElementById('mapTitle').textContent = m.title;
   document.getElementById('npaSliderWrap').style.display = (currentMetric === 'demrepnpa') ? 'block' : 'none';
 
-  const locations = COUNTIES.map(c=>c.fips);
-  const text = tooltipText();
+  const locations = activeCounties.map(c=>c.fips);
+  const text = tooltipText(activeCounties);
 
   let trace;
   const legendEl = document.getElementById('mapLegend');
 
   if(m.categorical){
     const cats = m.cats, n = cats.length;
-    const z = COUNTIES.map(c => cats.findIndex(cat=>cat.key===m.catFn(c)) + 0.5);
+    const z = activeCounties.map(c => cats.findIndex(cat=>cat.key===m.catFn(c)) + 0.5);
     trace = {
       type:'choropleth', geojson: geojsonFL, locations, z,
       featureidkey:'id', zmin:0, zmax:n,
@@ -1133,13 +1183,13 @@ async function renderMap(){
     };
     legendEl.style.display = 'flex';
     legendEl.innerHTML = cats.map(cat => {
-      const count = COUNTIES.filter(c=>m.catFn(c)===cat.key).length;
+      const count = activeCounties.filter(c=>m.catFn(c)===cat.key).length;
       if(!count) return '';
       return `<span class="swatch" style="background:${cat.color};color:${contrastText(cat.color)}">${cat.key} · ${count}</span>`;
     }).join('');
   }else if(m.symmetric){
-    const maxAbs = Math.max(0.01, ...COUNTIES.map(c=>Math.abs(m.get(c))));
-    const z = COUNTIES.map(m.get);
+    const maxAbs = Math.max(0.01, ...activeCounties.map(c=>Math.abs(m.get(c))));
+    const z = activeCounties.map(m.get);
     trace = {
       type:'choropleth', geojson: geojsonFL, locations, z,
       featureidkey:'id', zmin:-maxAbs, zmax:maxAbs,
@@ -1151,9 +1201,9 @@ async function renderMap(){
     legendEl.style.display = 'none';
     legendEl.innerHTML = '';
   }else{
-    const zmax = m.range(COUNTIES);
+    const zmax = m.range(activeCounties);
     const zmin = 0;
-    const z = COUNTIES.map(m.get);
+    const z = activeCounties.map(m.get);
     const colorbar = { tickfont:{color:'#7c879c', size:10}, thickness:12, len:0.6, outlinewidth:0 };
     // Vote-share metrics (0 to ~1) are shown as percentages; raw counts
     // (like turnout) keep plain comma-separated numbers.
@@ -1178,15 +1228,16 @@ async function renderMap(){
 
   document.getElementById('map').on('plotly_click', function(ev){
     const fips = ev.points[0].location;
-    const c = COUNTIES.find(c=>c.fips===fips);
+    const c = activeCountiesFor(currentMetric).find(c=>c.fips===fips);
     if(c){ highlightedCounty = c.county; renderTable(); }
   });
 }
 
 function renderTable(){
+  const activeCounties = activeCountiesFor(currentMetric);
   const useNpaAdj = currentMetric === 'demrepnpa';
   const q = document.getElementById('searchInput').value.trim().toLowerCase();
-  let rows = COUNTIES.filter(c => c.county.toLowerCase().includes(q));
+  let rows = activeCounties.filter(c => c.county.toLowerCase().includes(q));
   rows.sort((a,b)=>{
     let av=a[sortKey], bv=b[sortKey];
     if(typeof av === 'string'){ av=av.toLowerCase(); bv=bv.toLowerCase(); }
@@ -1223,7 +1274,9 @@ function renderTable(){
 
 // New: table of counties that received votes this update hour, broken
 // down by party, plus a top-3 "largest updates" callout — mirrors the
-// tweet generator's top-3 section in the Python script, but live on the page.
+// tweet generator's top-3 section in the Python script, but live on the
+// page. Always reads the live COUNTIES array (this is a live-tracking
+// concept, not part of the frozen D vs R snapshot).
 function renderUpdatesTable(){
   const updated = COUNTIES.filter(c => c.totalNew !== 0)
     .slice()
@@ -1259,14 +1312,20 @@ function render(){
   renderMap();
   renderTable();
   renderUpdatesTable();
-  const refreshedNote = lastLoadedAt ? ` \u00b7 data refreshed ${lastLoadedAt.toLocaleTimeString()}` : '';
+  const refreshedNote = lastLoadedAt ? ` \u00b7 data refreshed ${lastLoadedAt.toLocaleTimeString()}` : ' \u00b7 live feed not yet reporting (0 votes)';
   document.getElementById('footerNote').textContent =
-    `${COUNTIES.length} counties parsed \u00b7 Florida Votes 2026 · Created by Jayson Frascatore${refreshedNote}`;
+    `${activeCountiesFor(currentMetric).length} counties parsed \u00b7 Florida Votes 2026 · Created by Jayson Frascatore${refreshedNote}`;
 }
 
 document.getElementById('refreshBtn').addEventListener('click', () => loadLatestCSV(true));
 
-// Auto-load the latest results on page load, then keep checking for updates.
+// Seed the live dataset at 0 votes for every county, paint the dashboard
+// immediately (no more "empty state" wait), then start trying to pull
+// real numbers in from the live feed.
+initLiveCounties();
+document.getElementById('emptyState').style.display = 'none';
+document.getElementById('dashboard').classList.add('active');
+render();
 loadLatestCSV(false);
 if(AUTO_REFRESH_MS > 0){
   setInterval(() => loadLatestCSV(true), AUTO_REFRESH_MS);
@@ -1283,8 +1342,8 @@ document.getElementById('metricSelect').addEventListener('click', e => {
   document.querySelectorAll('#metricSelect button').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   currentMetric = btn.dataset.metric;
-  if(COUNTIES.length){ renderMap(); renderTable(); }
-  else document.getElementById('npaSliderWrap').style.display = (currentMetric === 'demrepnpa') ? 'block' : 'none';
+  renderMap();
+  renderTable();
 });
 
 function updateNpaSliderLabel(){
@@ -1300,7 +1359,7 @@ document.getElementById('npaSlider').addEventListener('input', e => {
   npaSplitToDem = 100 - parseFloat(e.target.value);
   updateNpaSliderLabel();
   updateStatewideNpaMargin();
-  if(COUNTIES.length && currentMetric === 'demrepnpa'){ renderMap(); renderTable(); }
+  if(currentMetric === 'demrepnpa'){ renderMap(); renderTable(); }
 });
 updateNpaSliderLabel();
 
@@ -1313,7 +1372,7 @@ document.getElementById('demLoyaltySlider').addEventListener('input', e => {
   demLoyalty = parseFloat(e.target.value);
   updateDemLoyaltyLabel();
   updateStatewideNpaMargin();
-  if(COUNTIES.length && currentMetric === 'demrepnpa'){ renderMap(); renderTable(); }
+  if(currentMetric === 'demrepnpa'){ renderMap(); renderTable(); }
 });
 updateDemLoyaltyLabel();
 
@@ -1326,11 +1385,11 @@ document.getElementById('repLoyaltySlider').addEventListener('input', e => {
   repLoyalty = parseFloat(e.target.value);
   updateRepLoyaltyLabel();
   updateStatewideNpaMargin();
-  if(COUNTIES.length && currentMetric === 'demrepnpa'){ renderMap(); renderTable(); }
+  if(currentMetric === 'demrepnpa'){ renderMap(); renderTable(); }
 });
 updateRepLoyaltyLabel();
 
-document.getElementById('searchInput').addEventListener('input', () => { if(COUNTIES.length) renderTable(); });
+document.getElementById('searchInput').addEventListener('input', () => renderTable());
 
 document.querySelectorAll('#voteTable thead th').forEach(th => {
   th.addEventListener('click', () => {
@@ -1338,7 +1397,7 @@ document.querySelectorAll('#voteTable thead th').forEach(th => {
     if(sortKey === key){ sortAsc = !sortAsc; } else { sortKey = key; sortAsc = true; }
     document.querySelectorAll('#voteTable thead th').forEach(t=>t.classList.remove('sorted','asc'));
     th.classList.add('sorted'); if(sortAsc) th.classList.add('asc');
-    if(COUNTIES.length) renderTable();
+    renderTable();
   });
 });
 
@@ -1696,11 +1755,7 @@ function switchMode(mode){
     if(!simInitialized){ simInitialized = true; initSim(); }
   }else{
     document.getElementById('simDashboard').classList.remove('active');
-    if(COUNTIES.length){
-      document.getElementById('dashboard').classList.add('active');
-    }else{
-      document.getElementById('emptyState').style.display = 'block';
-    }
+    document.getElementById('dashboard').classList.add('active');
   }
 }
 document.getElementById('modeLiveBtn').addEventListener('click', () => switchMode('live'));

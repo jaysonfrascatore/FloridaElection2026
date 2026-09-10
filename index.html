@@ -675,6 +675,42 @@ function categoryForNpaMargin(c){
   else level = 'Safe';
   return level + ' ' + leader;
 }
+
+// ------------------------------------------------------------
+// "Not Updated" pending state for the D vs R vs NPA view
+// ------------------------------------------------------------
+// A county's per-county reporting site sometimes hasn't actually posted
+// fresh results yet — it's either reporting 0, or still serving the same
+// (or a smaller) total than what was already known as of the frozen
+// Aug 23 snapshot. Rather than plot that as a real rating, the D vs R vs
+// NPA map/table show it as "Not Updated" (colored #cad2c5) with 0 votes,
+// until the live total actually moves past the Aug 23 baseline.
+const NOT_UPDATED_COLOR = '#cad2c5';
+
+function staticTotalFor(countyName){
+  const rec = STATIC_DVR_COUNTIES.find(s => s.county === countyName);
+  return rec ? rec.total : 0;
+}
+function isCountyPending(c){
+  const baseline = staticTotalFor(c.county);
+  return c.total <= 0 || c.total <= baseline;
+}
+// Same rating tiers as categoryForNpaMargin, but returns 'Not Updated'
+// for counties still in the pending state above.
+function categoryForNpaDisplay(c){
+  if(isCountyPending(c)) return 'Not Updated';
+  return categoryForNpaMargin(c);
+}
+// RATING_CATS plus the pending "Not Updated" state — used only by the
+// D vs R vs NPA map/table/legend.
+const NPA_DISPLAY_CATS = RATING_CATS.concat([{ key:'Not Updated', color: NOT_UPDATED_COLOR }]);
+// Display-safe copy of a county record for the D vs R vs NPA view: vote
+// counts zeroed out while the county is still pending, so the map,
+// table, and tooltip all agree it's showing 0 for now.
+function npaDisplayRecord(c){
+  if(!isCountyPending(c)) return c;
+  return { ...c, dem:0, rep:0, npa:0, ind:0, other:0, total:0, diff:0 };
+}
 // "Even" / "D+4.7" / "R+12.3" style label for a fractional margin.
 function marginLabel(margin){
   if(Math.abs(margin) < 0.0005) return 'Even';
@@ -684,6 +720,7 @@ function marginLabel(margin){
 function moveCategoryFor(c){ return c.ratingChanged ? 'Changed' : 'Unchanged'; }
 function updatedCategoryFor(c){ return c.totalNew ? 'Updated' : 'No new votes'; }
 function catColor(catKey){
+  if(catKey === 'Not Updated') return NOT_UPDATED_COLOR;
   const cat = RATING_CATS.find(c=>c.key===catKey) || MOVE_CATS.find(c=>c.key===catKey) || UPDATED_CATS.find(c=>c.key===catKey) || DROP_WINNER_CATS.find(c=>c.key===catKey);
   return cat ? cat.color : '#3a4356';
 }
@@ -1111,7 +1148,7 @@ const METRICS = {
   // in as the live feed updates. Same rating-tier styling as D vs R, but
   // the tier is decided from a margin that folds NPA into the denominator
   // alongside DEM and REP, so heavy-NPA counties can show a lighter lean.
-  demrepnpa: { title:'D vs R vs NPA rating by county', categorical:true, cats:RATING_CATS, catFn:categoryForNpaMargin },
+  demrepnpa: { title:'D vs R vs NPA rating by county', categorical:true, cats:NPA_DISPLAY_CATS, catFn:categoryForNpaDisplay },
   total: { title:'Total turnout by county', get:c=>c.total, scale:[[0,'#bce784'],[0.5,'#8ac926'],[1,'#007200']], range:cs=>Math.max(1,...cs.map(c=>c.total)), isCount:true },
   move: { title:'Counties with a forecast rating change', categorical:true, cats:MOVE_CATS, catFn:moveCategoryFor },
   updated: { title:'Counties updated (new votes reported)', categorical:true, cats:UPDATED_CATS, catFn:updatedCategoryFor },
@@ -1166,6 +1203,11 @@ function tooltipText(list){
   }
   if(currentMetric === 'demrepnpa'){
     return list.map(c => {
+      if(isCountyPending(c)){
+        return `<b>${c.county}</b><br>` +
+          `Rating: Not Updated<br>` +
+          `This county's site hasn't posted new results yet \u2014 showing 0 votes for now.`;
+      }
       const demToD = c.dem * (demLoyalty/100), demToR = c.dem - demToD;
       const repToR = c.rep * (repLoyalty/100), repToD = c.rep - repToR;
       const npaDem = c.npa * (npaSplitToDem/100), npaRep = c.npa - npaDem;
@@ -1281,18 +1323,20 @@ function renderTable(){
   });
   const body = document.getElementById('tableBody');
   body.innerHTML = rows.map(c => {
-    const cat = useNpaAdj ? categoryForNpaMargin(c) : c.category;
-    const marginVal = useNpaAdj ? marginWithNpaSplit(c) : c.marginPct;
+    const cat = useNpaAdj ? categoryForNpaDisplay(c) : c.category;
+    const pending = useNpaAdj && isCountyPending(c);
+    const d = pending ? npaDisplayRecord(c) : c;
+    const marginVal = useNpaAdj ? (pending ? 0 : marginWithNpaSplit(c)) : c.marginPct;
     const ratingText = useNpaAdj ? cat : c.rating;
     return `
     <tr data-county="${c.county}" class="${c.county===highlightedCounty?'hl':''}">
       <td class="county-name">${c.county}${c.ratingChanged?'<span class="moved" title="'+c.ratingMove+'"></span>':''}</td>
       <td><span class="chip" style="background:${catColor(cat)};color:${contrastText(catColor(cat))}">${cat}</span></td>
-      <td class="num-d">${fmt(c.dem)}</td>
-      <td class="num-r">${fmt(c.rep)}</td>
-      <td class="num-npa">${fmt(c.npa)}</td>
-      <td class="num-diff">${fmt(c.diff)}</td>
-      <td class="num-total">${fmt(c.total)}</td>
+      <td class="num-d">${fmt(d.dem)}</td>
+      <td class="num-r">${fmt(d.rep)}</td>
+      <td class="num-npa">${fmt(d.npa)}</td>
+      <td class="num-diff">${fmt(d.diff)}</td>
+      <td class="num-total">${fmt(d.total)}</td>
       <td class="${marginVal>=0?'num-d':'num-r'}">${marginVal>=0?'+':''}${pct(marginVal)}</td>
       <td class="rating">${ratingText}</td>
     </tr>

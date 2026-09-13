@@ -531,6 +531,7 @@
       <button class="sim-btn" id="simDownloadCsvBtn">Download CSV</button>
       <label class="sim-btn" for="simCsvFileInput" style="margin:0;">Upload CSV</label>
       <input type="file" id="simCsvFileInput" accept=".csv" style="display:none;">
+      <button class="sim-btn" id="simDownloadPngBtn">Save Map as PNG</button>
     </div>
   </div>
 
@@ -2002,12 +2003,49 @@ document.getElementById('simRatingBrush').addEventListener('click', e => {
 // split, at the current turnout setting) as a CSV the user can save and
 // re-upload later. In 2018/2022 mode this exports the actual historical
 // results instead.
+
+// Statewide numbers shared by the CSV and PNG exports: raw DEM/REP votes,
+// turnout (votes cast vs. total registered), and the resulting margin.
+function simStatewideSummary(){
+  const sw = simStatewide();
+  const totalRegistered = SIM_COUNTY_NAMES.reduce((s,name)=>s+SIM_REG[name][0],0);
+  const turnoutPct = totalRegistered ? (sw.total/totalRegistered*100) : 0;
+  const leader = sw.dem >= sw.rep ? 'DEM' : 'REP';
+  const modeLabel = simCheckpointMode === 'tie'
+    ? 'Hypothetical scenario'
+    : (simCheckpointMode === 'y2018' ? "2018 Governor's race (actual)" : "2022 Governor's race (actual)");
+  return {
+    modeLabel,
+    dem: sw.dem, rep: sw.rep, total: sw.total,
+    totalRegistered, turnoutPct,
+    leader, voteLead: Math.abs(sw.dem - sw.rep),
+    marginPct: Math.abs(sw.margin*100),
+    rating: sw.rating
+  };
+}
+
 document.getElementById('simDownloadCsvBtn').addEventListener('click', () => {
+  const summary = simStatewideSummary();
   const rows = [['County','Registered','TurnoutPct','DEM_Pct','REP_Pct','DEM_Votes','REP_Votes','Rating']];
   SIM_COUNTY_NAMES.forEach(name => {
     const s = simCountyStats(name);
     rows.push([name, SIM_REG[name][0], simCheckpointMode==='tie' ? simTurnoutPct.toFixed(1) : simCheckpointMode, s.demPct.toFixed(1), s.repPct.toFixed(1), s.demVotes, s.repVotes, s.rating]);
   });
+  // Statewide summary appended at the end (not the top) so the file still
+  // re-uploads cleanly -- these trailing rows don't match any real county
+  // name, so the upload handler's SIM_REG lookup just skips them.
+  rows.push([]);
+  rows.push(['STATEWIDE SUMMARY']);
+  rows.push(['Mode', summary.modeLabel]);
+  rows.push(['DEM Votes', summary.dem]);
+  rows.push(['REP Votes', summary.rep]);
+  rows.push(['Total Votes', summary.total]);
+  rows.push(['Registered Voters', summary.totalRegistered]);
+  rows.push(['Turnout %', summary.turnoutPct.toFixed(1)]);
+  rows.push(['Leader', summary.leader]);
+  rows.push(['Vote Lead', summary.voteLead]);
+  rows.push(['Margin %', summary.marginPct.toFixed(1)]);
+  rows.push(['Rating', summary.rating]);
   const csv = rows.map(r => r.map(v => {
     const str = String(v);
     return /[",\n]/.test(str) ? '"' + str.replace(/"/g,'""') + '"' : str;
@@ -2021,6 +2059,74 @@ document.getElementById('simDownloadCsvBtn').addEventListener('click', () => {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+});
+
+// Renders the current sim map to a PNG via Plotly, then composites a
+// statewide summary header (raw DEM/REP votes, turnout, margin) above it
+// on a canvas, and downloads the combined image.
+document.getElementById('simDownloadPngBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('simDownloadPngBtn');
+  const originalText = btn.textContent;
+  btn.textContent = 'Rendering…';
+  btn.disabled = true;
+  try{
+    const summary = simStatewideSummary();
+    const mapDataUrl = await Plotly.toImage('simMap', { format:'png', width:900, height:560, scale:2 });
+
+    const img = new Image();
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = mapDataUrl;
+    });
+
+    const headerH = 156;
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height + headerH;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#0a0e17';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const scale = canvas.width / 900;
+    ctx.fillStyle = '#e9edf5';
+    ctx.font = `600 ${Math.round(24*scale)}px Inter, Arial, sans-serif`;
+    ctx.fillText(`Florida Build Your Own Map \u2014 ${summary.modeLabel}`, 24*scale, 40*scale);
+
+    ctx.fillStyle = summary.leader === 'DEM' ? '#5b9bd9' : '#d4675a';
+    ctx.font = `600 ${Math.round(19*scale)}px Inter, Arial, sans-serif`;
+    ctx.fillText(
+      `${summary.leader} leads by ${fmt(Math.round(summary.voteLead))} votes (+${summary.marginPct.toFixed(1)}%) \u00b7 ${summary.rating}`,
+      24*scale, 74*scale
+    );
+
+    ctx.fillStyle = '#7c879c';
+    ctx.font = `${Math.round(15*scale)}px Inter, Arial, sans-serif`;
+    ctx.fillText(
+      `DEM ${fmt(summary.dem)} \u00b7 REP ${fmt(summary.rep)} \u00b7 Total votes cast ${fmt(summary.total)}`,
+      24*scale, 102*scale
+    );
+    ctx.fillText(
+      `Turnout: ${summary.turnoutPct.toFixed(1)}% of ${fmt(summary.totalRegistered)} registered voters`,
+      24*scale, 126*scale
+    );
+
+    ctx.drawImage(img, 0, headerH*scale);
+
+    const finalUrl = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = finalUrl;
+    a.download = `florida-build-your-own-map-${simCheckpointMode}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }catch(err){
+    alert('Could not generate the map image: ' + err.message);
+  }finally{
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
 });
 
 // Upload a previously downloaded (or hand-edited) scenario CSV and apply

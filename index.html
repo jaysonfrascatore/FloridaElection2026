@@ -209,6 +209,8 @@
     padding:7px 12px; border-radius:6px; cursor:pointer; white-space:nowrap;
   }
   .segmented button.active{ background:var(--panel-2); color:var(--text); box-shadow:inset 0 0 0 1px var(--border); }
+  #simRatingBrush button{ font-weight:600; }
+  #simRatingBrush button.active{ background:var(--panel-2); box-shadow:inset 0 0 0 2px currentColor; }
   .search-box{
     background:var(--panel); border:1px solid var(--border); border-radius:9px;
     padding:8px 12px; display:flex; align-items:center; gap:8px; min-width:200px;
@@ -228,6 +230,15 @@
   .npa-slider-wrap{
     margin-bottom:14px; padding:14px 16px;
     background:var(--panel-2); border:1px solid var(--border); border-radius:10px;
+  }
+  .shift-slider-badge{
+    display:inline-block; font-family:var(--mono); font-size:10.5px; letter-spacing:.04em;
+    padding:5px 12px; border-radius:20px; margin-bottom:14px;
+    background:var(--panel); color:var(--muted); border:1px solid var(--border);
+    transition:background .2s, color .2s, border-color .2s;
+  }
+  .shift-slider-badge.active{
+    background:rgba(14,173,105,0.18); color:#4ade80; border-color:#0ead69; font-weight:600;
   }
   .npa-slider-label{
     display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:6px;
@@ -399,6 +410,7 @@
     <div class="panel">
       <h2 id="mapTitle">Rating by county</h2>
       <div class="npa-slider-wrap" id="npaSliderWrap" style="display:none;">
+        <div class="shift-slider-badge" id="shiftSliderBadge">Shift Slider Not Yet In Use</div>
         <div class="npa-slider-label">
           <span>If undecided/NPA voters lean one way, how far does it move the map?</span>
           <span class="val" id="npaSliderValue">Even split (50% D / 50% R)</span>
@@ -525,6 +537,15 @@
   <div class="grid">
     <div class="panel">
       <h2 id="simMapHeader">Click a county to set its margin</h2>
+      <div class="segmented" id="simRatingBrush" style="margin-bottom:12px; flex-wrap:wrap;">
+        <button data-rating="Safe R" style="color:#dd2d4a;">Safe R</button>
+        <button data-rating="Likely R" style="color:#ee6a86;">Likely R</button>
+        <button data-rating="Lean R" style="color:#f49cbb;">Lean R</button>
+        <button data-rating="Toss Up" style="color:#c199f0;">Toss Up</button>
+        <button data-rating="Lean D" style="color:#7fd4e6;">Lean D</button>
+        <button data-rating="Likely D" style="color:#33c2e0;">Likely D</button>
+        <button data-rating="Safe D" style="color:#3d6fd9;">Safe D</button>
+      </div>
       <div id="simMap" style="height:480px;"></div>
       <div class="legend" id="simMapLegend"></div>
 
@@ -645,6 +666,23 @@ let npaSplitToDem = 50;
 let demLoyalty = 95;
 let repLoyalty = 95;
 
+// The three sliders above default to 50/50 NPA split and 95% D/R loyalty
+// — but those defaults should NOT, on their own, skew any displayed
+// numbers away from the raw votes actually reported. The adjustment only
+// takes effect once the user has actually moved one of the three levers
+// at least once (tracked here), regardless of where the sliders land.
+let shiftSliderActive = false;
+
+function activateShiftSlider(){
+  if(shiftSliderActive) return;
+  shiftSliderActive = true;
+  const badge = document.getElementById('shiftSliderBadge');
+  if(badge){
+    badge.textContent = 'Shift Slider Activated';
+    badge.classList.add('active');
+  }
+}
+
 // Reallocates a county's DEM, REP, and NPA votes according to the current
 // slider settings (NPA split + DEM/REP crossover) and returns the
 // resulting DEM-vs-REP margin as a fraction (-1..1).
@@ -660,12 +698,19 @@ function marginWithNpaSplit(c){
   const denom = totalDCand + totalRCand;
   return denom ? (totalDCand-totalRCand)/denom : 0;
 }
-// Same rating tiers as categoryFor, but the tier is decided from the
-// slider-adjusted margin (NPA votes reallocated per the current split)
+// Returns the margin actually used for display: the untouched raw margin
+// (NPA folded into the denominator, no loyalty/crossover assumptions)
+// until the shift sliders have been activated, and the slider-adjusted
+// margin once they have.
+function activeNpaMargin(c){
+  return shiftSliderActive ? marginWithNpaSplit(c) : c.marginNpaAdj;
+}
+// Same rating tiers as categoryFor, but the tier is decided from
+// activeNpaMargin() (raw until a lever is moved, slider-adjusted after)
 // instead of the plain DEM-vs-REP margin — used by "D vs R vs NPA".
 // Thresholds match the Python script: <.03 Toss Up, <.08 Lean, <.15 Likely, else Safe.
 function categoryForNpaMargin(c){
-  const margin = marginWithNpaSplit(c);
+  const margin = activeNpaMargin(c);
   const abs = Math.abs(margin);
   if(abs < 0.03) return margin === 0 ? 'Tie' : 'Toss Up';
   const leader = margin > 0 ? 'D' : 'R';
@@ -776,23 +821,34 @@ function activeCountiesFor(metric){
   return metric === 'rating' ? STATIC_DVR_COUNTIES : COUNTIES;
 }
 
-// Reallocates the statewide NPA total per the current slider split and
-// reports the resulting DEM-vs-REP lead as both a percentage and a raw
-// vote count.
+// Reports the statewide DEM-vs-REP lead (with NPA folded in) as both a
+// percentage and a raw vote count. Uses the raw, unadjusted totals until
+// the shift sliders have been activated; once activated, reallocates the
+// statewide NPA total (and DEM/REP crossover) per the current slider
+// settings first.
 function updateStatewideNpaMargin(){
   const el = document.getElementById('npaStatewideMargin');
   if(!el) return;
   const base = statewideTotals;
-  const demToD = base.dem * (demLoyalty/100);
-  const demToR = base.dem - demToD;
-  const repToR = base.rep * (repLoyalty/100);
-  const repToD = base.rep - repToR;
-  const npaToD = base.npa * (npaSplitToDem/100);
-  const npaToR = base.npa - npaToD;
-  const totalDCand = demToD + repToD + npaToD;
-  const totalRCand = repToR + demToR + npaToR;
-  const total = totalDCand + totalRCand;
-  const margin = total ? (totalDCand-totalRCand)/total : 0;
+  let totalDCand, totalRCand;
+  if(shiftSliderActive){
+    const demToD = base.dem * (demLoyalty/100);
+    const demToR = base.dem - demToD;
+    const repToR = base.rep * (repLoyalty/100);
+    const repToD = base.rep - repToR;
+    const npaToD = base.npa * (npaSplitToDem/100);
+    const npaToR = base.npa - npaToD;
+    totalDCand = demToD + repToD + npaToD;
+    totalRCand = repToR + demToR + npaToR;
+  }else{
+    totalDCand = base.dem;
+    totalRCand = base.rep;
+    // Raw display still folds NPA into the denominator (matching
+    // marginNpaAdj) so the percentage is comparable, but NPA votes
+    // themselves aren't assigned to either side.
+  }
+  const denom = shiftSliderActive ? (totalDCand + totalRCand) : (base.dem + base.rep + base.npa);
+  const margin = denom ? (totalDCand-totalRCand)/denom : 0;
   const voteLead = Math.round(Math.abs(totalDCand - totalRCand));
   if(Math.abs(margin) < 0.0005){
     el.innerHTML = 'Tied';
@@ -1219,6 +1275,13 @@ function tooltipText(list){
           `Rating: Not Updated<br>` +
           `This county's site hasn't posted new results yet \u2014 showing 0 votes for now.`;
       }
+      if(!shiftSliderActive){
+        return `<b>${c.county}</b><br>` +
+          `Rating: ${categoryForNpaMargin(c)}<br>` +
+          `DEM ${fmt(c.dem)} \u00b7 REP ${fmt(c.rep)} \u00b7 NPA ${fmt(c.npa)}<br>` +
+          `Total ${fmt(c.total)}<br>` +
+          `Margin (raw, NPA included): ${marginLabel(c.marginNpaAdj)}`;
+      }
       const demToD = c.dem * (demLoyalty/100), demToR = c.dem - demToD;
       const repToR = c.rep * (repLoyalty/100), repToD = c.rep - repToR;
       const npaDem = c.npa * (npaSplitToDem/100), npaRep = c.npa - npaDem;
@@ -1337,7 +1400,7 @@ function renderTable(){
     const cat = useNpaAdj ? categoryForNpaDisplay(c) : c.category;
     const pending = useNpaAdj && isCountyPending(c);
     const d = pending ? npaDisplayRecord(c) : c;
-    const marginVal = useNpaAdj ? (pending ? 0 : marginWithNpaSplit(c)) : c.marginPct;
+    const marginVal = useNpaAdj ? (pending ? 0 : activeNpaMargin(c)) : c.marginPct;
     const ratingText = useNpaAdj ? cat : c.rating;
     return `
     <tr data-county="${c.county}" class="${c.county===highlightedCounty?'hl':''}">
@@ -1450,6 +1513,7 @@ document.getElementById('npaSlider').addEventListener('input', e => {
   // Slider is now oriented Dem (left, low raw value) to Rep (right, high raw
   // value), so the raw 0-100 value is inverted to get the %-to-Dem figure.
   npaSplitToDem = 100 - parseFloat(e.target.value);
+  activateShiftSlider();
   updateNpaSliderLabel();
   updateStatewideNpaMargin();
   if(currentMetric === 'demrepnpa'){ renderMap(); renderTable(); }
@@ -1463,6 +1527,7 @@ function updateDemLoyaltyLabel(){
 }
 document.getElementById('demLoyaltySlider').addEventListener('input', e => {
   demLoyalty = parseFloat(e.target.value);
+  activateShiftSlider();
   updateDemLoyaltyLabel();
   updateStatewideNpaMargin();
   if(currentMetric === 'demrepnpa'){ renderMap(); renderTable(); }
@@ -1476,6 +1541,7 @@ function updateRepLoyaltyLabel(){
 }
 document.getElementById('repLoyaltySlider').addEventListener('input', e => {
   repLoyalty = parseFloat(e.target.value);
+  activateShiftSlider();
   updateRepLoyaltyLabel();
   updateStatewideNpaMargin();
   if(currentMetric === 'demrepnpa'){ renderMap(); renderTable(); }
@@ -1580,6 +1646,20 @@ let selectedSimCounty = null;
 let simInitialized = false;
 let simCheckpointMode = 'tie'; // 'tie' | 'y2018' | 'y2022'
 
+// Rating "paintbrush": pick one of these 7 buckets, then click counties
+// on the map/table to assign that bucket directly, instead of dragging
+// the fine-grained slider for each one. Each bucket maps to a
+// representative DEM share of the two-party vote chosen to land solidly
+// inside that bucket's margin range (matching simRatingFor's thresholds:
+// <0.03 Toss Up, <0.08 Lean, <0.15 Likely, else Safe), not right on an
+// edge.
+const RATING_BRUSH_DEMPCT = {
+  'Safe R': 35, 'Likely R': 44.5, 'Lean R': 47.5,
+  'Toss Up': 50.5,
+  'Lean D': 52.5, 'Likely D': 55.5, 'Safe D': 65
+};
+let selectedRatingBrush = null;
+
 function simResetAll(){
   simDemPct = {};
   SIM_COUNTY_NAMES.forEach(name => { simDemPct[name] = 50; });
@@ -1664,7 +1744,7 @@ async function renderSimMap(){
   const text = SIM_COUNTY_NAMES.map(name => {
     const s = simCountyStats(name);
     return `<b>${name}</b><br>Rating: ${s.rating}<br>DEM ${fmt(s.demVotes)} (${s.demPct.toFixed(1)}%)<br>REP ${fmt(s.repVotes)} (${s.repPct.toFixed(1)}%)<br>${simCheckpointMode==='tie' ? 'Turnout votes' : 'Total votes'} ${fmt(s.total)}` +
-      (clickable ? `<br><i>click to edit</i>` : `<br><i>click for details</i>`);
+      (clickable ? `<br><i>click to edit</i>` : '');
   });
   const trace = {
     type:'choropleth', geojson: geojsonFL, locations, z,
@@ -1739,6 +1819,21 @@ function updateSimTurnoutLabel(){
 }
 
 function selectSimCounty(name){
+  // If a rating brush is active (Tie mode only), clicking a county paints
+  // it with that bucket's representative margin immediately, and the
+  // brush stays selected so multiple counties can be painted in a row.
+  if(selectedRatingBrush && simCheckpointMode === 'tie'){
+    simDemPct[name] = RATING_BRUSH_DEMPCT[selectedRatingBrush];
+    selectedSimCounty = name;
+    document.getElementById('simPlaceholder').style.display = 'none';
+    document.getElementById('simEditor').style.display = 'block';
+    document.getElementById('simDemSlider').value = simDemPct[name];
+    renderSimStats();
+    renderSimMap();
+    renderSimTable();
+    renderSimEditor();
+    return;
+  }
   selectedSimCounty = name;
   document.getElementById('simPlaceholder').style.display = 'none';
   document.getElementById('simEditor').style.display = 'block';
@@ -1834,6 +1929,11 @@ function renderSim(){
   document.getElementById('simMapHeader').textContent = simCheckpointMode === 'tie'
     ? 'Click a county to set its margin'
     : `Actual ${simCheckpointMode === 'y2018' ? '2018' : '2022'} Governor's race results by county`;
+  document.getElementById('simRatingBrush').style.display = simCheckpointMode === 'tie' ? 'flex' : 'none';
+  if(simCheckpointMode !== 'tie'){
+    selectedRatingBrush = null;
+    document.querySelectorAll('#simRatingBrush button').forEach(b=>b.classList.remove('active'));
+  }
   if(selectedSimCounty) renderSimEditor();
 }
 
@@ -1882,11 +1982,20 @@ document.getElementById('simResetCountyBtn').addEventListener('click', () => {
 document.getElementById('simResetAllBtn').addEventListener('click', () => {
   simResetAll();
   selectedSimCounty = null;
+  selectedRatingBrush = null;
+  document.querySelectorAll('#simRatingBrush button').forEach(b=>b.classList.remove('active'));
   simCheckpointMode = 'tie';
   document.getElementById('simCheckpointMode').value = 'tie';
   document.getElementById('simEditor').style.display = 'none';
   document.getElementById('simPlaceholder').style.display = 'block';
   renderSim();
+});
+document.getElementById('simRatingBrush').addEventListener('click', e => {
+  const btn = e.target.closest('button'); if(!btn) return;
+  const rating = btn.dataset.rating;
+  selectedRatingBrush = (selectedRatingBrush === rating) ? null : rating;
+  document.querySelectorAll('#simRatingBrush button').forEach(b=>b.classList.remove('active'));
+  if(selectedRatingBrush) btn.classList.add('active');
 });
 
 // Download the current scenario (every county's hypothetical DEM/REP

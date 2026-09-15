@@ -1310,6 +1310,60 @@ function tooltipText(list){
   );
 }
 
+// ------------------------------------------------------------
+// Two-way tie stripes (General Election map only)
+// ------------------------------------------------------------
+// Plotly's choropleth only supports solid per-bucket colors via its
+// colorscale, so a genuine striped fill for a tie between two of the
+// three parties has to be done by hand: after each Plotly render, we
+// inject SVG stripe patterns and repaint the specific county paths that
+// qualify. A plain D-vs-R tie is untouched -- it keeps using the normal
+// solid "Tie" yellow from NPA_DISPLAY_CATS, same as before.
+function ensureStripeDefs(svg){
+  if(!svg || svg.querySelector('#stripe-r-npa')) return;
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  defs.innerHTML =
+    '<pattern id="stripe-r-npa" width="12" height="12" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">' +
+      '<rect width="12" height="12" fill="#d4675a"></rect>' +
+      '<rect width="6" height="12" fill="#c77dff"></rect>' +
+    '</pattern>' +
+    '<pattern id="stripe-d-npa" width="12" height="12" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">' +
+      '<rect width="12" height="12" fill="#5b9bd9"></rect>' +
+      '<rect width="6" height="12" fill="#c77dff"></rect>' +
+    '</pattern>';
+  svg.insertBefore(defs, svg.firstChild);
+}
+// Which stripe (if any) a county qualifies for: REP tied with NPA for the
+// county's lead (and NPA/REP > DEM), or DEM tied with NPA for the lead.
+function tieStripeFor(c){
+  if(c.rep > 0 && c.rep === c.npa && c.rep >= c.dem) return 'url(#stripe-r-npa)';
+  if(c.dem > 0 && c.dem === c.npa && c.dem >= c.rep) return 'url(#stripe-d-npa)';
+  return null;
+}
+function applyTieStripes(activeCounties){
+  const mapDiv = document.getElementById('map');
+  const svg = mapDiv && mapDiv.querySelector('svg');
+  if(!svg) return;
+  ensureStripeDefs(svg);
+  const byFips = {};
+  activeCounties.forEach(c => { byFips[c.fips] = c; });
+  const paths = svg.querySelectorAll('path.choroplethlocation, g.choroplethlayer path');
+  paths.forEach((path, i) => {
+    // Plotly binds each path's underlying GeoJSON feature via D3, which
+    // carries the "id" (FIPS) used to match locations -- fall back to
+    // positional order if that data isn't exposed for some reason.
+    const bound = path.__data__;
+    const fips = bound && (bound.id || bound.location || (bound.properties && bound.properties.id));
+    const c = (fips && byFips[fips]) || activeCounties[i];
+    if(!c) return;
+    const stripe = (currentMetric === 'demrepnpa' && !isCountyPending(c)) ? tieStripeFor(c) : null;
+    if(stripe){
+      path.setAttribute('fill', stripe);
+      path.style.fill = stripe;
+    }
+  });
+}
+
 async function renderMap(){
   await ensureGeojson();
   const m = METRICS[currentMetric];
@@ -1376,7 +1430,11 @@ async function renderMap(){
     paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
     margin:{t:10,b:10,l:10,r:10}, font:{family:'Inter, sans-serif'}
   };
-  Plotly.newPlot('map', [trace], layout, {displayModeBar:false, responsive:true});
+  Plotly.newPlot('map', [trace], layout, {displayModeBar:false, responsive:true}).then(() => {
+    if(currentMetric === 'demrepnpa'){
+      applyTieStripes(activeCounties);
+    }
+  });
 
   document.getElementById('map').on('plotly_click', function(ev){
     const fips = ev.points[0].location;
@@ -1644,6 +1702,44 @@ async function renderStatewideBarChartImage(summary, width, height){
   return img;
 }
 
+// Rasterizes the CURRENT LIVE map SVG (including any manually-applied
+// tie stripes from applyTieStripes) into a canvas, instead of asking
+// Plotly to redraw the map from its stored data -- Plotly.toImage()
+// regenerates the image from the underlying trace/layout and has no
+// knowledge of the stripe patches applied directly to the DOM, so it
+// would silently drop them. Used only for the General Election PNG,
+// where a REP-NPA or DEM-NPA tie needs to visibly show as a tie rather
+// than quietly resolving to a solid color.
+async function liveMapSvgToCanvas(svgEl, cssWidth, cssHeight, pixelScale){
+  const clone = svgEl.cloneNode(true);
+  clone.setAttribute('width', cssWidth);
+  clone.setAttribute('height', cssHeight);
+  if(!clone.getAttribute('xmlns')){
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  }
+  const svgStr = new XMLSerializer().serializeToString(clone);
+  const svgBlob = new Blob([svgStr], { type:'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(svgBlob);
+  try{
+    const img = new Image();
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = url;
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = cssWidth * pixelScale;
+    canvas.height = cssHeight * pixelScale;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#0a0e17';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas;
+  }finally{
+    URL.revokeObjectURL(url);
+  }
+}
+
 document.getElementById('downloadMapPngBtn').addEventListener('click', async () => {
   const btn = document.getElementById('downloadMapPngBtn');
   const originalText = btn.textContent;
@@ -1660,13 +1756,22 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
     const chartReqWidth = isGeneral ? 250 : 0;
     const reqHeight = 560;
 
-    const mapDataUrl = await Plotly.toImage('map', { format:'png', width:mapReqWidth, height:reqHeight, scale:2 });
-    const mapImg = new Image();
-    await new Promise((resolve, reject) => {
-      mapImg.onload = resolve;
-      mapImg.onerror = reject;
-      mapImg.src = mapDataUrl;
-    });
+    let mapImg = null;
+    if(isGeneral){
+      const liveSvg = document.querySelector('#map svg');
+      if(liveSvg){
+        mapImg = await liveMapSvgToCanvas(liveSvg, mapReqWidth, reqHeight, 2);
+      }
+    }
+    if(!mapImg){
+      const mapDataUrl = await Plotly.toImage('map', { format:'png', width:mapReqWidth, height:reqHeight, scale:2 });
+      mapImg = new Image();
+      await new Promise((resolve, reject) => {
+        mapImg.onload = resolve;
+        mapImg.onerror = reject;
+        mapImg.src = mapDataUrl;
+      });
+    }
 
     let chartImg = null;
     if(isGeneral){

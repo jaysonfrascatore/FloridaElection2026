@@ -87,13 +87,21 @@ def resolve_election_id(today):
 #
 #   SPIKE: the county's total went UP by an implausible amount in a
 #          single run. Rejected only when BOTH conditions are true --
-#          the raw increase exceeds COUNTY_SPIKE_ABS_THRESHOLD AND it's
-#          more than COUNTY_SPIKE_PCT_THRESHOLD of the previous total.
-#          Requiring both avoids two failure modes: a huge county
-#          legitimately posting a large end-of-day batch shouldn't get
-#          rejected just because the raw number is big, and a small
-#          county's normal increment from a tiny baseline shouldn't get
-#          rejected just because the percentage looks huge.
+#          the raw increase exceeds the abs threshold AND it's more
+#          than the pct threshold of the previous total. Requiring both
+#          avoids two failure modes: a huge county legitimately posting
+#          a large end-of-day batch shouldn't get rejected just because
+#          the raw number is big, and a small county's normal increment
+#          from a tiny baseline shouldn't get rejected just because the
+#          percentage looks huge.
+#
+#          Florida's largest counties can still legitimately clear the
+#          statewide default thresholds with one real canvassing batch
+#          (Broward posting +233,000 in one run really happened), so
+#          they get their own higher allowance below rather than
+#          loosening the check for every county and losing protection
+#          against real glitches in smaller ones. Set a county's entry
+#          to None to exempt it from the spike check entirely.
 #
 # Either guardrail firing restores that county's ENTIRE previous
 # accepted row -- nothing is capped or partially applied.
@@ -103,6 +111,17 @@ COUNTY_DROP_SANITY_THRESHOLD = 5000
 
 COUNTY_SPIKE_ABS_THRESHOLD = 50000
 COUNTY_SPIKE_PCT_THRESHOLD = 0.25
+
+# Code: (abs_threshold, pct_threshold) -- overrides the defaults above
+# for specific counties. Add more codes here as needed (see the COUNTIES
+# dict below for the full code list).
+COUNTY_SPIKE_OVERRIDES = {
+    "BRO": (400000, 0.60),   # Broward
+    "DAD": (400000, 0.60),   # Miami-Dade
+    "PAL": (300000, 0.60),   # Palm Beach
+    "HIL": (250000, 0.60),   # Hillsborough
+    "ORA": (250000, 0.60),   # Orange
+}
 
 
 # ============================================================
@@ -1105,6 +1124,24 @@ if previous is not None:
 
         reject_reason = None
 
+        spike_override = COUNTY_SPIKE_OVERRIDES.get(county_code)
+
+        if spike_override is None and county_code in COUNTY_SPIKE_OVERRIDES:
+
+            # Explicitly set to None in the overrides dict -- this
+            # county is fully exempt from the spike check.
+            spike_abs_threshold = None
+            spike_pct_threshold = None
+
+        elif spike_override is not None:
+
+            spike_abs_threshold, spike_pct_threshold = spike_override
+
+        else:
+
+            spike_abs_threshold = COUNTY_SPIKE_ABS_THRESHOLD
+            spike_pct_threshold = COUNTY_SPIKE_PCT_THRESHOLD
+
 
         if votes_removed > COUNTY_DROP_SANITY_THRESHOLD:
 
@@ -1113,9 +1150,13 @@ if previous is not None:
 
         elif (
 
+            spike_abs_threshold is not None
+
+            and
+
             votes_added
             >
-            COUNTY_SPIKE_ABS_THRESHOLD
+            spike_abs_threshold
 
             and
 
@@ -1130,7 +1171,7 @@ if previous is not None:
                     previous_total
                 )
                 >
-                COUNTY_SPIKE_PCT_THRESHOLD
+                spike_pct_threshold
             )
 
         ):
@@ -1193,9 +1234,14 @@ if previous is not None:
 
                 print(
                     f"  Spike thresholds: "
-                    f"{COUNTY_SPIKE_ABS_THRESHOLD:,} votes "
-                    f"AND {COUNTY_SPIKE_PCT_THRESHOLD:.0%} "
+                    f"{spike_abs_threshold:,} votes "
+                    f"AND {spike_pct_threshold:.0%} "
                     f"(actual: {pct_display:.0%})"
+                    + (
+                        f"  [override for {county_code}]"
+                        if county_code in COUNTY_SPIKE_OVERRIDES
+                        else ""
+                    )
                 )
 
             print(

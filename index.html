@@ -329,6 +329,87 @@
     background:#3a1c1c; border:1px solid var(--rep-dim); color:#f0b5ac; border-radius:8px;
     padding:10px 14px; font-size:12.5px; margin-bottom:14px; display:none; font-family:var(--mono);
   }
+
+  /* ============================================================
+     MOBILE OVERRIDES
+     ------------------------------------------------------------
+     Everything below only applies under 640px, so it never touches
+     the desktop layout above -- it just scales things down (padding,
+     font sizes, control heights, map heights) for phone screens where
+     the desktop sizing feels oversized.
+     ============================================================ */
+  @media (max-width: 640px){
+    body{ padding:16px 12px 40px; }
+    h1{ font-size:22px; }
+    .title-block p{ font-size:12px; }
+    .title-block .eyebrow{ font-size:10px; }
+
+    header{ gap:12px; padding-bottom:14px; margin-bottom:16px; }
+    .upload-zone{ padding:10px 12px; gap:10px; width:100%; }
+    .upload-icon{ width:28px; height:28px; }
+    .upload-text .t1{ font-size:12px; }
+    .upload-text .t2, #fileMeta{ font-size:10px; }
+
+    .mode-tabs{ gap:2px; margin-bottom:14px; }
+    .mode-tab{ font-size:11px; padding:8px 6px 10px; }
+
+    .margin-strip{ padding:14px 14px 16px; margin-bottom:14px; }
+    .margin-strip .leader{ font-size:17px; }
+    .margin-strip .label{ font-size:10px; }
+    .stat-cards{ grid-template-columns:repeat(auto-fit,minmax(96px,1fr)); gap:8px; margin-top:12px; }
+    .stat-card{ padding:8px 10px; }
+    .stat-card .v{ font-size:15px; }
+    .stat-card .k{ font-size:9.5px; }
+    .stat-card .sub{ font-size:9px; }
+    .bar-labels{ font-size:10px; }
+    .bar-note{ font-size:10px; }
+
+    .controls{ gap:10px; margin-bottom:12px; }
+    .segmented{ width:100%; }
+    .segmented button{ font-size:10.5px; padding:7px 8px; flex:1 1 auto; }
+    .search-box{ width:100%; min-width:0; }
+    #downloadMapPngBtn, .sim-btn{ font-size:10.5px; padding:7px 10px; }
+
+    #map{ height:340px; }
+    .panel{ padding:12px; }
+    .panel h2{ font-size:13.5px; margin-bottom:8px; }
+    .legend{ gap:5px; margin-top:10px; }
+    .legend .swatch{ font-size:9px; padding:3px 7px; }
+
+    .npa-slider-wrap{ padding:12px 14px; margin-bottom:12px; }
+    .npa-slider-label{ font-size:10px; }
+    .npa-slider-label .val{ font-size:11px; }
+    .npa-slider-ends{ font-size:8.5px; }
+    .shift-slider-badge{ font-size:9.5px; padding:4px 10px; margin-bottom:12px; }
+
+    table{ font-size:10px; }
+    thead th{ font-size:9px; padding:7px 5px; }
+    tbody td{ padding:6px 5px; }
+    .county-name{ font-size:10.5px; }
+    .chip{ font-size:8.5px; padding:2px 5px; }
+    .table-wrap{ max-height:460px; }
+
+    #updatesPanel{ margin-top:14px; }
+    #updatesPanel table{ font-size:11px; }
+    #updatesPanel thead th{ font-size:9.5px; padding:8px 6px; }
+    #updatesPanel tbody td{ padding:9px 6px; }
+    #updatesPanel .county-name{ font-size:11.5px; }
+    .medal-card .v{ font-size:12.5px; }
+    .medal-card .k{ font-size:10.5px; }
+
+    .sim-turnout-strip{ gap:10px; padding:12px; margin-bottom:12px; }
+    .sim-checkpoint-mode select{ font-size:10.5px; padding:5px 8px; }
+    .sim-csv-label{ font-size:9px; }
+    #simRatingBrush button{ font-size:10px; padding:6px 8px; }
+    .sim-editor{ padding:12px; margin-bottom:12px; }
+    .sim-editor .sim-editor-title{ font-size:14px; }
+    .sim-editor .sim-editor-sub{ font-size:9.5px; }
+    .sim-editor .sim-row{ font-size:10.5px; }
+    .sim-checkpoint{ padding:9px 10px; font-size:10.5px; }
+    #simMap{ height:320px !important; }
+
+    footer{ font-size:10px; }
+  }
 </style>
 </head>
 <body>

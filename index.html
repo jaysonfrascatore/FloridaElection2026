@@ -1972,18 +1972,20 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
     // clear space between the map and the chart so neither can bleed
     // into the other regardless of the map's own aspect ratio.
     //
-    // The map height is set to match Florida's REAL bounding-box aspect
-    // ratio (~1.04:1 -- the panhandle stretching west makes the overall
-    // shape nearly square, not the tall narrow rectangle the peninsula
-    // alone would suggest). Rendering a FRESH map at that box size (via
-    // renderGeneralElectionMapCanvas below, rather than recapturing
-    // whatever aspect ratio the on-screen map happens to be at) lets
-    // Plotly's own fitbounds properly fill the box with minimal empty
-    // space on any side.
-    const mapReqWidth = isGeneral ? 1000 : 900;
+    // mapReqWidth x reqHeight, at pixelScale 2, is the map's FINAL
+    // rendered pixel size: 900x850 -> 1800x1700. That's also close to
+    // Florida's real bounding-box aspect ratio (~1.04:1 -- the panhandle
+    // stretching west makes the overall shape nearly square, not the
+    // tall narrow rectangle the peninsula alone would suggest), so very
+    // little of that box ends up as empty padding. Rendering a FRESH map
+    // at this box size (via renderGeneralElectionMapCanvas below, rather
+    // than recapturing whatever aspect ratio the on-screen map happens
+    // to be at) lets Plotly's own fitbounds actually fill it -- with
+    // "meet" scaling, the full state is always visible, never cropped.
+    const mapReqWidth = 900;
     const gapReq = isGeneral ? 40 : 0;
     const chartReqWidth = isGeneral ? 260 : 0;
-    const reqHeight = isGeneral ? 960 : 560;
+    const reqHeight = isGeneral ? 850 : 560;
     const pixelScale = 2;
     const baseRef = mapReqWidth + gapReq + chartReqWidth;
 

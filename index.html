@@ -1645,14 +1645,36 @@ function liveResultsSummary(){
   const marginMoveCount = list.filter(c=>c.ratingChanged).length;
   const updated = list.filter(c=>c.totalNew).slice().sort((a,b)=>b.totalNew-a.totalNew);
 
+  // Statewide two-way tie between a major party and NPA (the same check
+  // as tieStripeFor(), but aggregated across the whole state instead of
+  // one county). When this happens, describing the result as e.g. "REP
+  // +1" is misleading -- REP and NPA are genuinely tied with each other,
+  // which is the fact worth surfacing, not the incidental gap to DEM.
+  let statewideTie = null;
+  if(totalR > 0 && totalR === totalNPA && totalR >= totalD){
+    statewideTie = { partyA:'Republicans', partyB:'NPA', votes: totalR };
+  }else if(totalD > 0 && totalD === totalNPA && totalD >= totalR){
+    statewideTie = { partyA:'Democrats', partyB:'NPA', votes: totalD };
+  }
+
   return {
     metricTitle: (METRICS[currentMetric] && METRICS[currentMetric].title) || 'Florida Vote Tracker',
     totalVotes, totalD, totalR, totalNPA,
-    leader, voteLead, marginPct,
+    leader, voteLead, marginPct, statewideTie,
     countiesReporting, marginMoveCount,
     countiesUpdated: updated.length,
     top3: updated.slice(0,3)
   };
+}
+
+// Small credit line drawn at the very bottom of every exported PNG.
+function drawSourceCredit(ctx, x, y, scale){
+  ctx.fillStyle = '#556076';
+  ctx.font = `${Math.round(11*scale)}px IBM Plex Mono, monospace`;
+  ctx.fillText(
+    'Source: https://jaysonfrascatore.github.io/FloridaElection2026/  \u00b7  Created by Jayson Frascatore',
+    x, y
+  );
 }
 
 // Renders a small statewide DEM/REP/NPA bar chart to an image via a
@@ -1804,7 +1826,7 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
 
     const gapPx = gapReq * pixelScale;
     const headerH = 108;
-    const footerH = 170;
+    const footerH = 190;
     const canvas = document.createElement('canvas');
     canvas.width = mapImg.width + (chartImg ? gapPx + chartImg.width : 0);
     // IMPORTANT: header/footer heights must be scaled the same way the
@@ -1822,13 +1844,25 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
     ctx.font = `600 ${Math.round(24*scale)}px Inter, Arial, sans-serif`;
     ctx.fillText(`Florida Vote Tracker 2026 \u2014 ${summary.metricTitle}`, 24*scale, 40*scale);
 
-    const leaderFull = summary.leader === 'DEM' ? 'Democrats' : 'Republicans';
-    ctx.fillStyle = summary.leader === 'DEM' ? '#5b9bd9' : '#d4675a';
-    ctx.font = `600 ${Math.round(19*scale)}px Inter, Arial, sans-serif`;
-    ctx.fillText(
-      `${leaderFull} lead by ${fmt(Math.round(summary.voteLead))} votes (+${summary.marginPct.toFixed(1)}%)`,
-      24*scale, 74*scale
-    );
+    if(summary.statewideTie){
+      // A major party is genuinely tied with NPA statewide -- say so
+      // directly rather than reporting a misleading margin against the
+      // third party.
+      ctx.fillStyle = '#d8b466';
+      ctx.font = `600 ${Math.round(19*scale)}px Inter, Arial, sans-serif`;
+      ctx.fillText(
+        `${summary.statewideTie.partyA} and ${summary.statewideTie.partyB} are tied statewide \u2014 ${fmt(summary.statewideTie.votes)} votes each`,
+        24*scale, 74*scale
+      );
+    }else{
+      const leaderFull = summary.leader === 'DEM' ? 'Democrats' : 'Republicans';
+      ctx.fillStyle = summary.leader === 'DEM' ? '#5b9bd9' : '#d4675a';
+      ctx.font = `600 ${Math.round(19*scale)}px Inter, Arial, sans-serif`;
+      ctx.fillText(
+        `${leaderFull} lead by ${fmt(Math.round(summary.voteLead))} votes (+${summary.marginPct.toFixed(1)}%)`,
+        24*scale, 74*scale
+      );
+    }
 
     ctx.fillStyle = '#7c879c';
     ctx.font = `${Math.round(15*scale)}px Inter, Arial, sans-serif`;
@@ -1872,6 +1906,8 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
     }else{
       ctx.fillText('No additional votes at this time.', 24*scale, footerY0 + 82*scale);
     }
+
+    drawSourceCredit(ctx, 24*scale, footerY0 + footerH*scale - 16*scale, scale);
 
     const finalUrl = canvas.toDataURL('image/png');
     const a = document.createElement('a');
@@ -2408,10 +2444,11 @@ document.getElementById('simDownloadPngBtn').addEventListener('click', async () 
     });
 
     const headerH = 156;
+    const footerH = 34;
     const canvas = document.createElement('canvas');
     canvas.width = img.width;
     const scale = canvas.width / 900;
-    canvas.height = img.height + headerH*scale;
+    canvas.height = img.height + headerH*scale + footerH*scale;
     const ctx = canvas.getContext('2d');
 
     ctx.fillStyle = '#0a0e17';
@@ -2440,6 +2477,8 @@ document.getElementById('simDownloadPngBtn').addEventListener('click', async () 
     );
 
     ctx.drawImage(img, 0, headerH*scale);
+
+    drawSourceCredit(ctx, 24*scale, headerH*scale + img.height + footerH*scale - 12*scale, scale);
 
     const finalUrl = canvas.toDataURL('image/png');
     const a = document.createElement('a');

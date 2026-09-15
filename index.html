@@ -1314,6 +1314,17 @@ const METRICS = {
   'party-npa': { title:'NPA vote share by county', get:c=>c.npaShare, scale:[[0,'#e0c3fc'],[0.5,'#9d4edd'],[1,'#3a0ca3']], range:cs=>Math.max(0.01, ...cs.map(c=>c.npaShare)) }
 };
 
+// Builds the "PARTY count (pct%)" lines for a tooltip, ordered by vote
+// count descending -- whichever party is actually leading shows first,
+// instead of always listing DEM before REP regardless of who's ahead.
+function partyLeadLines(parties){
+  return parties
+    .slice()
+    .sort((a, b) => b.count - a.count)
+    .map(p => `${p.label} ${fmt(p.count)} (${pct(p.pct)})`)
+    .join('<br>');
+}
+
 function tooltipText(list){
   if(currentMetric === 'dropwinner'){
     return list.map(c => {
@@ -1359,11 +1370,16 @@ function tooltipText(list){
           `This county's site hasn't posted new results yet \u2014 showing 0 votes for now.`;
       }
       if(!shiftSliderActive){
+        const lines = partyLeadLines([
+          { label:'DEM', count:c.dem, pct:c.demShare },
+          { label:'REP', count:c.rep, pct:c.repShare },
+          { label:'NPA', count:c.npa, pct:c.npaShare }
+        ]);
         return `<b>${c.county}</b><br>` +
           `Rating: ${categoryForNpaMargin(c)}<br>` +
-          `DEM ${fmt(c.dem)} \u00b7 REP ${fmt(c.rep)} \u00b7 NPA ${fmt(c.npa)}<br>` +
+          `${lines}<br>` +
           `Total ${fmt(c.total)}<br>` +
-          `Margin (raw, NPA included): ${marginLabel(c.marginNpaAdj)}`;
+          `Margin ${(c.marginNpaAdj>=0?'+':'')}${pct(c.marginNpaAdj)}`;
       }
       const demToD = c.dem * (demLoyalty/100), demToR = c.dem - demToD;
       const repToR = c.rep * (repLoyalty/100), repToD = c.rep - repToR;
@@ -1378,17 +1394,20 @@ function tooltipText(list){
         `Adjusted margin: ${marginLabel(margin)}`;
     });
   }
-  return list.map(c =>
-    `<b>${c.county}</b><br>` +
-    `Rating: ${c.category}<br>` +
-    `DEM ${fmt(c.dem)} (${pct(c.demShare)})<br>` +
-    `REP ${fmt(c.rep)} (${pct(c.repShare)})<br>` +
-    `Ind/NPA/Other ${fmt(c.ind+c.npa+c.other)} (${pct(c.indShare)})<br>` +
-    `Total ${fmt(c.total)}<br>` +
-    `Margin ${(c.marginPct>=0?'+':'')}${pct(c.marginPct)}` +
-    (c.ratingChanged ? `<br><i>${c.ratingMove}</i>` : '') +
-    (c.totalNew ? `<br>New votes this hour: +${fmt(c.totalNew)}` : '')
-  );
+  return list.map(c => {
+    const lines = partyLeadLines([
+      { label:'DEM', count:c.dem, pct:c.demShare },
+      { label:'REP', count:c.rep, pct:c.repShare }
+    ]);
+    return `<b>${c.county}</b><br>` +
+      `Rating: ${c.category}<br>` +
+      `${lines}<br>` +
+      `Ind/NPA/Other ${fmt(c.ind+c.npa+c.other)} (${pct(c.indShare)})<br>` +
+      `Total ${fmt(c.total)}<br>` +
+      `Margin ${(c.marginPct>=0?'+':'')}${pct(c.marginPct)}` +
+      (c.ratingChanged ? `<br><i>${c.ratingMove}</i>` : '') +
+      (c.totalNew ? `<br>New votes this hour: +${fmt(c.totalNew)}` : '');
+  });
 }
 
 // ------------------------------------------------------------
@@ -1766,6 +1785,24 @@ function liveResultsSummary(){
   const marginMoveCount = list.filter(c=>c.ratingChanged).length;
   const updated = list.filter(c=>c.totalNew).slice().sort((a,b)=>b.totalNew-a.totalNew);
 
+  // Always try to show 3 counties. If fewer than 3 actually posted new
+  // votes this run, pad the list out with whichever other counties have
+  // the largest overall totals (numerical order by vote count), rather
+  // than leaving the section looking sparse when there just isn't a
+  // third county with a fresh delta.
+  let top3 = updated.slice(0, 3);
+  if(top3.length < 3){
+    const already = new Set(top3.map(c => c.county));
+    const padding = list
+      .filter(c => !already.has(c.county))
+      .slice()
+      .sort((a, b) => b.total - a.total);
+    for(const c of padding){
+      if(top3.length >= 3) break;
+      top3.push(c);
+    }
+  }
+
   const updateTimes = list.map(c=>c.lastUpdated).filter(Boolean).sort();
   const rawLastUpdated = updateTimes.length ? updateTimes[updateTimes.length-1] : '';
   const asOfText = rawLastUpdated ? formatAsOf(rawLastUpdated) : formatAsOfFromDate(new Date());
@@ -1805,7 +1842,7 @@ function liveResultsSummary(){
     leader, voteLead, marginPct, statewideTie, npaLead, asOfText,
     countiesReporting, marginMoveCount,
     countiesUpdated: updated.length,
-    top3: updated.slice(0,3)
+    top3
   };
 }
 
@@ -1817,6 +1854,19 @@ function drawSourceCredit(ctx, x, y, scale){
     'Source: https://jaysonfrascatore.github.io/FloridaElection2026/  \u00b7  Created by Jayson Frascatore',
     x, y
   );
+}
+
+// Draws a single line made of differently-colored runs of text, left to
+// right (canvas fillText has no native multi-color support, so each
+// segment is measured and placed by hand). Font must already be set on
+// ctx before calling -- only fillStyle changes between segments.
+function drawColoredLine(ctx, segments, x, y){
+  let cx = x;
+  segments.forEach(seg => {
+    ctx.fillStyle = seg.color;
+    ctx.fillText(seg.text, cx, y);
+    cx += ctx.measureText(seg.text).width;
+  });
 }
 
 
@@ -2123,12 +2173,18 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
       );
     }
 
-    ctx.fillStyle = '#7c879c';
     ctx.font = `${Math.round(15*scale)}px Inter, Arial, sans-serif`;
-    ctx.fillText(
-      `Total votes: ${fmt(summary.totalVotes)} (DEM ${fmt(summary.totalD)} \u00b7 REP ${fmt(summary.totalR)} \u00b7 NPA ${fmt(summary.totalNPA)}) \u00b7 Turnout: ${summary.countiesReporting} / 67 counties reporting`,
-      24*scale, 98*scale
-    );
+    drawColoredLine(ctx, [
+      { text: 'Total votes: ', color: '#7c879c' },
+      { text: fmt(summary.totalVotes), color: '#80ed99' },
+      { text: ' (DEM ', color: '#7c879c' },
+      { text: fmt(summary.totalD), color: '#5b9bd9' },
+      { text: ' \u00b7 REP ', color: '#7c879c' },
+      { text: fmt(summary.totalR), color: '#d4675a' },
+      { text: ' \u00b7 NPA ', color: '#7c879c' },
+      { text: fmt(summary.totalNPA), color: '#c77dff' },
+      { text: `) \u00b7 Turnout: ${summary.countiesReporting} / 67 counties reporting`, color: '#7c879c' }
+    ], 24*scale, 98*scale);
 
     ctx.fillStyle = '#d8b466';
     ctx.font = `600 ${Math.round(13*scale)}px IBM Plex Mono, monospace`;

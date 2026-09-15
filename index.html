@@ -1770,6 +1770,8 @@ function liveResultsSummary(){
   const rawLastUpdated = updateTimes.length ? updateTimes[updateTimes.length-1] : '';
   const asOfText = rawLastUpdated ? formatAsOf(rawLastUpdated) : formatAsOfFromDate(new Date());
 
+  const npaPct = barDenom ? (totalNPA/barDenom)*100 : 0;
+
   // Statewide two-way tie between a major party and NPA (the same check
   // as tieStripeFor(), but aggregated across the whole state instead of
   // one county). When this happens, describing the result as e.g. "REP
@@ -1782,10 +1784,25 @@ function liveResultsSummary(){
     statewideTie = { partyA:'Democrats', partyB:'NPA', votes: totalD };
   }
 
+  // NPA genuinely outleading BOTH major parties statewide (not a tie) --
+  // the normal DEM-vs-REP leader line never even considers NPA as a
+  // possible leader, so without this it would keep reporting a DEM/REP
+  // "lead" while quietly ignoring that NPA is actually ahead of both.
+  let npaLead = null;
+  if(!statewideTie && totalNPA > totalD && totalNPA > totalR){
+    const secondPlace = Math.max(totalD, totalR);
+    const secondPct = Math.max(dPct, rPct);
+    npaLead = {
+      votes: totalNPA,
+      voteLead: totalNPA - secondPlace,
+      marginPct: npaPct - secondPct
+    };
+  }
+
   return {
     metricTitle: (METRICS[currentMetric] && METRICS[currentMetric].title) || 'Florida Vote Tracker',
     totalVotes, totalD, totalR, totalNPA,
-    leader, voteLead, marginPct, statewideTie, asOfText,
+    leader, voteLead, marginPct, statewideTie, npaLead, asOfText,
     countiesReporting, marginMoveCount,
     countiesUpdated: updated.length,
     top3: updated.slice(0,3)
@@ -2084,6 +2101,16 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
       ctx.font = `600 ${Math.round(19*scale)}px Inter, Arial, sans-serif`;
       ctx.fillText(
         `${summary.statewideTie.partyA} and ${summary.statewideTie.partyB} are tied statewide \u2014 ${fmt(summary.statewideTie.votes)} votes each`,
+        24*scale, 74*scale
+      );
+    }else if(summary.npaLead){
+      // NPA is genuinely outleading BOTH major parties statewide -- this
+      // has to be called out explicitly, since the normal DEM-vs-REP
+      // leader line never even considers NPA as a possible leader.
+      ctx.fillStyle = '#c77dff';
+      ctx.font = `600 ${Math.round(19*scale)}px Inter, Arial, sans-serif`;
+      ctx.fillText(
+        `NPA takes the lead statewide \u2014 ${fmt(summary.npaLead.votes)} votes, +${fmt(Math.round(summary.npaLead.voteLead))} ahead (+${summary.npaLead.marginPct.toFixed(1)}%)`,
         24*scale, 74*scale
       );
     }else{

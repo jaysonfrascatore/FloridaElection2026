@@ -1421,9 +1421,7 @@ function tieStripeFor(c){
   if(c.dem > 0 && c.dem === c.npa && c.dem >= c.rep) return 'url(#stripe-d-npa)';
   return null;
 }
-function applyTieStripes(activeCounties){
-  const mapDiv = document.getElementById('map');
-  const svg = mapDiv && mapDiv.querySelector('svg');
+function applyTieStripes(svg, activeCounties){
   if(!svg) return;
   ensureStripeDefs(svg);
   const byFips = {};
@@ -1513,7 +1511,7 @@ async function renderMap(){
   };
   Plotly.newPlot('map', [trace], layout, {displayModeBar:false, responsive:true}).then(() => {
     if(currentMetric === 'demrepnpa'){
-      applyTieStripes(activeCounties);
+      applyTieStripes(document.querySelector('#map svg'), activeCounties);
     }
   });
 
@@ -1858,6 +1856,54 @@ async function renderStatewideBarChartImage(summary, width, height){
   return img;
 }
 
+// Renders a FRESH General Election choropleth into a temporary off-screen
+// div sized exactly to the requested export box, instead of capturing
+// whatever aspect ratio the on-screen map happens to be at. Plotly's
+// fitbounds re-fits Florida's shape to whatever box it's actually drawn
+// into, so asking for a box shaped closer to Florida's real bounding-box
+// proportions (~1.04:1 -- the panhandle makes it nearly square, not the
+// wide rectangle you'd expect from the peninsula alone) lets the state
+// fill far more of the image instead of leaving empty space on the
+// sides. Tie stripes are re-applied after this fresh render, so the
+// export still shows them even though it isn't reusing the on-screen SVG.
+async function renderGeneralElectionMapCanvas(activeCounties, cssWidth, cssHeight, pixelScale){
+  await ensureGeojson();
+  const tempDiv = document.createElement('div');
+  tempDiv.style.position = 'fixed';
+  tempDiv.style.left = '-9999px';
+  tempDiv.style.top = '0';
+  tempDiv.style.width = cssWidth + 'px';
+  tempDiv.style.height = cssHeight + 'px';
+  document.body.appendChild(tempDiv);
+
+  try{
+    const cats = NPA_DISPLAY_CATS, n = cats.length;
+    const locations = activeCounties.map(c=>c.fips);
+    const text = tooltipText(activeCounties);
+    const z = activeCounties.map(c => cats.findIndex(cat=>cat.key===categoryForNpaDisplay(c)) + 0.5);
+    const trace = {
+      type:'choropleth', geojson: geojsonFL, locations, z,
+      featureidkey:'id', zmin:0, zmax:n,
+      colorscale: stepColorscale(cats), marker:{line:{color:'#0a0e17', width:1}},
+      text, hoverinfo:'text', showscale:false
+    };
+    const layout = {
+      geo:{ scope:'usa', fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' },
+      paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+      margin:{t:6,b:6,l:6,r:6}, font:{family:'Inter, sans-serif'}
+    };
+    await Plotly.newPlot(tempDiv, [trace], layout, { displayModeBar:false, responsive:false });
+
+    const svg = tempDiv.querySelector('svg');
+    applyTieStripes(svg, activeCounties);
+
+    return await liveMapSvgToCanvas(svg, cssWidth, cssHeight, pixelScale);
+  }finally{
+    Plotly.purge(tempDiv);
+    document.body.removeChild(tempDiv);
+  }
+}
+
 // Rasterizes the CURRENT LIVE map SVG (including any manually-applied
 // tie stripes from applyTieStripes) into a canvas, instead of asking
 // Plotly to redraw the map from its stored data -- Plotly.toImage()
@@ -1924,22 +1970,26 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
     // here doesn't shrink or enlarge the header/footer text -- it always
     // renders at a consistent pixelScale either way. The gap guarantees
     // clear space between the map and the chart so neither can bleed
-    // into the other regardless of the map's own aspect ratio. The live
-    // map is vector (SVG), so requesting a genuinely bigger box actually
-    // yields more legible county detail, not just a stretched-out blur.
+    // into the other regardless of the map's own aspect ratio.
+    //
+    // The map height is set to match Florida's REAL bounding-box aspect
+    // ratio (~1.04:1 -- the panhandle stretching west makes the overall
+    // shape nearly square, not the tall narrow rectangle the peninsula
+    // alone would suggest). Rendering a FRESH map at that box size (via
+    // renderGeneralElectionMapCanvas below, rather than recapturing
+    // whatever aspect ratio the on-screen map happens to be at) lets
+    // Plotly's own fitbounds properly fill the box with minimal empty
+    // space on any side.
     const mapReqWidth = isGeneral ? 1000 : 900;
     const gapReq = isGeneral ? 40 : 0;
     const chartReqWidth = isGeneral ? 260 : 0;
-    const reqHeight = isGeneral ? 700 : 560;
+    const reqHeight = isGeneral ? 960 : 560;
     const pixelScale = 2;
     const baseRef = mapReqWidth + gapReq + chartReqWidth;
 
     let mapImg = null;
     if(isGeneral){
-      const liveSvg = document.querySelector('#map svg');
-      if(liveSvg){
-        mapImg = await liveMapSvgToCanvas(liveSvg, mapReqWidth, reqHeight, pixelScale);
-      }
+      mapImg = await renderGeneralElectionMapCanvas(activeCountiesFor(currentMetric), mapReqWidth, reqHeight, pixelScale);
     }
     if(!mapImg){
       const mapDataUrl = await Plotly.toImage('map', { format:'png', width:mapReqWidth, height:reqHeight, scale:pixelScale });

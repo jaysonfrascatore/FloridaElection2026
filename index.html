@@ -1658,7 +1658,8 @@ function liveResultsSummary(){
 // Renders a small statewide DEM/REP/NPA bar chart to an image via a
 // temporary, off-screen Plotly plot (kept in the DOM but positioned off
 // canvas, since Plotly needs real layout to render into). Used only for
-// the General Election snapshot, alongside the map.
+// the General Election snapshot, alongside the map. Shown as whole-number
+// percentages of the statewide D+R+NPA total, not raw vote counts.
 async function renderStatewideBarChartImage(summary, width, height){
   const tempDiv = document.createElement('div');
   tempDiv.style.position = 'fixed';
@@ -1668,12 +1669,17 @@ async function renderStatewideBarChartImage(summary, width, height){
   tempDiv.style.height = height + 'px';
   document.body.appendChild(tempDiv);
 
+  const partyTotal = summary.totalD + summary.totalR + summary.totalNPA;
+  const pctD = partyTotal ? Math.round((summary.totalD/partyTotal)*100) : 0;
+  const pctR = partyTotal ? Math.round((summary.totalR/partyTotal)*100) : 0;
+  const pctN = partyTotal ? Math.round((summary.totalNPA/partyTotal)*100) : 0;
+
   const trace = {
     type: 'bar',
     x: ['DEM', 'REP', 'NPA'],
-    y: [summary.totalD, summary.totalR, summary.totalNPA],
+    y: [pctD, pctR, pctN],
     marker: { color: ['#5b9bd9', '#d4675a', '#c77dff'] },
-    text: [fmt(summary.totalD), fmt(summary.totalR), fmt(summary.totalNPA)],
+    text: [pctD+'%', pctR+'%', pctN+'%'],
     textposition: 'outside',
     textfont: { color: '#e9edf5', size: 13 },
     cliponaxis: false
@@ -1684,7 +1690,7 @@ async function renderStatewideBarChartImage(summary, width, height){
     plot_bgcolor: '#0a0e17',
     margin: { t:50, b:40, l:50, r:20 },
     font: { color:'#7c879c', family:'IBM Plex Mono, monospace', size:11 },
-    yaxis: { gridcolor:'#212a3b', tickformat:',', tickfont:{size:10} },
+    yaxis: { gridcolor:'#212a3b', ticksuffix:'%', tickfont:{size:10}, range:[0, Math.max(pctD,pctR,pctN)+10] },
     xaxis: { color:'#e9edf5' },
     showlegend: false
   };
@@ -1712,6 +1718,20 @@ async function renderStatewideBarChartImage(summary, width, height){
 // than quietly resolving to a solid color.
 async function liveMapSvgToCanvas(svgEl, cssWidth, cssHeight, pixelScale){
   const clone = svgEl.cloneNode(true);
+  // Without an explicit viewBox, forcing new width/height attributes just
+  // resizes the SVG viewport while leaving its internal (absolute-pixel)
+  // coordinates untouched -- the map content then spills past the new
+  // boundary instead of scaling down to fit it, which is what was
+  // bleeding into the bar chart's space. Setting a viewBox that matches
+  // the ORIGINAL rendered size first makes the width/height override
+  // actually rescale the content proportionally, so it's guaranteed to
+  // stay inside the box we ask for.
+  if(!clone.getAttribute('viewBox')){
+    const origWidth = parseFloat(svgEl.getAttribute('width')) || svgEl.clientWidth || cssWidth;
+    const origHeight = parseFloat(svgEl.getAttribute('height')) || svgEl.clientHeight || cssHeight;
+    clone.setAttribute('viewBox', `0 0 ${origWidth} ${origHeight}`);
+  }
+  clone.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   clone.setAttribute('width', cssWidth);
   clone.setAttribute('height', cssHeight);
   if(!clone.getAttribute('xmlns')){
@@ -1749,22 +1769,26 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
     const summary = liveResultsSummary();
     const isGeneral = currentMetric === 'demrepnpa';
 
-    // Requested (unscaled) widths sum to 900 either way, so the final
-    // canvas comes out the same total width (at scale:2, 1800px)
-    // whether or not the bar chart panel is included.
-    const mapReqWidth = isGeneral ? 650 : 900;
-    const chartReqWidth = isGeneral ? 250 : 0;
+    // Requested (unscaled) widths + gap sum to 900 either way, so the
+    // final canvas comes out the same total width (at scale:2, 1800px)
+    // whether or not the bar chart panel is included. The gap guarantees
+    // clear space between the map and the chart so neither can bleed
+    // into the other regardless of the map's own aspect ratio.
+    const mapReqWidth = isGeneral ? 600 : 900;
+    const gapReq = isGeneral ? 30 : 0;
+    const chartReqWidth = isGeneral ? 270 : 0;
     const reqHeight = 560;
+    const pixelScale = 2;
 
     let mapImg = null;
     if(isGeneral){
       const liveSvg = document.querySelector('#map svg');
       if(liveSvg){
-        mapImg = await liveMapSvgToCanvas(liveSvg, mapReqWidth, reqHeight, 2);
+        mapImg = await liveMapSvgToCanvas(liveSvg, mapReqWidth, reqHeight, pixelScale);
       }
     }
     if(!mapImg){
-      const mapDataUrl = await Plotly.toImage('map', { format:'png', width:mapReqWidth, height:reqHeight, scale:2 });
+      const mapDataUrl = await Plotly.toImage('map', { format:'png', width:mapReqWidth, height:reqHeight, scale:pixelScale });
       mapImg = new Image();
       await new Promise((resolve, reject) => {
         mapImg.onload = resolve;
@@ -1778,10 +1802,11 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
       chartImg = await renderStatewideBarChartImage(summary, chartReqWidth, reqHeight);
     }
 
+    const gapPx = gapReq * pixelScale;
     const headerH = 108;
     const footerH = 170;
     const canvas = document.createElement('canvas');
-    canvas.width = mapImg.width + (chartImg ? chartImg.width : 0);
+    canvas.width = mapImg.width + (chartImg ? gapPx + chartImg.width : 0);
     // IMPORTANT: header/footer heights must be scaled the same way the
     // header/footer content is drawn (scale below), or the canvas ends up
     // too short and the map/footer get cropped.
@@ -1812,10 +1837,11 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
       24*scale, 98*scale
     );
 
-    // Map (left) + statewide bar chart (right, General Election only)
+    // Map (left) + statewide bar chart (right, General Election only) --
+    // separated by gapPx so they can never overlap.
     ctx.drawImage(mapImg, 0, headerH*scale);
     if(chartImg){
-      ctx.drawImage(chartImg, mapImg.width, headerH*scale);
+      ctx.drawImage(chartImg, mapImg.width + gapPx, headerH*scale);
     }
 
     // Footer

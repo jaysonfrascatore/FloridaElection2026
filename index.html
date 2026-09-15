@@ -393,8 +393,8 @@
 
   <div class="controls">
     <div class="segmented" id="metricSelect">
-      <button data-metric="demrepnpa" class="active">D vs R vs NPA</button>
-      <button data-metric="rating">D vs R</button>
+      <button data-metric="demrepnpa" class="active">General Election</button>
+      <button data-metric="rating">Primary Election</button>
       <button data-metric="total">Total turnout</button>
       <button data-metric="move">Margin move</button>
       <button data-metric="updated">Counties Updated</button>
@@ -1210,14 +1210,14 @@ function renderStats(){
 }
 
 const METRICS = {
-  // "D vs R" — pinned to the frozen snapshot (STATIC_DVR_COUNTIES), never
+  // "Primary Election" — pinned to the frozen snapshot (STATIC_DVR_COUNTIES), never
   // touched by the live auto-refresh.
-  rating: { title:'D vs R rating by county', categorical:true, cats:RATING_CATS, catFn:categoryFor },
-  // "D vs R vs NPA" — live, starts at 0 votes for every county and fills
-  // in as the live feed updates. Same rating-tier styling as D vs R, but
+  rating: { title:'Primary Election rating by county', categorical:true, cats:RATING_CATS, catFn:categoryFor },
+  // "General Election" — live, starts at 0 votes for every county and fills
+  // in as the live feed updates. Same rating-tier styling as Primary Election, but
   // the tier is decided from a margin that folds NPA into the denominator
   // alongside DEM and REP, so heavy-NPA counties can show a lighter lean.
-  demrepnpa: { title:'D vs R vs NPA rating by county', categorical:true, cats:NPA_DISPLAY_CATS, catFn:categoryForNpaDisplay },
+  demrepnpa: { title:'General Election rating by county', categorical:true, cats:NPA_DISPLAY_CATS, catFn:categoryForNpaDisplay },
   total: { title:'Total turnout by county', get:c=>c.total, scale:[[0,'#bce784'],[0.5,'#8ac926'],[1,'#007200']], range:cs=>Math.max(1,...cs.map(c=>c.total)), isCount:true },
   move: { title:'Counties with a forecast rating change', categorical:true, cats:MOVE_CATS, catFn:moveCategoryFor },
   updated: { title:'Counties updated (new votes reported)', categorical:true, cats:UPDATED_CATS, catFn:updatedCategoryFor },
@@ -1597,6 +1597,53 @@ function liveResultsSummary(){
   };
 }
 
+// Renders a small statewide DEM/REP/NPA bar chart to an image via a
+// temporary, off-screen Plotly plot (kept in the DOM but positioned off
+// canvas, since Plotly needs real layout to render into). Used only for
+// the General Election snapshot, alongside the map.
+async function renderStatewideBarChartImage(summary, width, height){
+  const tempDiv = document.createElement('div');
+  tempDiv.style.position = 'fixed';
+  tempDiv.style.left = '-9999px';
+  tempDiv.style.top = '0';
+  tempDiv.style.width = width + 'px';
+  tempDiv.style.height = height + 'px';
+  document.body.appendChild(tempDiv);
+
+  const trace = {
+    type: 'bar',
+    x: ['DEM', 'REP', 'NPA'],
+    y: [summary.totalD, summary.totalR, summary.totalNPA],
+    marker: { color: ['#5b9bd9', '#d4675a', '#c77dff'] },
+    text: [fmt(summary.totalD), fmt(summary.totalR), fmt(summary.totalNPA)],
+    textposition: 'outside',
+    textfont: { color: '#e9edf5', size: 13 },
+    cliponaxis: false
+  };
+  const layout = {
+    title: { text: 'Statewide Votes', font: { color:'#e9edf5', size:15, family:'Inter, Arial, sans-serif' } },
+    paper_bgcolor: '#0a0e17',
+    plot_bgcolor: '#0a0e17',
+    margin: { t:50, b:40, l:50, r:20 },
+    font: { color:'#7c879c', family:'IBM Plex Mono, monospace', size:11 },
+    yaxis: { gridcolor:'#212a3b', tickformat:',', tickfont:{size:10} },
+    xaxis: { color:'#e9edf5' },
+    showlegend: false
+  };
+  await Plotly.newPlot(tempDiv, [trace], layout, { displayModeBar:false });
+  const dataUrl = await Plotly.toImage(tempDiv, { format:'png', width, height, scale:2 });
+  Plotly.purge(tempDiv);
+  document.body.removeChild(tempDiv);
+
+  const img = new Image();
+  await new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+  return img;
+}
+
 document.getElementById('downloadMapPngBtn').addEventListener('click', async () => {
   const btn = document.getElementById('downloadMapPngBtn');
   const originalText = btn.textContent;
@@ -1604,36 +1651,52 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
   btn.disabled = true;
   try{
     const summary = liveResultsSummary();
-    const mapDataUrl = await Plotly.toImage('map', { format:'png', width:900, height:560, scale:2 });
+    const isGeneral = currentMetric === 'demrepnpa';
 
-    const img = new Image();
+    // Requested (unscaled) widths sum to 900 either way, so the final
+    // canvas comes out the same total width (at scale:2, 1800px)
+    // whether or not the bar chart panel is included.
+    const mapReqWidth = isGeneral ? 650 : 900;
+    const chartReqWidth = isGeneral ? 250 : 0;
+    const reqHeight = 560;
+
+    const mapDataUrl = await Plotly.toImage('map', { format:'png', width:mapReqWidth, height:reqHeight, scale:2 });
+    const mapImg = new Image();
     await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-      img.src = mapDataUrl;
+      mapImg.onload = resolve;
+      mapImg.onerror = reject;
+      mapImg.src = mapDataUrl;
     });
 
+    let chartImg = null;
+    if(isGeneral){
+      chartImg = await renderStatewideBarChartImage(summary, chartReqWidth, reqHeight);
+    }
+
     const headerH = 108;
-    const footerH = 150;
+    const footerH = 170;
     const canvas = document.createElement('canvas');
-    canvas.width = img.width;
-    canvas.height = img.height + headerH + footerH;
+    canvas.width = mapImg.width + (chartImg ? chartImg.width : 0);
+    // IMPORTANT: header/footer heights must be scaled the same way the
+    // header/footer content is drawn (scale below), or the canvas ends up
+    // too short and the map/footer get cropped.
+    const scale = canvas.width / 900;
+    canvas.height = mapImg.height + headerH*scale + footerH*scale;
     const ctx = canvas.getContext('2d');
 
     ctx.fillStyle = '#0a0e17';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const scale = canvas.width / 900;
 
     // Header
     ctx.fillStyle = '#e9edf5';
     ctx.font = `600 ${Math.round(24*scale)}px Inter, Arial, sans-serif`;
     ctx.fillText(`Florida Vote Tracker 2026 \u2014 ${summary.metricTitle}`, 24*scale, 40*scale);
 
+    const leaderFull = summary.leader === 'DEM' ? 'Democrats' : 'Republicans';
     ctx.fillStyle = summary.leader === 'DEM' ? '#5b9bd9' : '#d4675a';
     ctx.font = `600 ${Math.round(19*scale)}px Inter, Arial, sans-serif`;
     ctx.fillText(
-      `${summary.leader} leads by ${fmt(Math.round(summary.voteLead))} votes (+${summary.marginPct.toFixed(1)}%)`,
+      `${leaderFull} lead by ${fmt(Math.round(summary.voteLead))} votes (+${summary.marginPct.toFixed(1)}%)`,
       24*scale, 74*scale
     );
 
@@ -1644,11 +1707,14 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
       24*scale, 98*scale
     );
 
-    // Map
-    ctx.drawImage(img, 0, headerH*scale);
+    // Map (left) + statewide bar chart (right, General Election only)
+    ctx.drawImage(mapImg, 0, headerH*scale);
+    if(chartImg){
+      ctx.drawImage(chartImg, mapImg.width, headerH*scale);
+    }
 
     // Footer
-    const footerY0 = (headerH*scale) + img.height;
+    const footerY0 = (headerH*scale) + mapImg.height;
     ctx.fillStyle = '#151b28';
     ctx.fillRect(0, footerY0, canvas.width, footerH*scale);
 
@@ -2213,13 +2279,13 @@ document.getElementById('simDownloadPngBtn').addEventListener('click', async () 
     const headerH = 156;
     const canvas = document.createElement('canvas');
     canvas.width = img.width;
-    canvas.height = img.height + headerH;
+    const scale = canvas.width / 900;
+    canvas.height = img.height + headerH*scale;
     const ctx = canvas.getContext('2d');
 
     ctx.fillStyle = '#0a0e17';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const scale = canvas.width / 900;
     ctx.fillStyle = '#e9edf5';
     ctx.font = `600 ${Math.round(24*scale)}px Inter, Arial, sans-serif`;
     ctx.fillText(`Florida Build Your Own Map \u2014 ${summary.modeLabel}`, 24*scale, 40*scale);

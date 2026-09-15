@@ -1856,16 +1856,34 @@ async function renderStatewideBarChartImage(summary, width, height){
   return img;
 }
 
+// Union bounding box of all rendered county paths, in SVG user-space
+// coordinates. Reuses the same selector applyTieStripes() matches
+// against, so it's measuring exactly the shapes that are actually drawn.
+function computeChoroplethBBox(svg){
+  const paths = svg.querySelectorAll('path.choroplethlocation, g.choroplethlayer path');
+  let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+  paths.forEach(p => {
+    let b;
+    try{ b = p.getBBox(); }catch(e){ return; }
+    if(!b || (b.width===0 && b.height===0)) return;
+    minX = Math.min(minX, b.x); minY = Math.min(minY, b.y);
+    maxX = Math.max(maxX, b.x+b.width); maxY = Math.max(maxY, b.y+b.height);
+  });
+  if(!isFinite(minX)) return null;
+  return { x:minX, y:minY, width:maxX-minX, height:maxY-minY };
+}
+
 // Renders a FRESH General Election choropleth into a temporary off-screen
-// div sized exactly to the requested export box, instead of capturing
-// whatever aspect ratio the on-screen map happens to be at. Plotly's
-// fitbounds re-fits Florida's shape to whatever box it's actually drawn
-// into, so asking for a box shaped closer to Florida's real bounding-box
-// proportions (~1.04:1 -- the panhandle makes it nearly square, not the
-// wide rectangle you'd expect from the peninsula alone) lets the state
-// fill far more of the image instead of leaving empty space on the
-// sides. Tie stripes are re-applied after this fresh render, so the
-// export still shows them even though it isn't reusing the on-screen SVG.
+// div, then measures exactly where Florida actually ended up landing
+// inside that render (its real pixel bounding box, not a guessed aspect
+// ratio -- the USA Albers projection Plotly uses doesn't distort lat/lon
+// in a simple way, so estimating it up front was leaving Florida much
+// smaller than it needed to be) and crops tightly to that, with a small
+// pad, then fits it into the requested box. "Fit" here always preserves
+// the full shape -- it can leave a sliver of padding on one axis, but
+// can never crop off any part of the state. Tie stripes are re-applied
+// after the render, so the export still shows them even though it isn't
+// reusing the on-screen SVG.
 async function renderGeneralElectionMapCanvas(activeCounties, cssWidth, cssHeight, pixelScale){
   await ensureGeojson();
   const tempDiv = document.createElement('div');
@@ -1897,7 +1915,44 @@ async function renderGeneralElectionMapCanvas(activeCounties, cssWidth, cssHeigh
     const svg = tempDiv.querySelector('svg');
     applyTieStripes(svg, activeCounties);
 
-    return await liveMapSvgToCanvas(svg, cssWidth, cssHeight, pixelScale);
+    const targetW = cssWidth * pixelScale, targetH = cssHeight * pixelScale;
+    const bbox = computeChoroplethBBox(svg);
+    if(!bbox){
+      // Fallback: couldn't measure the shapes for some reason -- just
+      // rasterize the whole thing rather than failing the export.
+      return await liveMapSvgToCanvas(svg, cssWidth, cssHeight, pixelScale);
+    }
+
+    // Rasterize the whole (untrimmed) render at the same pixel density
+    // we're targeting, so the crop below stays crisp.
+    const fullCanvas = await liveMapSvgToCanvas(svg, cssWidth, cssHeight, pixelScale);
+
+    const padFrac = 0.03;
+    const padX = bbox.width * padFrac, padY = bbox.height * padFrac;
+    const srcX = Math.max(0, (bbox.x - padX)) * pixelScale;
+    const srcY = Math.max(0, (bbox.y - padY)) * pixelScale;
+    const srcW = (bbox.width + 2*padX) * pixelScale;
+    const srcH = (bbox.height + 2*padY) * pixelScale;
+
+    const srcAspect = srcW / srcH, targetAspect = targetW / targetH;
+    let drawW, drawH, drawX, drawY;
+    if(srcAspect > targetAspect){
+      drawW = targetW; drawH = targetW / srcAspect;
+      drawX = 0; drawY = (targetH - drawH) / 2;
+    }else{
+      drawH = targetH; drawW = targetH * srcAspect;
+      drawY = 0; drawX = (targetW - drawW) / 2;
+    }
+
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = targetW;
+    finalCanvas.height = targetH;
+    const ctx = finalCanvas.getContext('2d');
+    ctx.fillStyle = '#0a0e17';
+    ctx.fillRect(0, 0, targetW, targetH);
+    ctx.drawImage(fullCanvas, srcX, srcY, srcW, srcH, drawX, drawY, drawW, drawH);
+
+    return finalCanvas;
   }finally{
     Plotly.purge(tempDiv);
     document.body.removeChild(tempDiv);

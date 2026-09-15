@@ -1965,27 +1965,20 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
     const summary = liveResultsSummary();
     const isGeneral = currentMetric === 'demrepnpa';
 
-    // Requested (unscaled) widths + gap. Each branch's own total is used
-    // as the scale reference below (baseRef), so making the map bigger
-    // here doesn't shrink or enlarge the header/footer text -- it always
-    // renders at a consistent pixelScale either way. The gap guarantees
-    // clear space between the map and the chart so neither can bleed
-    // into the other regardless of the map's own aspect ratio.
-    //
-    // mapReqWidth x reqHeight, at pixelScale 2, is the map's FINAL
-    // rendered pixel size: 900x850 -> 1800x1700. That's also close to
-    // Florida's real bounding-box aspect ratio (~1.04:1 -- the panhandle
-    // stretching west makes the overall shape nearly square, not the
-    // tall narrow rectangle the peninsula alone would suggest), so very
-    // little of that box ends up as empty padding. Rendering a FRESH map
-    // at this box size (via renderGeneralElectionMapCanvas below, rather
-    // than recapturing whatever aspect ratio the on-screen map happens
-    // to be at) lets Plotly's own fitbounds actually fill it -- with
-    // "meet" scaling, the full state is always visible, never cropped.
-    const mapReqWidth = 900;
-    const gapReq = isGeneral ? 40 : 0;
-    const chartReqWidth = isGeneral ? 260 : 0;
-    const reqHeight = isGeneral ? 850 : 560;
+    // The FULL exported file needs to come out at exactly 1800x1700, not
+    // just the map region within it. Working backward from that: with
+    // headerH=132 and footerH=190 (unscaled, matching the font-size
+    // formulas below) at the fixed scale of 2, the header+footer together
+    // take up 644px of the final 1700px height, leaving 1056px for the
+    // map/chart row. Widths and reqHeight are chosen so the math lands
+    // on exactly 1800x1700 either way:
+    //   General:  (700 map + 25 gap + 175 chart) x 528  -> *2 -> 1800 x 1056
+    //   Other:     900 map x 528                        -> *2 -> 1800 x 1056
+    // plus 264 (header) + 380 (footer) = 1700 total height in both cases.
+    const mapReqWidth = isGeneral ? 700 : 900;
+    const gapReq = isGeneral ? 25 : 0;
+    const chartReqWidth = isGeneral ? 175 : 0;
+    const reqHeight = 528;
     const pixelScale = 2;
     const baseRef = mapReqWidth + gapReq + chartReqWidth;
 

@@ -1703,6 +1703,48 @@ document.querySelectorAll('#voteTable thead th').forEach(th => {
 
 // Statewide highlights for the Live Results PNG snapshot: raw votes,
 // vote-count margin lead, percentage margin, turnout (counties actually
+function ordinalSuffix(n){
+  if(n % 100 >= 11 && n % 100 <= 13) return 'th';
+  switch(n % 10){
+    case 1: return 'st';
+    case 2: return 'nd';
+    case 3: return 'rd';
+    default: return 'th';
+  }
+}
+// The Python script writes "Last Updated" as e.g.
+// "Updated at August 23rd, 2026 at 12:19am" -- reshape that into the
+// "As of Month Day, Year, Time" format used on the PNG snapshot.
+function formatAsOf(str){
+  if(!str) return '';
+  return str
+    .replace(/^Updated at /i, 'As of ')
+    .replace(/(,\s*\d{4})\s+at\s+/i, '$1, ');
+}
+// Fallback for when no county has reported a "Last Updated" value yet --
+// builds the same "As of Month Day, Year, Time" style from right now.
+function formatAsOfFromDate(d){
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const month = months[d.getMonth()];
+  const day = d.getDate();
+  const year = d.getFullYear();
+  let hours = d.getHours();
+  const minutes = d.getMinutes().toString().padStart(2,'0');
+  const ampm = hours >= 12 ? 'pm' : 'am';
+  hours = hours % 12; if(hours === 0) hours = 12;
+  return `As of ${month} ${day}${ordinalSuffix(day)}, ${year}, ${hours}:${minutes}${ampm}`;
+}
+// Strips the "As of " prefix and any punctuation that isn't filename-safe,
+// for use in the downloaded PNG's filename.
+function filenameSafeTimestamp(asOfStr){
+  return asOfStr
+    .replace(/^As of /i, '')
+    .replace(/,/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/:/g, '')
+    .toLowerCase();
+}
+
 // reporting), how many counties had a rating change ("margin move"), how
 // many counties got new votes this update, and the top 3 counties by
 // votes added this update. All pulled from whichever dataset the map/
@@ -1726,6 +1768,10 @@ function liveResultsSummary(){
   const marginMoveCount = list.filter(c=>c.ratingChanged).length;
   const updated = list.filter(c=>c.totalNew).slice().sort((a,b)=>b.totalNew-a.totalNew);
 
+  const updateTimes = list.map(c=>c.lastUpdated).filter(Boolean).sort();
+  const rawLastUpdated = updateTimes.length ? updateTimes[updateTimes.length-1] : '';
+  const asOfText = rawLastUpdated ? formatAsOf(rawLastUpdated) : formatAsOfFromDate(new Date());
+
   // Statewide two-way tie between a major party and NPA (the same check
   // as tieStripeFor(), but aggregated across the whole state instead of
   // one county). When this happens, describing the result as e.g. "REP
@@ -1741,7 +1787,7 @@ function liveResultsSummary(){
   return {
     metricTitle: (METRICS[currentMetric] && METRICS[currentMetric].title) || 'Florida Vote Tracker',
     totalVotes, totalD, totalR, totalNPA,
-    leader, voteLead, marginPct, statewideTie,
+    leader, voteLead, marginPct, statewideTie, asOfText,
     countiesReporting, marginMoveCount,
     countiesUpdated: updated.length,
     top3: updated.slice(0,3)
@@ -1757,6 +1803,7 @@ function drawSourceCredit(ctx, x, y, scale){
     x, y
   );
 }
+
 
 // Renders a small statewide DEM/REP/NPA bar chart to an image via a
 // temporary, off-screen Plotly plot (kept in the DOM but positioned off
@@ -1872,16 +1919,18 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
     const summary = liveResultsSummary();
     const isGeneral = currentMetric === 'demrepnpa';
 
-    // Requested (unscaled) widths + gap sum to 900 either way, so the
-    // final canvas comes out the same total width (at scale:2, 1800px)
-    // whether or not the bar chart panel is included. The gap guarantees
+    // Requested (unscaled) widths + gap. Each branch's own total is used
+    // as the scale reference below (baseRef), so making the map bigger
+    // here doesn't shrink or enlarge the header/footer text -- it always
+    // renders at a consistent 2x scale either way. The gap guarantees
     // clear space between the map and the chart so neither can bleed
     // into the other regardless of the map's own aspect ratio.
-    const mapReqWidth = isGeneral ? 600 : 900;
+    const mapReqWidth = isGeneral ? 700 : 900;
     const gapReq = isGeneral ? 30 : 0;
     const chartReqWidth = isGeneral ? 270 : 0;
     const reqHeight = 560;
     const pixelScale = 2;
+    const baseRef = mapReqWidth + gapReq + chartReqWidth;
 
     let mapImg = null;
     if(isGeneral){
@@ -1906,14 +1955,14 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
     }
 
     const gapPx = gapReq * pixelScale;
-    const headerH = 108;
+    const headerH = 132;
     const footerH = 190;
     const canvas = document.createElement('canvas');
     canvas.width = mapImg.width + (chartImg ? gapPx + chartImg.width : 0);
     // IMPORTANT: header/footer heights must be scaled the same way the
     // header/footer content is drawn (scale below), or the canvas ends up
     // too short and the map/footer get cropped.
-    const scale = canvas.width / 900;
+    const scale = canvas.width / baseRef;
     canvas.height = mapImg.height + headerH*scale + footerH*scale;
     const ctx = canvas.getContext('2d');
 
@@ -1951,6 +2000,10 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
       `Total votes: ${fmt(summary.totalVotes)} (DEM ${fmt(summary.totalD)} \u00b7 REP ${fmt(summary.totalR)} \u00b7 NPA ${fmt(summary.totalNPA)}) \u00b7 Turnout: ${summary.countiesReporting} / 67 counties reporting`,
       24*scale, 98*scale
     );
+
+    ctx.fillStyle = '#d8b466';
+    ctx.font = `600 ${Math.round(13*scale)}px IBM Plex Mono, monospace`;
+    ctx.fillText(summary.asOfText, 24*scale, 120*scale);
 
     // Map (left) + statewide bar chart (right, General Election only) --
     // separated by gapPx so they can never overlap.
@@ -1993,7 +2046,7 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
     const finalUrl = canvas.toDataURL('image/png');
     const a = document.createElement('a');
     a.href = finalUrl;
-    a.download = `florida-vote-tracker-${currentMetric}-snapshot.png`;
+    a.download = `florida-vote-tracker-${currentMetric}-${filenameSafeTimestamp(summary.asOfText)}.png`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

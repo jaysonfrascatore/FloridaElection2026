@@ -404,6 +404,7 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7c879c" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
       <input type="text" id="searchInput" placeholder="Search county...">
     </div>
+    <button class="sim-btn" id="downloadMapPngBtn">Download PNG</button>
   </div>
 
   <div class="grid">
@@ -1559,6 +1560,135 @@ document.querySelectorAll('#voteTable thead th').forEach(th => {
     th.classList.add('sorted'); if(sortAsc) th.classList.add('asc');
     renderTable();
   });
+});
+
+// Statewide highlights for the Live Results PNG snapshot: raw votes,
+// vote-count margin lead, percentage margin, turnout (counties actually
+// reporting), how many counties had a rating change ("margin move"), how
+// many counties got new votes this update, and the top 3 counties by
+// votes added this update. All pulled from whichever dataset the map/
+// table are currently showing (frozen D vs R snapshot, or the live
+// feed) so the snapshot always matches what's on screen.
+function liveResultsSummary(){
+  const list = activeCountiesFor(currentMetric);
+  const totalD = list.reduce((s,c)=>s+c.dem,0);
+  const totalR = list.reduce((s,c)=>s+c.rep,0);
+  const totalNPA = list.reduce((s,c)=>s+c.npa,0);
+  const totalOther = list.reduce((s,c)=>s+c.ind+c.npa+c.other,0);
+  const totalVotes = totalD + totalR + totalOther;
+  const barDenom = totalD + totalR + totalNPA;
+  const dPct = barDenom ? (totalD/barDenom)*100 : 0;
+  const rPct = barDenom ? (totalR/barDenom)*100 : 0;
+  const leader = totalD >= totalR ? 'DEM' : 'REP';
+  const voteLead = Math.abs(totalD - totalR);
+  const marginPct = Math.abs(dPct - rPct);
+
+  const countiesReporting = list.filter(c=>c.total>0).length;
+  const marginMoveCount = list.filter(c=>c.ratingChanged).length;
+  const updated = list.filter(c=>c.totalNew).slice().sort((a,b)=>b.totalNew-a.totalNew);
+
+  return {
+    metricTitle: (METRICS[currentMetric] && METRICS[currentMetric].title) || 'Florida Vote Tracker',
+    totalVotes, totalD, totalR, totalNPA,
+    leader, voteLead, marginPct,
+    countiesReporting, marginMoveCount,
+    countiesUpdated: updated.length,
+    top3: updated.slice(0,3)
+  };
+}
+
+document.getElementById('downloadMapPngBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('downloadMapPngBtn');
+  const originalText = btn.textContent;
+  btn.textContent = 'Rendering\u2026';
+  btn.disabled = true;
+  try{
+    const summary = liveResultsSummary();
+    const mapDataUrl = await Plotly.toImage('map', { format:'png', width:900, height:560, scale:2 });
+
+    const img = new Image();
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = mapDataUrl;
+    });
+
+    const headerH = 108;
+    const footerH = 150;
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height + headerH + footerH;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#0a0e17';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const scale = canvas.width / 900;
+
+    // Header
+    ctx.fillStyle = '#e9edf5';
+    ctx.font = `600 ${Math.round(24*scale)}px Inter, Arial, sans-serif`;
+    ctx.fillText(`Florida Vote Tracker 2026 \u2014 ${summary.metricTitle}`, 24*scale, 40*scale);
+
+    ctx.fillStyle = summary.leader === 'DEM' ? '#5b9bd9' : '#d4675a';
+    ctx.font = `600 ${Math.round(19*scale)}px Inter, Arial, sans-serif`;
+    ctx.fillText(
+      `${summary.leader} leads by ${fmt(Math.round(summary.voteLead))} votes (+${summary.marginPct.toFixed(1)}%)`,
+      24*scale, 74*scale
+    );
+
+    ctx.fillStyle = '#7c879c';
+    ctx.font = `${Math.round(15*scale)}px Inter, Arial, sans-serif`;
+    ctx.fillText(
+      `Total votes: ${fmt(summary.totalVotes)} (DEM ${fmt(summary.totalD)} \u00b7 REP ${fmt(summary.totalR)} \u00b7 NPA ${fmt(summary.totalNPA)}) \u00b7 Turnout: ${summary.countiesReporting} / 67 counties reporting`,
+      24*scale, 98*scale
+    );
+
+    // Map
+    ctx.drawImage(img, 0, headerH*scale);
+
+    // Footer
+    const footerY0 = (headerH*scale) + img.height;
+    ctx.fillStyle = '#151b28';
+    ctx.fillRect(0, footerY0, canvas.width, footerH*scale);
+
+    ctx.fillStyle = '#e9edf5';
+    ctx.font = `600 ${Math.round(15*scale)}px Inter, Arial, sans-serif`;
+    ctx.fillText(
+      `Margin move: ${summary.marginMoveCount} counties with a rating change \u00b7 Counties updated: ${summary.countiesUpdated}`,
+      24*scale, footerY0 + 30*scale
+    );
+
+    ctx.fillStyle = '#d8b466';
+    ctx.font = `600 ${Math.round(14*scale)}px Inter, Arial, sans-serif`;
+    ctx.fillText('Top 3 counties by votes added:', 24*scale, footerY0 + 58*scale);
+
+    ctx.fillStyle = '#e9edf5';
+    ctx.font = `${Math.round(14*scale)}px Inter, Arial, sans-serif`;
+    if(summary.top3.length){
+      summary.top3.forEach((c, i) => {
+        ctx.fillText(
+          `${i+1}. ${c.county}: +${fmt(c.totalNew)} total (DEM ${c.demNew>=0?'+':''}${fmt(c.demNew)} \u00b7 REP ${c.repNew>=0?'+':''}${fmt(c.repNew)} \u00b7 Other ${c.otherNew>=0?'+':''}${fmt(c.otherNew)})`,
+          24*scale, footerY0 + (82 + i*22)*scale
+        );
+      });
+    }else{
+      ctx.fillText('No additional votes at this time.', 24*scale, footerY0 + 82*scale);
+    }
+
+    const finalUrl = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = finalUrl;
+    a.download = `florida-vote-tracker-${currentMetric}-snapshot.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }catch(err){
+    alert('Could not generate the map image: ' + err.message);
+  }finally{
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
 });
 
 // ==================== Build Your Own Map ====================

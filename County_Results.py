@@ -78,9 +78,31 @@ def resolve_election_id(today):
 
 # ============================================================
 # COUNTY UPDATE SANITY CHECK
+# ------------------------------------------------------------
+# Two independent guardrails, checked per county on every run:
+#
+#   DROP:  the county's total went DOWN by more than this many votes.
+#          Always suspicious -- vote totals should never meaningfully
+#          decrease during a live count.
+#
+#   SPIKE: the county's total went UP by an implausible amount in a
+#          single run. Rejected only when BOTH conditions are true --
+#          the raw increase exceeds COUNTY_SPIKE_ABS_THRESHOLD AND it's
+#          more than COUNTY_SPIKE_PCT_THRESHOLD of the previous total.
+#          Requiring both avoids two failure modes: a huge county
+#          legitimately posting a large end-of-day batch shouldn't get
+#          rejected just because the raw number is big, and a small
+#          county's normal increment from a tiny baseline shouldn't get
+#          rejected just because the percentage looks huge.
+#
+# Either guardrail firing restores that county's ENTIRE previous
+# accepted row -- nothing is capped or partially applied.
 # ============================================================
 
 COUNTY_DROP_SANITY_THRESHOLD = 5000
+
+COUNTY_SPIKE_ABS_THRESHOLD = 50000
+COUNTY_SPIKE_PCT_THRESHOLD = 0.25
 
 
 # ============================================================
@@ -1007,7 +1029,8 @@ df = df.fillna(0)
 # ------------------------------------------------------------
 # Skipped entirely when NEW_ELECTION_CYCLE is True (previous is None in
 # that case), so a legitimate reset to near-0 turnout at the start of a
-# new cycle is never mistaken for a scraping error.
+# new cycle is never mistaken for a scraping error. Checks BOTH a big
+# drop and an implausible spike (see the threshold comments above).
 # ============================================================
 
 rejected_counties = []
@@ -1069,22 +1092,60 @@ if previous is not None:
             scraped_total
         )
 
+        votes_added = (
+            scraped_total
+            -
+            previous_total
+        )
+
 
         # ----------------------------------------------------
-        # Reject ONLY this county if >5,000 votes are removed
+        # Reject this county if either guardrail trips
         # ----------------------------------------------------
 
-        if (
-            votes_removed
+        reject_reason = None
+
+
+        if votes_removed > COUNTY_DROP_SANITY_THRESHOLD:
+
+            reject_reason = "drop"
+
+
+        elif (
+
+            votes_added
             >
-            COUNTY_DROP_SANITY_THRESHOLD
+            COUNTY_SPIKE_ABS_THRESHOLD
+
+            and
+
+            (
+                previous_total == 0
+
+                or
+
+                (
+                    votes_added
+                    /
+                    previous_total
+                )
+                >
+                COUNTY_SPIKE_PCT_THRESHOLD
+            )
+
         ):
+
+            reject_reason = "spike"
+
+
+        if reject_reason:
 
             county_name = row["County"]
 
 
             print(
-                "\n⚠️ REJECTED COUNTY UPDATE:"
+                "\n⚠️ REJECTED COUNTY UPDATE "
+                f"({reject_reason.upper()}):"
             )
 
             print(
@@ -1101,15 +1162,41 @@ if previous is not None:
                 f"{scraped_total:,.0f}"
             )
 
-            print(
-                f"  Votes removed: "
-                f"{votes_removed:,.0f}"
-            )
+            if reject_reason == "drop":
 
-            print(
-                f"  Threshold: "
-                f"{COUNTY_DROP_SANITY_THRESHOLD:,}"
-            )
+                print(
+                    f"  Votes removed: "
+                    f"{votes_removed:,.0f}"
+                )
+
+                print(
+                    f"  Drop threshold: "
+                    f"{COUNTY_DROP_SANITY_THRESHOLD:,}"
+                )
+
+            else:
+
+                pct_display = (
+
+                    (votes_added / previous_total)
+
+                    if previous_total
+
+                    else float("inf")
+
+                )
+
+                print(
+                    f"  Votes added: "
+                    f"{votes_added:,.0f}"
+                )
+
+                print(
+                    f"  Spike thresholds: "
+                    f"{COUNTY_SPIKE_ABS_THRESHOLD:,} votes "
+                    f"AND {COUNTY_SPIKE_PCT_THRESHOLD:.0%} "
+                    f"(actual: {pct_display:.0%})"
+                )
 
             print(
                 "  Keeping previous accepted data."
@@ -1124,6 +1211,9 @@ if previous is not None:
                 "Code":
                     county_code,
 
+                "Reason":
+                    reject_reason,
+
                 "Previous Total":
                     previous_total,
 
@@ -1131,7 +1221,10 @@ if previous is not None:
                     scraped_total,
 
                 "Votes Removed":
-                    votes_removed
+                    votes_removed,
+
+                "Votes Added":
+                    votes_added
 
             })
 
@@ -2135,7 +2228,8 @@ if rejected_counties:
     for rejected in rejected_counties:
 
         print(
-            f"\n{rejected['County']}"
+            f"\n{rejected['County']} "
+            f"({rejected['Reason'].upper()})"
         )
 
         print(
@@ -2148,10 +2242,19 @@ if rejected_counties:
             f"{rejected['Scraped Total']:,.0f}"
         )
 
-        print(
-            " Votes Removed:",
-            f"{rejected['Votes Removed']:,.0f}"
-        )
+        if rejected["Reason"] == "drop":
+
+            print(
+                " Votes Removed:",
+                f"{rejected['Votes Removed']:,.0f}"
+            )
+
+        else:
+
+            print(
+                " Votes Added:",
+                f"{rejected['Votes Added']:,.0f}"
+            )
 
         print(
             " Action: Previous data retained"
@@ -2520,16 +2623,13 @@ if rejected_counties:
 
         report += f"""
 
-{rejected['County']}
+{rejected['County']} ({rejected['Reason'].upper()})
 
 Previous Accepted:
 {rejected['Previous Total']:,.0f}
 
 Scraped:
 {rejected['Scraped Total']:,.0f}
-
-Votes Removed:
-{rejected['Votes Removed']:,.0f}
 
 Action:
 Previous county data retained.

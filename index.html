@@ -233,13 +233,23 @@
   }
   .shift-slider-badge{
     display:inline-block; font-family:var(--mono); font-size:10.5px; letter-spacing:.04em;
-    padding:5px 12px; border-radius:20px; margin-bottom:14px;
+    padding:5px 12px; border-radius:20px;
     background:var(--panel); color:var(--muted); border:1px solid var(--border);
     transition:background .2s, color .2s, border-color .2s;
   }
   .shift-slider-badge.active{
     background:rgba(14,173,105,0.18); color:#4ade80; border-color:#0ead69; font-weight:600;
   }
+  .shift-slider-row{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:14px;
+  }
+  #shiftSliderResetBtn{
+    display:none; font-family:var(--mono); font-size:10.5px; color:var(--text);
+    background:var(--panel); border:1px solid var(--border); border-radius:7px;
+    padding:5px 10px; cursor:pointer;
+  }
+  #shiftSliderResetBtn:hover{ border-color:var(--gold); }
+  #shiftSliderResetBtn.visible{ display:inline-block; }
   .npa-slider-label{
     display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:6px;
     font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:10px;
@@ -492,7 +502,10 @@
     <div class="panel">
       <h2 id="mapTitle">Rating by county</h2>
       <div class="npa-slider-wrap" id="npaSliderWrap" style="display:none;">
-        <div class="shift-slider-badge" id="shiftSliderBadge">Shift Slider Not Yet In Use</div>
+        <div class="shift-slider-row">
+          <div class="shift-slider-badge" id="shiftSliderBadge">Shift Slider Not Yet In Use</div>
+          <button id="shiftSliderResetBtn" title="Reset the shift sliders back to their defaults">Reset Shift Sliders</button>
+        </div>
         <div class="npa-slider-label">
           <span>If undecided/NPA voters lean one way, how far does it move the map?</span>
           <span class="val" id="npaSliderValue">Even split (50% D / 50% R)</span>
@@ -764,6 +777,42 @@ function activateShiftSlider(){
     badge.textContent = 'Shift Slider Activated';
     badge.classList.add('active');
   }
+  const resetBtn = document.getElementById('shiftSliderResetBtn');
+  if(resetBtn) resetBtn.classList.add('visible');
+}
+
+// Puts all three shift sliders back to their untouched defaults (50/50
+// NPA split, 95% D/R loyalty) and turns the "activated" state back off,
+// so the map/table/tooltip go back to showing raw, unadjusted votes.
+function resetShiftSliders(){
+  npaSplitToDem = 50;
+  demLoyalty = 95;
+  repLoyalty = 95;
+  shiftSliderActive = false;
+
+  const npaSlider = document.getElementById('npaSlider');
+  const demLoyaltySlider = document.getElementById('demLoyaltySlider');
+  const repLoyaltySlider = document.getElementById('repLoyaltySlider');
+  // Slider is oriented Dem (left) to Rep (right), so 50/50 NPA split
+  // corresponds to the slider's own midpoint value of 50.
+  if(npaSlider) npaSlider.value = 50;
+  if(demLoyaltySlider) demLoyaltySlider.value = 95;
+  if(repLoyaltySlider) repLoyaltySlider.value = 95;
+
+  updateNpaSliderLabel();
+  updateDemLoyaltyLabel();
+  updateRepLoyaltyLabel();
+  updateStatewideNpaMargin();
+
+  const badge = document.getElementById('shiftSliderBadge');
+  if(badge){
+    badge.textContent = 'Shift Slider Not Yet In Use';
+    badge.classList.remove('active');
+  }
+  const resetBtn = document.getElementById('shiftSliderResetBtn');
+  if(resetBtn) resetBtn.classList.remove('visible');
+
+  if(currentMetric === 'demrepnpa'){ renderMap(); renderTable(); }
 }
 
 // Reallocates a county's DEM, REP, and NPA votes according to the current
@@ -1468,11 +1517,18 @@ function ensureStripeDefs(svg){
     '</pattern>';
   svg.insertBefore(defs, svg.firstChild);
 }
-// Which stripe (if any) a county qualifies for: REP tied with NPA for the
-// county's lead (and NPA/REP > DEM), or DEM tied with NPA for the lead.
+// Which stripe (if any) a county qualifies for: REP tied with the
+// combined NPA/Other total for the county's lead, or DEM tied with it.
+// Uses the SAME combined total (npaOtherTotal) as the solid-category
+// logic above, so the two systems agree -- a county that outright wins
+// on NPA/Other (npaOtherLeadCategoryFor) never also matches here, and a
+// genuine 3-way tie (already solid dark green) is explicitly excluded
+// so the stripe can't paint over it.
 function tieStripeFor(c){
-  if(c.rep > 0 && c.rep === c.npa && c.rep >= c.dem) return 'url(#stripe-r-npa)';
-  if(c.dem > 0 && c.dem === c.npa && c.dem >= c.rep) return 'url(#stripe-d-npa)';
+  const combined = npaOtherTotal(c);
+  if(c.dem === c.rep && c.dem === combined) return null; // 3-way tie -- solid green handles this
+  if(c.rep > 0 && combined === c.rep && combined >= c.dem) return 'url(#stripe-r-npa)';
+  if(c.dem > 0 && combined === c.dem && combined >= c.rep) return 'url(#stripe-d-npa)';
   return null;
 }
 function applyTieStripes(svg, activeCounties){
@@ -1740,6 +1796,8 @@ document.getElementById('repLoyaltySlider').addEventListener('input', e => {
   if(currentMetric === 'demrepnpa'){ renderMap(); renderTable(); }
 });
 updateRepLoyaltyLabel();
+
+document.getElementById('shiftSliderResetBtn').addEventListener('click', resetShiftSliders);
 
 document.getElementById('searchInput').addEventListener('input', () => renderTable());
 

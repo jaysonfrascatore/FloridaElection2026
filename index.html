@@ -716,7 +716,7 @@ const RATING_CATS = [
   { key:'Safe R',   color:'#880d1e' },
   { key:'Likely R', color:'#dd2d4a' },
   { key:'Lean R',   color:'#f49cbb' },
-  { key:'Toss Up',  color:'#9d4edd' },
+  { key:'Toss Up',  color:'#3a0ca3' },
   { key:'Tie',      color:'#e9c46a' },
   { key:'Lean D',   color:'#90e0ef' },
   { key:'Likely D', color:'#00b4d8' },
@@ -730,17 +730,19 @@ const UPDATED_CATS = [
   { key:'No new votes', color:'#141a26' },
   { key:'Updated',      color:'#0ead69' }
 ];
-// Which party won each county's most recent hourly vote drop (not the
-// county's overall standing — just the incremental batch of votes added
-// this run).
+// Which party (or NPA/Other combined) won each county's most recent
+// hourly vote drop (not the county's overall standing — just the
+// incremental batch of votes added this run).
 const DROP_WINNER_CATS = [
   { key:'No new votes', color:'#141a26' },
   { key:'Tied drop',    color:'#e9c46a' },
   { key:'D won drop',   color:'#00b4d8' },
-  { key:'R won drop',   color:'#dd2d4a' }
+  { key:'R won drop',   color:'#dd2d4a' },
+  { key:'NPA/Other won drop', color:'#c77dff' }
 ];
 function dropWinnerCategoryFor(c){
   if(!c.totalNew) return 'No new votes';
+  if(c.otherNew > c.demNew && c.otherNew > c.repNew) return 'NPA/Other won drop';
   if(c.demNew === c.repNew) return 'Tied drop';
   return c.demNew > c.repNew ? 'D won drop' : 'R won drop';
 }
@@ -894,11 +896,18 @@ function npaOtherLeadCategoryFor(c){
 
 // Same rating tiers as categoryForNpaMargin, but returns 'Not Updated'
 // for counties still pending, and the NPA/Other overrides above take
-// priority over the normal D-vs-R tiers when they apply.
+// priority over the normal D-vs-R tiers when they apply -- UNLESS the
+// shift sliders are active, in which case NPA/Other votes are being
+// actively reallocated between D and R, so there's no separate "NPA/
+// Other" bucket left standing to lead or tie with anything; the map
+// falls fully through to the slider-adjusted D-vs-R tiers instead, the
+// same way the tooltip's conversion breakdown already does.
 function categoryForNpaDisplay(c){
   if(isCountyPending(c)) return 'Not Updated';
-  const override = npaOtherLeadCategoryFor(c);
-  if(override) return override;
+  if(!shiftSliderActive){
+    const override = npaOtherLeadCategoryFor(c);
+    if(override) return override;
+  }
   return categoryForNpaMargin(c);
 }
 // RATING_CATS plus the pending "Not Updated" state and the NPA/Other
@@ -1423,7 +1432,10 @@ function tooltipText(list){
       if(!c.totalNew){
         return `<b>${c.county}</b><br>No additional votes at this time.`;
       }
-      const winner = c.demNew === c.repNew ? 'Tied' : (c.demNew > c.repNew ? 'Democrats' : 'Republicans');
+      let winner;
+      if(c.otherNew > c.demNew && c.otherNew > c.repNew) winner = 'NPA/Other';
+      else if(c.demNew === c.repNew) winner = 'Tied';
+      else winner = c.demNew > c.repNew ? 'Democrats' : 'Republicans';
       return `<b>${c.county}</b><br>` +
         `<b>${winner} won this drop</b><br>` +
         `DEM +${fmt(c.demNew)} &middot; REP +${fmt(c.repNew)} &middot; Other +${fmt(c.otherNew)}<br>` +
@@ -1563,18 +1575,15 @@ function applyTieStripes(svg, activeCounties){
   });
 }
 
-async function renderMap(){
-  await ensureGeojson();
-  const m = METRICS[currentMetric];
-  const activeCounties = activeCountiesFor(currentMetric);
-  document.getElementById('mapTitle').textContent = m.title;
-  document.getElementById('npaSliderWrap').style.display = (currentMetric === 'demrepnpa') ? 'block' : 'none';
-
+// Builds the Plotly trace (plus legend HTML, for categorical metrics)
+// for a given metric + county list. Shared between the on-screen
+// renderMap() and the PNG export's renderMetricMapCanvas(), so both
+// always agree pixel-for-pixel on what a county's color should be.
+function buildMapTrace(metric, activeCounties){
+  const m = METRICS[metric];
   const locations = activeCounties.map(c=>c.fips);
   const text = tooltipText(activeCounties);
-
-  let trace;
-  const legendEl = document.getElementById('mapLegend');
+  let trace, legendHtml = '', legendVisible = false;
 
   if(m.categorical){
     const cats = m.cats, n = cats.length;
@@ -1586,8 +1595,8 @@ async function renderMap(){
       text, hoverinfo:'text', hoverlabel:{bgcolor:'#151b28', bordercolor:'#212a3b', font:{family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5'}},
       showscale:false
     };
-    legendEl.style.display = 'flex';
-    legendEl.innerHTML = cats.map(cat => {
+    legendVisible = true;
+    legendHtml = cats.map(cat => {
       const count = activeCounties.filter(c=>m.catFn(c)===cat.key).length;
       if(!count) return '';
       return `<span class="swatch" style="background:${cat.color};color:${contrastText(cat.color)}">${cat.key} · ${count}</span>`;
@@ -1603,8 +1612,6 @@ async function renderMap(){
       // Fractional values (-1 to 1) shown as signed percentages on the colorbar.
       showscale:true, colorbar:{ tickfont:{color:'#7c879c', size:10}, thickness:12, len:0.6, outlinewidth:0, tickformat:'.0%' }
     };
-    legendEl.style.display = 'none';
-    legendEl.innerHTML = '';
   }else{
     const zmax = m.range(activeCounties);
     const zmin = 0;
@@ -1620,9 +1627,22 @@ async function renderMap(){
       text, hoverinfo:'text', hoverlabel:{bgcolor:'#151b28', bordercolor:'#212a3b', font:{family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5'}},
       showscale:true, colorbar
     };
-    legendEl.style.display = 'none';
-    legendEl.innerHTML = '';
   }
+
+  return { trace, legendHtml, legendVisible };
+}
+
+async function renderMap(){
+  await ensureGeojson();
+  const m = METRICS[currentMetric];
+  const activeCounties = activeCountiesFor(currentMetric);
+  document.getElementById('mapTitle').textContent = m.title;
+  document.getElementById('npaSliderWrap').style.display = (currentMetric === 'demrepnpa') ? 'block' : 'none';
+
+  const { trace, legendHtml, legendVisible } = buildMapTrace(currentMetric, activeCounties);
+  const legendEl = document.getElementById('mapLegend');
+  legendEl.style.display = legendVisible ? 'flex' : 'none';
+  legendEl.innerHTML = legendHtml;
 
   const layout = {
     geo:{ scope:'usa', fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' },
@@ -1630,7 +1650,7 @@ async function renderMap(){
     margin:{t:10,b:10,l:10,r:10}, font:{family:'Inter, sans-serif'}
   };
   Plotly.newPlot('map', [trace], layout, {displayModeBar:false, responsive:true}).then(() => {
-    if(currentMetric === 'demrepnpa'){
+    if(currentMetric === 'demrepnpa' && !shiftSliderActive){
       applyTieStripes(document.querySelector('#map svg'), activeCounties);
     }
   });
@@ -2050,7 +2070,7 @@ function computeChoroplethBBox(svg){
   return { x:minX, y:minY, width:maxX-minX, height:maxY-minY };
 }
 
-// Renders a FRESH General Election choropleth into a temporary off-screen
+// Renders a FRESH choropleth for ANY metric into a temporary off-screen
 // div, then measures exactly where Florida actually ended up landing
 // inside that render (its real pixel bounding box, not a guessed aspect
 // ratio -- the USA Albers projection Plotly uses doesn't distort lat/lon
@@ -2059,9 +2079,10 @@ function computeChoroplethBBox(svg){
 // pad, then fits it into the requested box. "Fit" here always preserves
 // the full shape -- it can leave a sliver of padding on one axis, but
 // can never crop off any part of the state. Tie stripes are re-applied
-// after the render, so the export still shows them even though it isn't
+// afterward for the General Election metric (when the shift sliders
+// aren't active), so the export still shows them even though it isn't
 // reusing the on-screen SVG.
-async function renderGeneralElectionMapCanvas(activeCounties, cssWidth, cssHeight, pixelScale){
+async function renderMetricMapCanvas(metric, activeCounties, cssWidth, cssHeight, pixelScale){
   await ensureGeojson();
   const tempDiv = document.createElement('div');
   tempDiv.style.position = 'fixed';
@@ -2072,16 +2093,7 @@ async function renderGeneralElectionMapCanvas(activeCounties, cssWidth, cssHeigh
   document.body.appendChild(tempDiv);
 
   try{
-    const cats = NPA_DISPLAY_CATS, n = cats.length;
-    const locations = activeCounties.map(c=>c.fips);
-    const text = tooltipText(activeCounties);
-    const z = activeCounties.map(c => cats.findIndex(cat=>cat.key===categoryForNpaDisplay(c)) + 0.5);
-    const trace = {
-      type:'choropleth', geojson: geojsonFL, locations, z,
-      featureidkey:'id', zmin:0, zmax:n,
-      colorscale: stepColorscale(cats), marker:{line:{color:'#0a0e17', width:1}},
-      text, hoverinfo:'text', showscale:false
-    };
+    const { trace } = buildMapTrace(metric, activeCounties);
     const layout = {
       geo:{ scope:'usa', fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' },
       paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
@@ -2090,7 +2102,9 @@ async function renderGeneralElectionMapCanvas(activeCounties, cssWidth, cssHeigh
     await Plotly.newPlot(tempDiv, [trace], layout, { displayModeBar:false, responsive:false });
 
     const svg = tempDiv.querySelector('svg');
-    applyTieStripes(svg, activeCounties);
+    if(metric === 'demrepnpa' && !shiftSliderActive){
+      applyTieStripes(svg, activeCounties);
+    }
 
     const targetW = cssWidth * pixelScale, targetH = cssHeight * pixelScale;
     const bbox = computeChoroplethBBox(svg);
@@ -2214,10 +2228,7 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
     const pixelScale = 2;
     const baseRef = mapReqWidth + gapReq + chartReqWidth;
 
-    let mapImg = null;
-    if(isGeneral){
-      mapImg = await renderGeneralElectionMapCanvas(activeCountiesFor(currentMetric), mapReqWidth, reqHeight, pixelScale);
-    }
+    let mapImg = await renderMetricMapCanvas(currentMetric, activeCountiesFor(currentMetric), mapReqWidth, reqHeight, pixelScale);
     if(!mapImg){
       const mapDataUrl = await Plotly.toImage('map', { format:'png', width:mapReqWidth, height:reqHeight, scale:pixelScale });
       mapImg = new Image();

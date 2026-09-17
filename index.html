@@ -1454,10 +1454,12 @@ function tooltipText(list){
           `This county's site hasn't posted new results yet \u2014 showing 0 votes for now.`;
       }
       if(!shiftSliderActive){
+        const combinedNpaOther = npaOtherTotal(c);
+        const combinedShare = c.total ? combinedNpaOther / c.total : 0;
         const lines = partyLeadLines([
           { label:'DEM', count:c.dem, pct:c.demShare },
           { label:'REP', count:c.rep, pct:c.repShare },
-          { label:'NPA', count:c.npa, pct:c.npaShare }
+          { label:'NPA/Other', count:combinedNpaOther, pct:combinedShare }
         ]);
         return `<b>${c.county}</b><br>` +
           `Rating: ${categoryForNpaDisplay(c)}<br>` +

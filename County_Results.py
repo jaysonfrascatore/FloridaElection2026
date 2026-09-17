@@ -120,7 +120,7 @@ def resolve_election_id(today):
 # accepted row -- nothing is capped or partially applied.
 # ============================================================
 
-COUNTY_DROP_SANITY_THRESHOLD = 500000
+COUNTY_DROP_SANITY_THRESHOLD = 5000
 
 COUNTY_SPIKE_ABS_THRESHOLD = 50000
 COUNTY_SPIKE_PCT_THRESHOLD = 0.25
@@ -134,6 +134,43 @@ COUNTY_SPIKE_OVERRIDES = {
     "PAL": (300000, 0.60),   # Palm Beach
     "HIL": (250000, 0.60),   # Hillsborough
     "ORA": (250000, 0.60),   # Orange
+}
+
+
+# ============================================================
+# COUNTY DATA GATES -- manual per-county open/close switches
+# ------------------------------------------------------------
+# Everything above (the drop/spike guardrails) is an AUTOMATIC check
+# that runs every time. This is different: a MANUAL override you flip
+# by hand when you already know a specific county's source is bad and
+# want it excluded entirely, not just guarded against.
+#
+# When a county's code is listed here with False, this run SKIPS
+# scraping it completely (no request is even made) and the county is
+# simply left out of this run's data/previous_turnout.csv. The site
+# already treats a county that's missing from the file as "Not
+# Updated" (0 votes, shown in gray) -- so closing the gate is exactly
+# equivalent to telling the dashboard "nothing to report here yet."
+#
+# To open a county back up, either delete its line below or change it
+# to True. On the FIRST run after reopening, there's no "previous" row
+# for that county to compare against (it was missing while closed), so
+# the drop/spike guardrails above have nothing to check against and
+# that run's numbers are accepted as-is -- from the run after that,
+# guardrails apply normally again, same as any other county.
+#
+# A county not listed here at all behaves exactly as if it were True
+# (open) -- this only ever affects counties you explicitly add.
+# ============================================================
+
+COUNTY_DATA_GATES = {
+    "BRO": False,   # Broward -- CLOSED as of 2026-09-17. The county's
+                     # own site posted inaccurate numbers this morning,
+                     # and floridados.gov's public VBM/EV stats
+                     # (countyfilesvbm-ev.floridados.gov) show Broward
+                     # hasn't actually updated. Flip to True (or delete
+                     # this line) once Broward's own data is confirmed
+                     # reliable again.
 }
 
 
@@ -1074,6 +1111,21 @@ for county_name, county_code in COUNTIES.items():
         "\nLoading:",
         county_name
     )
+
+
+    # ========================================================
+    # MANUAL GATE CHECK -- closed counties are skipped entirely
+    # ========================================================
+
+    if not COUNTY_DATA_GATES.get(county_code, True):
+
+        print(
+            f"  {county_name} ({county_code}) is CLOSED via "
+            "COUNTY_DATA_GATES -- skipping, will show as "
+            "Not Updated on the site."
+        )
+
+        continue
 
 
     # ========================================================
@@ -2511,6 +2563,25 @@ print(
 )
 
 
+closed_counties = [
+
+    code
+
+    for code in COUNTY_DATA_GATES
+
+    if not COUNTY_DATA_GATES[code]
+
+]
+
+
+if closed_counties:
+
+    print(
+        "Closed via COUNTY_DATA_GATES (intentionally skipped):",
+        ", ".join(closed_counties)
+    )
+
+
 if "BRO" in df["Code"].values:
 
     broward_row = df[
@@ -2540,6 +2611,14 @@ if "BRO" in df["Code"].values:
     print(
         "  OTHER:",
         f"{broward_row['OTHER']:,.0f}"
+    )
+
+
+elif not COUNTY_DATA_GATES.get("BRO", True):
+
+    print(
+        "\nBroward is missing from the dataset -- expected, "
+        "COUNTY_DATA_GATES[\"BRO\"] is currently False."
     )
 
 

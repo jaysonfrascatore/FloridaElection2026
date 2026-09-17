@@ -21,7 +21,7 @@
     --dem-dim:#294a68;
     --rep:#d4675a;
     --rep-dim:#6b332c;
-    --npa:#3a0ca3;
+    --npa:#c77dff;
     --npa-text:#c77dff;
     --total-green:#80ed99;
     --gold:#d8b466;
@@ -1325,29 +1325,37 @@ function renderStats(){
   const totalD = activeCounties.reduce((s,c)=>s+c.dem,0);
   const totalR = activeCounties.reduce((s,c)=>s+c.rep,0);
   const totalNPA = activeCounties.reduce((s,c)=>s+c.npa,0);
-  const totalOther = activeCounties.reduce((s,c)=>s+c.ind+c.npa+c.other,0);
-  const total = totalD+totalR+totalOther;
+  // Everything that isn't DEM or REP -- NPA plus the small Ind/Other
+  // catch-all -- combined into one bucket, same grouping used for
+  // county-level coloring (npaOtherTotal) and the map tooltip. The bar
+  // used to show raw NPA alone here, which didn't match what the map
+  // itself was actually grouping together.
+  const totalNpaOther = activeCounties.reduce((s,c)=>s+c.ind+c.npa+c.other,0);
+  const total = totalD+totalR+totalNpaOther;
   const dShare = total ? totalD/total : 0;
   const rShare = total ? totalR/total : 0;
-  const npaShare = total ? totalNPA/total : 0;
+  const npaOtherShare = total ? totalNpaOther/total : 0;
   const leader = totalD >= totalR ? 'D' : 'R';
 
   const leaderEl = document.getElementById('stateLeader');
   leaderEl.textContent = (leader === 'D' ? 'DEM' : 'REP') + ' +' + fmt(Math.abs(totalD-totalR));
   leaderEl.className = 'leader ' + leader;
 
-  // The statewide bar only ever shows DEM, REP, and NPA — IND/Other votes
-  // aren't part of it, so shares are renormalized against (D+R+NPA) only.
-  // NPA's share is the remainder of the other two rather than its own
-  // independently-rounded fraction, so the three always sum to exactly
-  // 100% with no leftover grey sliver from floating-point rounding.
-  const barDenom = totalD + totalR + totalNPA;
+  // The statewide bar only ever shows DEM, REP, and NPA/Other — shares
+  // are renormalized against (D+R+NPA/Other) only. NPA/Other's share is
+  // the remainder of the other two rather than its own independently-
+  // rounded fraction, so the three always sum to exactly 100% with no
+  // leftover grey sliver from floating-point rounding.
+  const barDenom = totalD + totalR + totalNpaOther;
   const dPct = barDenom ? (totalD/barDenom)*100 : 50;
   const rPct = barDenom ? (totalR/barDenom)*100 : 50;
   const npaPct = barDenom ? Math.max(0, 100 - dPct - rPct) : 0;
   barShares = { d:dPct, r:rPct, npa:npaPct };
   applyBarWidths();
 
+  // statewideTotals still tracks raw NPA (not combined with Other) --
+  // it feeds the shift-slider's D/R crossover math separately, which is
+  // unchanged here.
   statewideTotals = { dem:totalD, rep:totalR, npa:totalNPA };
   updateStatewideNpaMargin();
 
@@ -1359,11 +1367,11 @@ function renderStats(){
   labelNPA.style.left = Math.min(97, Math.max(4, dPct + rPct + npaPct/2)) + '%';
   labelD.textContent = 'DEM ' + fmt(totalD) + ' (' + pct(dShare) + ')';
   labelR.textContent = 'REP ' + fmt(totalR) + ' (' + pct(rShare) + ')';
-  labelNPA.textContent = 'NPA ' + fmt(totalNPA) + ' (' + pct(npaShare) + ')';
+  labelNPA.textContent = 'NPA/Other ' + fmt(totalNpaOther) + ' (' + pct(npaOtherShare) + ')';
 
   document.getElementById('statTotal').textContent = fmt(total);
   document.getElementById('statCounties').textContent = activeCounties.filter(c=>c.total>0).length + ' / 67';
-  document.getElementById('statInd').textContent = fmt(totalOther);
+  document.getElementById('statInd').textContent = fmt(totalNpaOther);
   document.getElementById('statMoved').textContent = activeCounties.filter(c=>c.ratingChanged).length;
   const times = activeCounties.map(c=>c.lastUpdated).filter(Boolean).sort();
   document.getElementById('statUpdated').textContent = times.length ? times[times.length-1] : '—';
@@ -1866,10 +1874,15 @@ function liveResultsSummary(){
   const list = activeCountiesFor(currentMetric);
   const totalD = list.reduce((s,c)=>s+c.dem,0);
   const totalR = list.reduce((s,c)=>s+c.rep,0);
-  const totalNPA = list.reduce((s,c)=>s+c.npa,0);
-  const totalOther = list.reduce((s,c)=>s+c.ind+c.npa+c.other,0);
-  const totalVotes = totalD + totalR + totalOther;
-  const barDenom = totalD + totalR + totalNPA;
+  // Everything that isn't DEM or REP -- NPA plus the small Ind/Other
+  // catch-all -- combined into one bucket, same grouping used for
+  // county-level coloring/tooltips and the top summary bar. Statewide
+  // tie/lead detection below uses this combined total too, not raw NPA
+  // alone, so the PNG header's narrative always matches what the map
+  // itself is actually showing.
+  const totalNpaOther = list.reduce((s,c)=>s+c.ind+c.npa+c.other,0);
+  const totalVotes = totalD + totalR + totalNpaOther;
+  const barDenom = totalD + totalR + totalNpaOther;
   const dPct = barDenom ? (totalD/barDenom)*100 : 0;
   const rPct = barDenom ? (totalR/barDenom)*100 : 0;
   const leader = totalD >= totalR ? 'DEM' : 'REP';
@@ -1902,38 +1915,40 @@ function liveResultsSummary(){
   const rawLastUpdated = updateTimes.length ? updateTimes[updateTimes.length-1] : '';
   const asOfText = rawLastUpdated ? formatAsOf(rawLastUpdated) : formatAsOfFromDate(new Date());
 
-  const npaPct = barDenom ? (totalNPA/barDenom)*100 : 0;
+  const npaPct = barDenom ? (totalNpaOther/barDenom)*100 : 0;
 
-  // Statewide two-way tie between a major party and NPA (the same check
-  // as tieStripeFor(), but aggregated across the whole state instead of
-  // one county). When this happens, describing the result as e.g. "REP
-  // +1" is misleading -- REP and NPA are genuinely tied with each other,
-  // which is the fact worth surfacing, not the incidental gap to DEM.
+  // Statewide two-way tie between a major party and NPA/Other (the same
+  // check as tieStripeFor(), but aggregated across the whole state
+  // instead of one county). When this happens, describing the result as
+  // e.g. "REP +1" is misleading -- REP and NPA/Other are genuinely tied
+  // with each other, which is the fact worth surfacing, not the
+  // incidental gap to DEM.
   let statewideTie = null;
-  if(totalR > 0 && totalR === totalNPA && totalR >= totalD){
-    statewideTie = { partyA:'Republicans', partyB:'NPA', votes: totalR };
-  }else if(totalD > 0 && totalD === totalNPA && totalD >= totalR){
-    statewideTie = { partyA:'Democrats', partyB:'NPA', votes: totalD };
+  if(totalR > 0 && totalR === totalNpaOther && totalR >= totalD){
+    statewideTie = { partyA:'Republicans', partyB:'NPA/Other', votes: totalR };
+  }else if(totalD > 0 && totalD === totalNpaOther && totalD >= totalR){
+    statewideTie = { partyA:'Democrats', partyB:'NPA/Other', votes: totalD };
   }
 
-  // NPA genuinely outleading BOTH major parties statewide (not a tie) --
-  // the normal DEM-vs-REP leader line never even considers NPA as a
-  // possible leader, so without this it would keep reporting a DEM/REP
-  // "lead" while quietly ignoring that NPA is actually ahead of both.
+  // NPA/Other genuinely outleading BOTH major parties statewide (not a
+  // tie) -- the normal DEM-vs-REP leader line never even considers
+  // NPA/Other as a possible leader, so without this it would keep
+  // reporting a DEM/REP "lead" while quietly ignoring that NPA/Other is
+  // actually ahead of both.
   let npaLead = null;
-  if(!statewideTie && totalNPA > totalD && totalNPA > totalR){
+  if(!statewideTie && totalNpaOther > totalD && totalNpaOther > totalR){
     const secondPlace = Math.max(totalD, totalR);
     const secondPct = Math.max(dPct, rPct);
     npaLead = {
-      votes: totalNPA,
-      voteLead: totalNPA - secondPlace,
+      votes: totalNpaOther,
+      voteLead: totalNpaOther - secondPlace,
       marginPct: npaPct - secondPct
     };
   }
 
   return {
     metricTitle: (METRICS[currentMetric] && METRICS[currentMetric].title) || 'Florida Vote Tracker',
-    totalVotes, totalD, totalR, totalNPA,
+    totalVotes, totalD, totalR, totalNPA: totalNpaOther,
     leader, voteLead, marginPct, statewideTie, npaLead, asOfText,
     countiesReporting, marginMoveCount,
     countiesUpdated: updated.length,
@@ -1986,7 +2001,7 @@ async function renderStatewideBarChartImage(summary, width, height){
 
   const trace = {
     type: 'bar',
-    x: ['DEM', 'REP', 'NPA'],
+    x: ['DEM', 'REP', 'NPA/Other'],
     y: [pctD, pctR, pctN],
     marker: { color: ['#5b9bd9', '#d4675a', '#c77dff'] },
     text: [pctD+'%', pctR+'%', pctN+'%'],
@@ -2276,7 +2291,7 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
       { text: fmt(summary.totalD), color: '#5b9bd9' },
       { text: ' \u00b7 REP ', color: '#7c879c' },
       { text: fmt(summary.totalR), color: '#d4675a' },
-      { text: ' \u00b7 NPA ', color: '#7c879c' },
+      { text: ' \u00b7 NPA/Other ', color: '#7c879c' },
       { text: fmt(summary.totalNPA), color: '#c77dff' },
       { text: `) \u00b7 Turnout: ${summary.countiesReporting} / 67 counties reporting`, color: '#7c879c' }
     ], 24*scale, 98*scale);

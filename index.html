@@ -817,15 +817,48 @@ const NOT_UPDATED_COLOR = '#cad2c5';
 function isCountyPending(c){
   return c.total <= 0;
 }
+
+// ------------------------------------------------------------
+// NPA/Other outright lead / 3-way tie (D vs R vs NPA view)
+// ------------------------------------------------------------
+// Everything that isn't DEM or REP -- NPA plus the small Ind/Other
+// catch-all -- combined into one bucket for leadership purposes. When
+// that combined bucket actually outnumbers BOTH major parties, showing
+// a D-vs-R "Safe R"/"Lean D" tier for the county would be misleading,
+// since neither major party is even leading there -- it gets its own
+// solid color instead (the same purple used for NPA elsewhere). A true
+// three-way tie (all three exactly equal) gets its own dark green.
+const NPA_OTHER_LEAD_COLOR = '#c77dff';
+const THREE_WAY_TIE_COLOR = '#145a32';
+
+function npaOtherTotal(c){
+  return c.npa + c.ind + c.other;
+}
+// Returns 'NPA/Other Lead', '3-Way Tie', or null (no override -- fall
+// through to the normal D-vs-R rating tiers below).
+function npaOtherLeadCategoryFor(c){
+  const combined = npaOtherTotal(c);
+  if(combined === c.dem && combined === c.rep) return '3-Way Tie';
+  if(combined > c.dem && combined > c.rep) return 'NPA/Other Lead';
+  return null;
+}
+
 // Same rating tiers as categoryForNpaMargin, but returns 'Not Updated'
-// for counties still in the pending state above.
+// for counties still pending, and the NPA/Other overrides above take
+// priority over the normal D-vs-R tiers when they apply.
 function categoryForNpaDisplay(c){
   if(isCountyPending(c)) return 'Not Updated';
+  const override = npaOtherLeadCategoryFor(c);
+  if(override) return override;
   return categoryForNpaMargin(c);
 }
-// RATING_CATS plus the pending "Not Updated" state — used only by the
-// D vs R vs NPA map/table/legend.
-const NPA_DISPLAY_CATS = RATING_CATS.concat([{ key:'Not Updated', color: NOT_UPDATED_COLOR }]);
+// RATING_CATS plus the pending "Not Updated" state and the NPA/Other
+// overrides above — used only by the D vs R vs NPA map/table/legend.
+const NPA_DISPLAY_CATS = RATING_CATS.concat([
+  { key:'Not Updated', color: NOT_UPDATED_COLOR },
+  { key:'NPA/Other Lead', color: NPA_OTHER_LEAD_COLOR },
+  { key:'3-Way Tie', color: THREE_WAY_TIE_COLOR }
+]);
 // Display-safe copy of a county record for the D vs R vs NPA view: vote
 // counts zeroed out while the county is still pending, so the map,
 // table, and tooltip all agree it's showing 0 for now.
@@ -843,6 +876,8 @@ function moveCategoryFor(c){ return c.ratingChanged ? 'Changed' : 'Unchanged'; }
 function updatedCategoryFor(c){ return c.totalNew ? 'Updated' : 'No new votes'; }
 function catColor(catKey){
   if(catKey === 'Not Updated') return NOT_UPDATED_COLOR;
+  if(catKey === 'NPA/Other Lead') return NPA_OTHER_LEAD_COLOR;
+  if(catKey === '3-Way Tie') return THREE_WAY_TIE_COLOR;
   const cat = RATING_CATS.find(c=>c.key===catKey) || MOVE_CATS.find(c=>c.key===catKey) || UPDATED_CATS.find(c=>c.key===catKey) || DROP_WINNER_CATS.find(c=>c.key===catKey);
   return cat ? cat.color : '#3a4356';
 }
@@ -1376,7 +1411,7 @@ function tooltipText(list){
           { label:'NPA', count:c.npa, pct:c.npaShare }
         ]);
         return `<b>${c.county}</b><br>` +
-          `Rating: ${categoryForNpaMargin(c)}<br>` +
+          `Rating: ${categoryForNpaDisplay(c)}<br>` +
           `${lines}<br>` +
           `Total ${fmt(c.total)}<br>` +
           `Margin ${(c.marginNpaAdj>=0?'+':'')}${pct(c.marginNpaAdj)}`;
@@ -1386,7 +1421,7 @@ function tooltipText(list){
       const npaDem = c.npa * (npaSplitToDem/100), npaRep = c.npa - npaDem;
       const margin = marginWithNpaSplit(c);
       return `<b>${c.county}</b><br>` +
-        `Rating: ${categoryForNpaMargin(c)}<br>` +
+        `Rating: ${categoryForNpaDisplay(c)}<br>` +
         `DEM ${fmt(c.dem)} \u2192 ${fmt(Math.round(demToD))} D / ${fmt(Math.round(demToR))} R<br>` +
         `REP ${fmt(c.rep)} \u2192 ${fmt(Math.round(repToR))} R / ${fmt(Math.round(repToD))} D<br>` +
         `NPA ${fmt(c.npa)} \u2192 ${fmt(Math.round(npaDem))} D / ${fmt(Math.round(npaRep))} R<br>` +

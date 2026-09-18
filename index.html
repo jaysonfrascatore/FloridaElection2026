@@ -645,12 +645,21 @@
       <input type="range" id="simTurnoutSlider" class="adj-slider" min="65" max="85" step="0.1" value="75">
       <div class="npa-slider-ends"><span>65%</span><span>85%</span></div>
     </div>
+    <div style="flex:1; min-width:220px; display:none;" id="sim2024SwingWrap">
+      <div class="npa-slider-label" style="margin-bottom:8px;">
+        <span>Uniform statewide swing from actual 2024 results</span>
+        <span class="val" id="sim2024SwingValue">Even (actual results)</span>
+      </div>
+      <input type="range" id="sim2024SwingSlider" class="adj-slider" min="-15" max="15" step="0.1" value="0">
+      <div class="npa-slider-ends"><span>R+15</span><span>Even</span><span>D+15</span></div>
+    </div>
     <div class="sim-checkpoint-mode" style="margin-top:0;">
       <label for="simCheckpointMode">Map mode</label>
       <select id="simCheckpointMode">
         <option value="tie">Tie &mdash; build the map by hand</option>
         <option value="y2018">2018 Governor's Race (actual)</option>
         <option value="y2022">2022 Governor's Race (actual)</option>
+        <option value="y2024">2024 Presidential Race (actual)</option>
       </select>
     </div>
     <button class="sim-btn" id="simResetAllBtn">Reset all counties to 50/50</button>
@@ -2655,13 +2664,47 @@ const SIM_2022 = {
   "Wakulla":[3920,11033],"Walton":[6112,28647],"Washington":[1285,7786]
 };
 
+// Actual certified county-level results, 2024 Florida Presidential race
+// (Harris-Trump). Source: Florida Department of State official results,
+// as tabulated in the county-level table on Wikipedia's "2024 United
+// States presidential election in Florida" (statewide totals match the
+// certified 6,110,125 Trump / 4,683,038 Harris).
+const SIM_2024 = {
+  "Alachua":[81578,52939],"Baker":[1982,12926],"Bay":[25201,71497],"Bradford":[2946,10920],
+  "Brevard":[141233,216533],"Broward":[507328,358952],"Calhoun":[1021,5367],
+  "Charlotte":[40450,82480],"Citrus":[26276,71356],"Clay":[37926,87711],
+  "Collier":[71720,143267],"Columbia":[8250,25108],"DeSoto":[3525,8888],"Dixie":[1183,6920],
+  "Duval":[229365,236285],"Escambia":[64601,96407],"Flagler":[28431,51014],
+  "Franklin":[1870,4831],"Gadsden":[14203,7495],"Gilchrist":[1662,8931],"Glades":[1222,4034],
+  "Gulf":[1970,6684],"Hamilton":[1727,3964],"Hardee":[1751,6336],"Hendry":[4096,9253],
+  "Hernando":[34431,75446],"Highlands":[15227,36382],"Hillsborough":[321455,342017],
+  "Holmes":[882,8193],"Indian River":[35654,62737],"Jackson":[5892,16074],
+  "Jefferson":[3429,5011],"Lafayette":[441,3296],"Lake":[84546,140500],"Lee":[139240,250661],
+  "Leon":[94520,60397],"Levy":[5994,18245],"Liberty":[566,2898],"Madison":[3231,5874],
+  "Manatee":[86674,140486],"Marion":[72436,140173],"Martin":[33539,64121],
+  "Miami-Dade":[480355,605590],"Monroe":[17933,26064],"Nassau":[17143,47945],
+  "Okaloosa":[32074,80309],"Okeechobee":[3671,12315],"Orange":[340807,258279],
+  "Osceola":[84205,86713],"Palm Beach":[372512,366836],"Pasco":[117450,197779],
+  "Pinellas":[242452,269472],"Polk":[136879,209044],"Putnam":[9354,26700],
+  "Santa Rosa":[27035,84314],"Sarasota":[112668,163219],"Seminole":[120717,129735],
+  "St. Johns":[66862,128759],"St. Lucie":[83517,100293],"Sumter":[32551,72134],
+  "Suwannee":[4217,17561],"Taylor":[1991,7954],"Union":[971,5224],"Volusia":[120132,187691],
+  "Wakulla":[5441,14246],"Walton":[10287,38970],"Washington":[2140,10370]
+};
+
 // Current hypothetical DEM share of the two-party vote per county
 // (0-100). 50 = tied. Keyed by county name. Only used in Tie mode.
 let simDemPct = {};
 let simTurnoutPct = 75;
 let selectedSimCounty = null;
 let simInitialized = false;
-let simCheckpointMode = 'tie'; // 'tie' | 'y2018' | 'y2022'
+let simCheckpointMode = 'tie'; // 'tie' | 'y2018' | 'y2022' | 'y2024'
+// Uniform statewide swing applied ONLY in y2024 mode: shifts every
+// county's actual 2024 margin by this many percentage points (-15 =
+// R+15 shift, +15 = D+15 shift, 0 = actual results unchanged). Turnout
+// (each county's real 2024 total votes) stays fixed -- only the D/R
+// split within that real total moves.
+let sim2024Swing = 0;
 
 // Rating "paintbrush": pick one of these 7 buckets, then click counties
 // on the map/table to assign that bucket directly, instead of dragging
@@ -2709,6 +2752,25 @@ function simHistoricalStats(name, yearData){
   return { total, demPct, repPct: 100-demPct, demVotes:dem, repVotes:rep, margin, rating: simRatingFor(margin) };
 }
 
+// 2024 Presidential results (SIM_2024) with the uniform statewide swing
+// slider applied: the county's REAL total votes stay fixed (turnout
+// doesn't change), but the D/R split shifts by sim2024Swing percentage
+// points from the actual 2024 margin. sim2024Swing ranges -15 (R+15) to
+// +15 (D+15); 0 reproduces the actual 2024 result exactly.
+function sim2024StatsWithSwing(name){
+  const row = SIM_2024[name];
+  const dem = row ? row[0] : 0, rep = row ? row[1] : 0;
+  const total = dem + rep;
+  const actualMargin = total ? (dem-rep)/total : 0;
+  // Clamp to [-1, 1] so an extreme swing on an already-lopsided county
+  // can't imply more than 100% of the vote for one side.
+  const shiftedMargin = Math.max(-1, Math.min(1, actualMargin + (sim2024Swing/100)));
+  const demVotes = Math.round(total * (1 + shiftedMargin) / 2);
+  const repVotes = total - demVotes;
+  const demPct = total ? (demVotes/total)*100 : 50;
+  return { total, demPct, repPct: 100-demPct, demVotes, repVotes, margin: shiftedMargin, rating: simRatingFor(shiftedMargin) };
+}
+
 // The currently-loaded LIVE/preliminary two-party result for this county
 // (from the Live Results tab's COUNTIES array), if any votes have been
 // counted yet. Used to compare "what's coming in so far" against the
@@ -2727,6 +2789,7 @@ function simPreliminaryStats(name){
 function simCountyStats(name){
   if(simCheckpointMode === 'y2018') return simHistoricalStats(name, SIM_2018);
   if(simCheckpointMode === 'y2022') return simHistoricalStats(name, SIM_2022);
+  if(simCheckpointMode === 'y2024') return sim2024StatsWithSwing(name);
   const total = simCountyTotal(name);
   const demPct = simDemPct[name];
   const demVotes = Math.round(total * (demPct/100));
@@ -2924,6 +2987,12 @@ function renderSimEditor(){
   if(editable){
     document.getElementById('simEditorVoters').textContent =
       `${fmt(reg[0])} registered voters \u00b7 ${fmt(s.total)} voting at ${simTurnoutPct.toFixed(1)}% turnout`;
+  }else if(simCheckpointMode === 'y2024'){
+    const swingNote = sim2024Swing === 0
+      ? ''
+      : ` (uniform ${sim2024Swing > 0 ? 'D' : 'R'}+${Math.abs(sim2024Swing).toFixed(1)} shift applied)`;
+    document.getElementById('simEditorVoters').textContent =
+      `Actual 2024 Presidential race result \u00b7 ${fmt(s.total)} votes cast${swingNote}`;
   }else{
     const yearLabel = simCheckpointMode === 'y2018' ? '2018' : '2022';
     document.getElementById('simEditorVoters').textContent = `Actual ${yearLabel} Governor's race result \u00b7 ${fmt(s.total)} votes cast`;
@@ -2943,9 +3012,16 @@ function renderSim(){
   updateSimTurnoutLabel();
   document.getElementById('simTurnoutStrip').querySelectorAll('.adj-slider')[0].closest('div').style.opacity = simCheckpointMode === 'tie' ? '1' : '.4';
   document.getElementById('simTurnoutSlider').disabled = simCheckpointMode !== 'tie';
-  document.getElementById('simMapHeader').textContent = simCheckpointMode === 'tie'
-    ? 'Click a county to set its margin'
-    : `Actual ${simCheckpointMode === 'y2018' ? '2018' : '2022'} Governor's race results by county`;
+  document.getElementById('sim2024SwingWrap').style.display = simCheckpointMode === 'y2024' ? 'block' : 'none';
+  let mapHeaderText = 'Click a county to set its margin';
+  if(simCheckpointMode === 'y2018') mapHeaderText = "Actual 2018 Governor's race results by county";
+  else if(simCheckpointMode === 'y2022') mapHeaderText = "Actual 2022 Governor's race results by county";
+  else if(simCheckpointMode === 'y2024'){
+    mapHeaderText = sim2024Swing === 0
+      ? 'Actual 2024 Presidential race results by county'
+      : `2024 Presidential results, uniform ${sim2024Swing > 0 ? 'D' : 'R'}+${Math.abs(sim2024Swing).toFixed(1)} shift`;
+  }
+  document.getElementById('simMapHeader').textContent = mapHeaderText;
   document.getElementById('simRatingBrush').style.display = simCheckpointMode === 'tie' ? 'flex' : 'none';
   if(simCheckpointMode !== 'tie'){
     selectedRatingBrush = null;
@@ -2975,6 +3051,14 @@ document.getElementById('simTurnoutSlider').addEventListener('input', e => {
   simTurnoutPct = parseFloat(e.target.value);
   renderSim();
 });
+document.getElementById('sim2024SwingSlider').addEventListener('input', e => {
+  sim2024Swing = parseFloat(e.target.value);
+  const valEl = document.getElementById('sim2024SwingValue');
+  valEl.textContent = sim2024Swing === 0
+    ? 'Even (actual results)'
+    : `${sim2024Swing > 0 ? 'D' : 'R'}+${Math.abs(sim2024Swing).toFixed(1)} uniform shift`;
+  renderSim();
+});
 document.getElementById('simDemSlider').addEventListener('input', e => {
   if(!selectedSimCounty || simCheckpointMode !== 'tie') return;
   simDemPct[selectedSimCounty] = parseFloat(e.target.value);
@@ -2987,6 +3071,11 @@ document.getElementById('simCheckpointMode').addEventListener('change', e => {
   simCheckpointMode = e.target.value;
   if(selectedSimCounty && simCheckpointMode === 'tie'){
     document.getElementById('simDemSlider').value = simDemPct[selectedSimCounty];
+  }
+  if(simCheckpointMode !== 'y2024'){
+    sim2024Swing = 0;
+    document.getElementById('sim2024SwingSlider').value = 0;
+    document.getElementById('sim2024SwingValue').textContent = 'Even (actual results)';
   }
   renderSim();
 });
@@ -3003,6 +3092,9 @@ document.getElementById('simResetAllBtn').addEventListener('click', () => {
   document.querySelectorAll('#simRatingBrush button').forEach(b=>b.classList.remove('active'));
   simCheckpointMode = 'tie';
   document.getElementById('simCheckpointMode').value = 'tie';
+  sim2024Swing = 0;
+  document.getElementById('sim2024SwingSlider').value = 0;
+  document.getElementById('sim2024SwingValue').textContent = 'Even (actual results)';
   document.getElementById('simEditor').style.display = 'none';
   document.getElementById('simPlaceholder').style.display = 'block';
   renderSim();
@@ -3027,9 +3119,15 @@ function simStatewideSummary(){
   const totalRegistered = SIM_COUNTY_NAMES.reduce((s,name)=>s+SIM_REG[name][0],0);
   const turnoutPct = totalRegistered ? (sw.total/totalRegistered*100) : 0;
   const leader = sw.dem >= sw.rep ? 'DEM' : 'REP';
-  const modeLabel = simCheckpointMode === 'tie'
-    ? 'Hypothetical scenario'
-    : (simCheckpointMode === 'y2018' ? "2018 Governor's race (actual)" : "2022 Governor's race (actual)");
+  let modeLabel;
+  if(simCheckpointMode === 'tie') modeLabel = 'Hypothetical scenario';
+  else if(simCheckpointMode === 'y2018') modeLabel = "2018 Governor's race (actual)";
+  else if(simCheckpointMode === 'y2022') modeLabel = "2022 Governor's race (actual)";
+  else if(simCheckpointMode === 'y2024'){
+    modeLabel = sim2024Swing === 0
+      ? '2024 Presidential race (actual)'
+      : `2024 Presidential race (uniform ${sim2024Swing > 0 ? 'D' : 'R'}+${Math.abs(sim2024Swing).toFixed(1)} shift)`;
+  }
   return {
     modeLabel,
     dem: sw.dem, rep: sw.rep, total: sw.total,

@@ -274,6 +274,26 @@
     color:var(--muted-2); margin-top:6px; letter-spacing:.03em; text-transform:uppercase;
   }
   .table-wrap{ max-height:596px; overflow-y:auto; overflow-x:auto; border-radius:8px; }
+
+  .tweet-carousel{ margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
+  .tweet-carousel-header{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+  .tweet-card-viewport{
+    position:relative; min-height:190px; background:var(--panel-2); border:1px solid var(--border);
+    border-radius:8px; padding:14px 16px; overflow:hidden;
+  }
+  .tweet-card{
+    display:none; white-space:pre-wrap; word-break:break-word; font-family:var(--mono);
+    font-size:11.5px; line-height:1.6; color:var(--text);
+  }
+  .tweet-card.active{ display:block; animation:tweetSwipeIn .35s ease; }
+  @keyframes tweetSwipeIn{ from{ opacity:0; transform:translateX(16px); } to{ opacity:1; transform:translateX(0); } }
+  .tweet-card-dots{ display:flex; justify-content:center; gap:6px; margin-top:10px; }
+  .tweet-card-dots span{
+    width:6px; height:6px; border-radius:50%; background:var(--border); cursor:pointer;
+    transition:background .2s;
+  }
+  .tweet-card-dots span.active{ background:var(--gold); }
+
   table{ width:100%; min-width:600px; table-layout:fixed; border-collapse:collapse; font-size:11px; }
   #voteTable th:nth-child(1), #voteTable td:nth-child(1){ width:14%; }
   #voteTable th:nth-child(2), #voteTable td:nth-child(2){ width:11%; }
@@ -385,6 +405,10 @@
     .panel h2{ font-size:13.5px; margin-bottom:8px; }
     .legend{ gap:5px; margin-top:10px; }
     .legend .swatch{ font-size:9px; padding:3px 7px; }
+
+    .tweet-carousel{ margin-top:12px; padding-top:12px; }
+    .tweet-card-viewport{ min-height:220px; padding:12px 14px; }
+    .tweet-card{ font-size:10.5px; }
 
     .npa-slider-wrap{ padding:12px 14px; margin-bottom:12px; }
     .npa-slider-label{ font-size:10px; }
@@ -554,6 +578,15 @@
           </thead>
           <tbody id="tableBody"></tbody>
         </table>
+      </div>
+
+      <div class="tweet-carousel">
+        <div class="tweet-carousel-header">
+          <h2 style="margin-bottom:0;">Latest Update Summary</h2>
+          <button id="tweetCopyBtn" class="sim-btn" title="Copy the full summary as one paste-ready block">Copy</button>
+        </div>
+        <div class="tweet-card-viewport" id="tweetCardViewport"></div>
+        <div class="tweet-card-dots" id="tweetCardDots"></div>
       </div>
     </div>
   </div>
@@ -1738,17 +1771,197 @@ function renderUpdatesTable(){
   `).join('') : '<div class="stat-card"><div class="v">—</div><div class="k">There were no county updates this hour</div></div>';
 }
 
+// ==================== Tweet-style update summary carousel ====================
+// Always builds from the LIVE feed (COUNTIES), regardless of which map
+// tab is currently selected -- this is specifically a "what just
+// happened" summary, not tied to whichever view someone's looking at.
+
+// A percentage formatted to 2 decimals, except a value that rounds to a
+// clean whole number (e.g. "20.00%") collapses to just "20%".
+function formatPctTweet(fraction){
+  const raw = (fraction*100).toFixed(2);
+  if(raw.endsWith('.00')) return Math.round(fraction*100) + '%';
+  return raw + '%';
+}
+
+// Same "old share vs new share" math the Python script's own
+// statewide_margin_change uses, just derived client-side from numbers
+// already on hand: this run's DEM/REP totals minus this run's DEM/REP
+// deltas gives the previous run's totals, without needing to separately
+// store any prior-run state.
+function computeStatewideMarginChangeText(list){
+  const stateDem = list.reduce((s,c)=>s+c.dem,0);
+  const stateRep = list.reduce((s,c)=>s+c.rep,0);
+  const demNewTotal = list.reduce((s,c)=>s+(c.demNew||0),0);
+  const repNewTotal = list.reduce((s,c)=>s+(c.repNew||0),0);
+  const oldDem = stateDem - demNewTotal;
+  const oldRep = stateRep - repNewTotal;
+  const oldTotal = oldDem + oldRep;
+  const newTotal = stateDem + stateRep;
+  if(oldTotal <= 0 || newTotal <= 0) return 'First update';
+  const oldShare = oldDem / oldTotal;
+  const newShare = stateDem / newTotal;
+  const change = newShare - oldShare;
+  if(Math.abs(change) < 0.0001) return 'No change';
+  return (change > 0 ? '+' : '-') + formatPctTweet(Math.abs(change)) + ' toward ' + (change > 0 ? 'Democrats' : 'Republicans');
+}
+
+// Builds the 4 copy-paste-ready text blocks (each becomes one carousel
+// card, and together make up the full "Copy" output).
+function buildTweetSections(){
+  const list = COUNTIES;
+  const sign = n => (n>=0?'+':'') + fmt(n);
+
+  const demNewTotal = list.reduce((s,c)=>s+(c.demNew||0),0);
+  const repNewTotal = list.reduce((s,c)=>s+(c.repNew||0),0);
+  const otherNewTotal = list.reduce((s,c)=>s+(c.otherNew||0),0);
+  const totalNewTotal = demNewTotal + repNewTotal + otherNewTotal;
+  const countiesUpdatedCount = list.filter(c=>c.totalNew).length;
+
+  const lastUpdatedRaw = list.map(c=>c.lastUpdated).filter(Boolean).sort().pop() || '';
+  const asOf = (lastUpdatedRaw ? formatAsOf(lastUpdatedRaw) : formatAsOfFromDate(new Date())).replace(/^As of /i, '');
+
+  const section1 =
+`New VBM ballots have been counted in ${countiesUpdatedCount}/67 counties as of ${asOf}.
+
+Latest Drop
+ DEM: ${sign(demNewTotal)}
+ REP: ${sign(repNewTotal)}
+ OTHER: ${sign(otherNewTotal)}
+ TOTAL: ${sign(totalNewTotal)}`;
+
+  const changedCounties = list.filter(c=>c.ratingChanged);
+  const marginChangesText = changedCounties.length
+    ? changedCounties.map(c => `${c.county}: ${c.ratingMove}`).join('\n')
+    : 'No county rating changes this update.';
+  const statewideMarginChangeText = computeStatewideMarginChangeText(list);
+
+  const section2 =
+`Margin Changes by County:
+${marginChangesText}
+
+Statewide Margin Change: ${statewideMarginChangeText}`;
+
+  const totalD = list.reduce((s,c)=>s+c.dem,0);
+  const totalR = list.reduce((s,c)=>s+c.rep,0);
+  const totalOther = list.reduce((s,c)=>s+c.ind+c.npa+c.other,0);
+  const totalVotes = totalD + totalR + totalOther;
+  const dPct = totalVotes ? totalD/totalVotes : 0;
+  const rPct = totalVotes ? totalR/totalVotes : 0;
+  const oPct = totalVotes ? totalOther/totalVotes : 0;
+  const leaderFull = totalD >= totalR ? 'Democrats' : 'Republicans';
+  const voteLead = Math.abs(totalD - totalR);
+  const marginFraction = Math.abs(dPct - rPct);
+
+  const section3 =
+`Statewide Total Votes
+ DEM: ${fmt(totalD)} (${formatPctTweet(dPct)})
+ REP: ${fmt(totalR)} (${formatPctTweet(rPct)})
+ OTHER: ${fmt(totalOther)} (${formatPctTweet(oPct)})
+
+ Total Votes: ${fmt(totalVotes)}
+ ${leaderFull} lead by ${fmt(voteLead)} votes statewide, or ${formatPctTweet(marginFraction)}.`;
+
+  const countiesReporting = list.filter(c=>c.total>0).length;
+  const topDrops = list.filter(c=>c.totalNew).slice().sort((a,b)=>b.totalNew-a.totalNew).slice(0,3);
+  const topDropsText = topDrops.length
+    ? topDrops.map(c=>c.county).join('\n')
+    : 'No counties updated this drop.';
+
+  const section4 =
+`${countiesReporting} of 67 have votes.
+
+Top 3 largest vote drops this update:
+${topDropsText}`;
+
+  return [section1, section2, section3, section4];
+}
+
+function escapeHtmlForCard(str){
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+let tweetCards = [];
+let tweetCardIndex = 0;
+let tweetCarouselTimer = null;
+
+function showTweetCard(index){
+  if(!tweetCards.length) return;
+  tweetCardIndex = ((index % tweetCards.length) + tweetCards.length) % tweetCards.length;
+  document.querySelectorAll('.tweet-card').forEach(el =>
+    el.classList.toggle('active', parseInt(el.dataset.card, 10) === tweetCardIndex)
+  );
+  document.querySelectorAll('#tweetCardDots span').forEach(el =>
+    el.classList.toggle('active', parseInt(el.dataset.dot, 10) === tweetCardIndex)
+  );
+}
+
+function restartTweetCarouselTimer(){
+  if(tweetCarouselTimer) clearInterval(tweetCarouselTimer);
+  tweetCarouselTimer = setInterval(() => showTweetCard(tweetCardIndex + 1), 6000);
+}
+
+function renderTweetCarousel(){
+  tweetCards = buildTweetSections();
+  const viewport = document.getElementById('tweetCardViewport');
+  const dotsEl = document.getElementById('tweetCardDots');
+  if(!viewport || !dotsEl) return;
+
+  viewport.innerHTML = tweetCards.map((text, i) =>
+    `<div class="tweet-card${i===0?' active':''}" data-card="${i}">${escapeHtmlForCard(text)}</div>`
+  ).join('');
+  dotsEl.innerHTML = tweetCards.map((_, i) =>
+    `<span class="${i===0?'active':''}" data-dot="${i}" title="Card ${i+1}"></span>`
+  ).join('');
+  dotsEl.querySelectorAll('span').forEach(dot => {
+    dot.addEventListener('click', () => {
+      showTweetCard(parseInt(dot.dataset.dot, 10));
+      restartTweetCarouselTimer();
+    });
+  });
+
+  tweetCardIndex = 0;
+  restartTweetCarouselTimer();
+}
+
 function render(){
   renderStats();
   renderMap();
   renderTable();
   renderUpdatesTable();
+  renderTweetCarousel();
   const refreshedNote = lastLoadedAt ? ` \u00b7 data refreshed ${lastLoadedAt.toLocaleTimeString()}` : ' \u00b7 live feed not yet reporting (0 votes)';
   document.getElementById('footerNote').textContent =
     `${activeCountiesFor(currentMetric).length} counties parsed \u00b7 Florida Votes 2026 · Created by Jayson Frascatore${refreshedNote}`;
 }
 
 document.getElementById('refreshBtn').addEventListener('click', () => loadLatestCSV(true));
+
+document.getElementById('tweetCopyBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('tweetCopyBtn');
+  if(!tweetCards.length) return;
+  const fullText = [
+    tweetCards[0],
+    '',
+    '____',
+    tweetCards[1],
+    '____',
+    '',
+    tweetCards[2],
+    '',
+    '____',
+    '',
+    tweetCards[3]
+  ].join('\n');
+  const originalText = btn.textContent;
+  try{
+    await navigator.clipboard.writeText(fullText);
+    btn.textContent = 'Copied!';
+  }catch(e){
+    btn.textContent = 'Copy failed';
+  }
+  setTimeout(() => { btn.textContent = originalText; }, 1500);
+});
 
 // Seed the live dataset at 0 votes for every county, seed the frozen
 // D vs R snapshot with a zero placeholder too (in case its fetch hasn't

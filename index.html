@@ -132,6 +132,7 @@
   .stat-cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-top:14px; }
   .stat-card{ background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:10px 14px; }
   .stat-card .v{ font-family:var(--mono); font-size:19px; font-weight:600; }
+  #statTotal{ color:var(--total-green); }
   .stat-card .k{ font-size:11px; color:var(--muted); margin-top:2px; }
   .stat-card .sub{ font-family:var(--mono); font-size:10.5px; color:var(--gold); margin-top:5px; }
 
@@ -144,11 +145,16 @@
   }
   .mode-tab{
     font-family:var(--mono); font-size:12.5px; letter-spacing:.03em; color:var(--muted);
-    background:none; border:none; padding:10px 4px 12px; cursor:pointer;
+    background:none; border:none; padding:10px 14px 12px; cursor:pointer;
     border-bottom:2px solid transparent; margin-bottom:-1px;
+    border-radius:8px 8px 0 0; transition:background .2s, color .2s, border-color .2s;
   }
   .mode-tab:hover{ color:var(--text); }
   .mode-tab.active{ color:var(--gold); border-bottom-color:var(--gold); }
+  #modeLiveBtn{ background:rgba(216,180,102,0.14); color:#d8b466; }
+  #modeLiveBtn.active{ background:#d8b466; color:#0a0e17; border-bottom-color:#d8b466; font-weight:700; }
+  #modeSimBtn{ background:rgba(199,125,255,0.14); color:#c77dff; }
+  #modeSimBtn.active{ background:#c77dff; color:#0a0e17; border-bottom-color:#c77dff; font-weight:700; }
   #simDashboard{ display:none; }
   #simDashboard.active{ display:block; }
   .sim-editor{
@@ -278,12 +284,13 @@
   .tweet-carousel{ margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
   .tweet-carousel-header{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
   .tweet-card-viewport{
-    position:relative; min-height:190px; background:var(--panel-2); border:1px solid var(--border);
-    border-radius:8px; padding:14px 16px; overflow:hidden;
+    position:relative; min-height:230px; background:#000000; border:1px solid #2a2a2a;
+    border-radius:12px; padding:22px 24px; overflow:hidden;
+    box-shadow:0 4px 18px rgba(0,0,0,0.45);
   }
   .tweet-card{
     display:none; white-space:pre-wrap; word-break:break-word; font-family:var(--mono);
-    font-size:11.5px; line-height:1.6; color:var(--text);
+    font-size:15px; line-height:1.75; color:#ffffff; font-weight:500;
   }
   .tweet-card.active{ display:block; animation:tweetSwipeIn .35s ease; }
   @keyframes tweetSwipeIn{ from{ opacity:0; transform:translateX(16px); } to{ opacity:1; transform:translateX(0); } }
@@ -407,8 +414,8 @@
     .legend .swatch{ font-size:9px; padding:3px 7px; }
 
     .tweet-carousel{ margin-top:12px; padding-top:12px; }
-    .tweet-card-viewport{ min-height:220px; padding:12px 14px; }
-    .tweet-card{ font-size:10.5px; }
+    .tweet-card-viewport{ min-height:250px; padding:16px 16px; }
+    .tweet-card{ font-size:12.5px; line-height:1.65; }
 
     .npa-slider-wrap{ padding:12px 14px; margin-bottom:12px; }
     .npa-slider-label{ font-size:10px; }
@@ -1389,7 +1396,9 @@ function renderStats(){
   const leader = totalD >= totalR ? 'D' : 'R';
 
   const leaderEl = document.getElementById('stateLeader');
-  leaderEl.textContent = (leader === 'D' ? 'DEM' : 'REP') + ' +' + fmt(Math.abs(totalD-totalR));
+  const barDenomForMargin = totalD + totalR + totalNpaOther;
+  const marginFraction = barDenomForMargin ? Math.abs(totalD-totalR)/barDenomForMargin : 0;
+  leaderEl.textContent = (leader === 'D' ? 'DEM' : 'REP') + ' +' + fmt(Math.abs(totalD-totalR)) + ' (' + formatPctTweet(marginFraction) + ')';
   leaderEl.className = 'leader ' + leader;
 
   // The statewide bar only ever shows DEM, REP, and NPA/Other — shares
@@ -1826,64 +1835,94 @@ function buildTweetSections(){
   const otherNewTotal = list.reduce((s,c)=>s+(c.otherNew||0),0);
   const totalNewTotal = demNewTotal + repNewTotal + otherNewTotal;
   const countiesUpdatedCount = list.filter(c=>c.totalNew).length;
+  const countiesReporting = list.filter(c=>c.total>0).length;
 
   const lastUpdatedRaw = list.map(c=>c.lastUpdated).filter(Boolean).sort().pop() || '';
   const asOf = (lastUpdatedRaw ? formatAsOf(lastUpdatedRaw) : formatAsOfFromDate(new Date())).replace(/^As of /i, '');
 
+  const topDrops = list.filter(c=>c.totalNew).slice().sort((a,b)=>b.totalNew-a.totalNew).slice(0,3);
+  const topCountyName = topDrops.length ? topDrops[0].county : 'No county';
+
+  // Card 1: matches the "🗳️ Florida EV & VBM Update" opener + drop
+  // numbers from the actual tweets.
   const section1 =
-`New VBM ballots have been counted in ${countiesUpdatedCount}/67 counties as of ${asOf}.
+`\u{1F5F3}\u{FE0F} Florida EV & VBM Update
 
-Latest Drop
- DEM: ${sign(demNewTotal)}
- REP: ${sign(repNewTotal)}
- OTHER: ${sign(otherNewTotal)}
- TOTAL: ${sign(totalNewTotal)}`;
+New votes have been cast in ${countiesUpdatedCount}/67 counties as of ${asOf}, with the largest update coming from ${topCountyName} County.
 
-  const changedCounties = list.filter(c=>c.ratingChanged);
-  const marginChangesText = changedCounties.length
-    ? changedCounties.map(c => `${c.county}: ${c.ratingMove}`).join('\n')
-    : 'No county rating changes this update.';
-  const statewideMarginChangeText = computeStatewideMarginChangeText(list);
+\u{1F535} DEM: ${sign(demNewTotal)}
+\u{1F534} REP: ${sign(repNewTotal)}
+\u{1F7E3} OTHER: ${sign(otherNewTotal)}
+\u{1F7E2} TOTAL: ${sign(totalNewTotal)}
 
-  const section2 =
-`Margin Changes by County:
-${marginChangesText}
-
-Statewide Margin Change: ${statewideMarginChangeText}`;
+${countiesReporting} of 67 counties have votes.`;
 
   const totalD = list.reduce((s,c)=>s+c.dem,0);
   const totalR = list.reduce((s,c)=>s+c.rep,0);
   const totalOther = list.reduce((s,c)=>s+c.ind+c.npa+c.other,0);
   const totalVotes = totalD + totalR + totalOther;
+  const leaderFull = totalD >= totalR ? 'Democrats' : 'Republicans';
+  const leaderEmoji = totalD >= totalR ? '\u{1F535}' : '\u{1F534}';
+  const voteLead = Math.abs(totalD - totalR);
+  const statewideMarginChangeText = computeStatewideMarginChangeText(list);
+
+  // Card 2: matches the actual tweet's statewide leader line + margin
+  // change line (same 🔴 label the real tweets always use for Margin
+  // Change, win or lose).
+  const section2 =
+`${leaderEmoji} ${leaderFull} lead by ${fmt(voteLead)} votes statewide.
+
+\u{1F534} Margin Change: ${statewideMarginChangeText}`;
+
+  // Card 3: Margin Changes by County -- kept here even though the real
+  // tweets skip it, since it's useful reference info for the page.
+  const changedCounties = list.filter(c=>c.ratingChanged);
+  const marginChangesText = changedCounties.length
+    ? changedCounties.map(c => `${c.county}: ${c.ratingMove}`).join('\n')
+    : 'No county rating changes this update.';
+
+  const section3 =
+`\u{1F4CA} Margin Changes by County
+
+${marginChangesText}`;
+
   const dPct = totalVotes ? totalD/totalVotes : 0;
   const rPct = totalVotes ? totalR/totalVotes : 0;
   const oPct = totalVotes ? totalOther/totalVotes : 0;
-  const leaderFull = totalD >= totalR ? 'Democrats' : 'Republicans';
-  const voteLead = Math.abs(totalD - totalR);
   const marginFraction = Math.abs(dPct - rPct);
 
-  const section3 =
-`Statewide Total Votes
- DEM: ${fmt(totalD)} (${formatPctTweet(dPct)})
- REP: ${fmt(totalR)} (${formatPctTweet(rPct)})
- OTHER: ${fmt(totalOther)} (${formatPctTweet(oPct)})
+  const section4 =
+`\u{1F5F3}\u{FE0F} Statewide Total Votes
 
- Total Votes: ${fmt(totalVotes)}
- ${leaderFull} lead by ${fmt(voteLead)} votes statewide, or ${formatPctTweet(marginFraction)}.`;
+\u{1F535} DEM: ${fmt(totalD)} (${formatPctTweet(dPct)})
+\u{1F534} REP: ${fmt(totalR)} (${formatPctTweet(rPct)})
+\u{1F7E3} OTHER: ${fmt(totalOther)} (${formatPctTweet(oPct)})
 
-  const countiesReporting = list.filter(c=>c.total>0).length;
-  const topDrops = list.filter(c=>c.totalNew).slice().sort((a,b)=>b.totalNew-a.totalNew).slice(0,3);
+\u{1F7E2} TOTAL: ${fmt(totalVotes)}
+
+${leaderEmoji} ${leaderFull} lead by ${fmt(voteLead)} votes statewide, or ${formatPctTweet(marginFraction)}.`;
+
+  // Card 5: Largest County Updates -- medal + per-county breakdown, same
+  // layout as the real tweets' "Largest County Updates" section.
+  const medals = ['\u{1F947}', '\u{1F948}', '\u{1F949}'];
   const topDropsText = topDrops.length
-    ? topDrops.map(c=>c.county).join('\n')
+    ? topDrops.map((c, i) => {
+        return `${medals[i]} ${c.county} County
+\u{1F535} DEM: ${sign(c.demNew)}
+\u{1F534} REP: ${sign(c.repNew)}
+\u{1F7E3} OTHER: ${sign(c.otherNew)}
+\u{1F7E2} TOTAL: ${sign(c.totalNew)}`;
+      }).join('\n\n')
     : 'No counties updated this drop.';
 
-  const section4 =
-`${countiesReporting} of 67 have votes.
+  const section5 =
+`\u{1F3C6} Largest County Updates
 
-Top 3 largest vote drops this update:
-${topDropsText}`;
+${topDropsText}
 
-  return [section1, section2, section3, section4];
+#Florida #EarlyVoting #VoteByMail`;
+
+  return [section1, section2, section3, section4, section5];
 }
 
 function escapeHtmlForCard(str){
@@ -1960,7 +1999,14 @@ document.getElementById('tweetCopyBtn').addEventListener('click', async () => {
     '',
     '____',
     '',
-    tweetCards[3]
+    tweetCards[3],
+    '',
+    '____',
+    '',
+    tweetCards[4],
+    '',
+    '\u2014\u2014\u2014',
+    'Compiled by Jayson Frascatore'
   ].join('\n');
   const originalText = btn.textContent;
   try{

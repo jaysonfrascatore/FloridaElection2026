@@ -799,15 +799,32 @@ const DROP_WINNER_CATS = [
   { key:'R won drop',   color:'#dd2d4a' },
   { key:'NPA/Other won drop', color:'#c77dff' }
 ];
+// Finds this hour's actual leader(s) among DEM/REP/NPA-Other new votes:
+// takes the highest of the three values first, THEN checks which of the
+// three actually reached it -- a tie only means two (or three) of them
+// are tied for the LEAD, not merely equal to each other while a third
+// value is clearly ahead. (Checking pairwise equality directly, without
+// first finding the max, was the earlier bug: DEM +4 / REP +1 / NPA +1
+// would wrongly read as an R-NPA tie just because 1 === 1, even though
+// DEM was the actual and only winner.)
+function dropLeaders(c){
+  const d = c.demNew, r = c.repNew, o = c.otherNew;
+  const max = Math.max(d, r, o);
+  return { d, r, o, dAtMax: d === max, rAtMax: r === max, oAtMax: o === max };
+}
 function dropWinnerCategoryFor(c){
   if(!c.totalNew) return 'No new votes';
-  const d = c.demNew, r = c.repNew, o = c.otherNew;
-  if(d === r && d === o) return '3-Way Tie Drop';
-  if(d === r) return 'D-R Tied Drop';
-  if(d === o) return 'D-NPA Tied Drop';
-  if(r === o) return 'R-NPA Tied Drop';
-  if(o > d && o > r) return 'NPA/Other won drop';
-  return d > r ? 'D won drop' : 'R won drop';
+  const { dAtMax, rAtMax, oAtMax } = dropLeaders(c);
+  const leadersCount = (dAtMax?1:0) + (rAtMax?1:0) + (oAtMax?1:0);
+  if(leadersCount === 3) return '3-Way Tie Drop';
+  if(leadersCount === 2){
+    if(dAtMax && rAtMax) return 'D-R Tied Drop';
+    if(dAtMax && oAtMax) return 'D-NPA Tied Drop';
+    return 'R-NPA Tied Drop';
+  }
+  if(dAtMax) return 'D won drop';
+  if(rAtMax) return 'R won drop';
+  return 'NPA/Other won drop';
 }
 function categoryFor(c){
   if(c.marginPct === 0) return 'Tie';
@@ -1497,14 +1514,17 @@ function tooltipText(list){
       if(!c.totalNew){
         return `<b>${c.county}</b><br>No additional votes at this time.`;
       }
-      const d = c.demNew, r = c.repNew, o = c.otherNew;
+      const { dAtMax, rAtMax, oAtMax } = dropLeaders(c);
+      const leadersCount = (dAtMax?1:0) + (rAtMax?1:0) + (oAtMax?1:0);
       let winner;
-      if(d === r && d === o) winner = 'Tied 3 ways (DEM / REP / NPA-Other)';
-      else if(d === r) winner = 'Tied (DEM / REP)';
-      else if(d === o) winner = 'Tied (DEM / NPA-Other)';
-      else if(o === r) winner = 'Tied (REP / NPA-Other)';
-      else if(o > d && o > r) winner = 'NPA/Other';
-      else winner = d > r ? 'Democrats' : 'Republicans';
+      if(leadersCount === 3) winner = 'Tied 3 ways (DEM / REP / NPA-Other)';
+      else if(leadersCount === 2){
+        if(dAtMax && rAtMax) winner = 'Tied (DEM / REP)';
+        else if(dAtMax && oAtMax) winner = 'Tied (DEM / NPA-Other)';
+        else winner = 'Tied (REP / NPA-Other)';
+      }else{
+        winner = dAtMax ? 'Democrats' : (rAtMax ? 'Republicans' : 'NPA/Other');
+      }
       return `<b>${c.county}</b><br>` +
         `<b>${winner} won this drop</b><br>` +
         `DEM +${fmt(c.demNew)} \u00b7 REP +${fmt(c.repNew)} \u00b7 NPA/Other +${fmt(c.otherNew)}<br>` +
@@ -1627,18 +1647,20 @@ function tieStripeFor(c){
   if(c.dem > 0 && combined === c.dem && combined >= c.rep) return 'url(#stripe-d-npa)';
   return null;
 }
-// Same idea, but for the Drop Winners map: any two of this hour's new
-// DEM/REP/NPA-Other votes tied with each other. A genuine three-way tie
-// is excluded here too (solid green handles that, via
-// dropWinnerCategoryFor's '3-Way Tie Drop' category).
+// Same idea, but for the Drop Winners map: exactly two of this hour's
+// new DEM/REP/NPA-Other votes tied for the LEAD (using dropLeaders, the
+// same max-based check dropWinnerCategoryFor uses -- not just any two
+// values happening to be equal). A genuine three-way tie is excluded
+// here too (solid green handles that, via dropWinnerCategoryFor's
+// '3-Way Tie Drop' category).
 function dropTieStripeFor(c){
   if(!c.totalNew) return null;
-  const d = c.demNew, r = c.repNew, o = c.otherNew;
-  if(d === r && d === o) return null; // 3-way tie -- solid green handles this
-  if(d === r) return 'url(#stripe-d-r)';
-  if(d === o) return 'url(#stripe-d-npa)';
-  if(r === o) return 'url(#stripe-r-npa)';
-  return null;
+  const { dAtMax, rAtMax, oAtMax } = dropLeaders(c);
+  const leadersCount = (dAtMax?1:0) + (rAtMax?1:0) + (oAtMax?1:0);
+  if(leadersCount !== 2) return null;
+  if(dAtMax && rAtMax) return 'url(#stripe-d-r)';
+  if(dAtMax && oAtMax) return 'url(#stripe-d-npa)';
+  return 'url(#stripe-r-npa)';
 }
 function applyTieStripes(svg, activeCounties){
   if(!svg) return;

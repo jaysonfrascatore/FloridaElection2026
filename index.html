@@ -1906,71 +1906,65 @@ function buildTweetSections(){
   const topDrops = list.filter(c=>c.totalNew).slice().sort((a,b)=>b.totalNew-a.totalNew).slice(0,3);
   const topCountyName = topDrops.length ? topDrops[0].county : 'No county';
 
-  // Card 1: matches the "🗳️ Florida EV & VBM Update" opener + drop
-  // numbers from the actual tweets.
-  const section1 =
-`\u{1F5F3}\u{FE0F} Florida EV & VBM Update
-
-New votes have been cast in ${countiesUpdatedCount}/67 counties as of ${asOf}, with the largest update coming from ${topCountyName} County.
-
-\u{1F535} DEM: ${sign(demNewTotal)}
-\u{1F534} REP: ${sign(repNewTotal)}
-\u{1F7E3} OTHER: ${sign(otherNewTotal)}
-\u{1F7E2} TOTAL: ${sign(totalNewTotal)}
-
-${countiesReporting} of 67 counties have votes.`;
-
   const totalD = list.reduce((s,c)=>s+c.dem,0);
   const totalR = list.reduce((s,c)=>s+c.rep,0);
   const totalOther = list.reduce((s,c)=>s+c.ind+c.npa+c.other,0);
   const totalVotes = totalD + totalR + totalOther;
   const leaderFull = totalD >= totalR ? 'Democrats' : 'Republicans';
-  const leaderEmoji = totalD >= totalR ? '\u{1F535}' : '\u{1F534}';
   const voteLead = Math.abs(totalD - totalR);
-  const statewideMarginChangeText = computeStatewideMarginChangeText(list);
-
-  // Card 2: matches the actual tweet's statewide leader line + margin
-  // change line (same 🔴 label the real tweets always use for Margin
-  // Change, win or lose).
-  const section2 =
-`${leaderEmoji} ${leaderFull} lead by ${fmt(voteLead)} votes statewide.
-
-\u{1F534} Margin Change: ${statewideMarginChangeText}`;
-
-  // Card 3: Margin Changes by County -- kept here even though the real
-  // tweets skip it, since it's useful reference info for the page.
-  const changedCounties = list.filter(c=>c.ratingChanged);
-  const marginChangesText = changedCounties.length
-    ? changedCounties.map(c => `${c.county}: ${c.ratingMove}`).join('\n')
-    : 'No county rating changes this update.';
-
-  const section3 =
-`\u{1F4CA} Margin Changes by County
-
-${marginChangesText}`;
-
   const dPct = totalVotes ? totalD/totalVotes : 0;
   const rPct = totalVotes ? totalR/totalVotes : 0;
   const oPct = totalVotes ? totalOther/totalVotes : 0;
-  const marginFraction = Math.abs(dPct - rPct);
 
-  const section4 =
-`\u{1F5F3}\u{FE0F} Statewide Total Votes
+  // Card 1: opening update line, this drop's DEM/REP/OTHER/TOTAL, the
+  // statewide running totals with percentages, the statewide grand
+  // total, the leader line, and the counties-with-votes line -- all one
+  // card, matching the exact wording and order of the reference example.
+  const section1 =
+`New votes have been counted in ${countiesUpdatedCount} of 67 counties as of ${asOf}, with the largest update coming from ${topCountyName} County.
 
+Latest Drop:
+\u{1F535} DEM: ${sign(demNewTotal)}
+\u{1F534} REP: ${sign(repNewTotal)}
+\u{1F7E3} OTHER: ${sign(otherNewTotal)}
+\u{1F7E2} TOTAL: ${sign(totalNewTotal)}
+
+Statewide Total Votes
 \u{1F535} DEM: ${fmt(totalD)} (${formatPctTweet(dPct)})
 \u{1F534} REP: ${fmt(totalR)} (${formatPctTweet(rPct)})
 \u{1F7E3} OTHER: ${fmt(totalOther)} (${formatPctTweet(oPct)})
 
-\u{1F7E2} TOTAL: ${fmt(totalVotes)}
+Statewide Total Votes: ${fmt(totalVotes)}
+${leaderFull} lead by ${fmt(voteLead)} votes statewide.
 
-${leaderEmoji} ${leaderFull} lead by ${fmt(voteLead)} votes statewide, or ${formatPctTweet(marginFraction)}.`;
+${countiesReporting} of 67 counties have votes.`;
 
-  // Card 5: Largest County Updates -- medal + per-county breakdown, same
-  // layout as the real tweets' "Largest County Updates" section.
+  // Card 2: short transition line into the per-county breakdown.
+  // County ratings and margin changes are intentionally left out for
+  // now (bringing those back is planned for around October 15th).
+  const section2 =
+`${countiesUpdatedCount} counties have been updated with ${fmt(totalNewTotal)} new votes counted. Here are the counties that updated and who won the latest vote drop by county.`;
+
+  // Card 3: Top 3 Largest Updates -- medal rank plus a color emoji
+  // showing who actually won each county's drop (using the same
+  // leader-finding logic as the Drop Winners map, so a tie shows both
+  // parties' colors and a true 3-way tie shows green, never a wrong
+  // single-party call).
   const medals = ['\u{1F947}', '\u{1F948}', '\u{1F949}'];
+  const winnerEmojiFor = c => {
+    const { dAtMax, rAtMax, oAtMax } = dropLeaders(c);
+    const leadersCount = (dAtMax?1:0) + (rAtMax?1:0) + (oAtMax?1:0);
+    if(leadersCount === 3) return '\u{1F7E2}';
+    if(leadersCount === 2){
+      if(dAtMax && rAtMax) return '\u{1F535}\u{1F534}';
+      if(dAtMax && oAtMax) return '\u{1F535}\u{1F7E3}';
+      return '\u{1F534}\u{1F7E3}';
+    }
+    return dAtMax ? '\u{1F535}' : (rAtMax ? '\u{1F534}' : '\u{1F7E3}');
+  };
   const topDropsText = topDrops.length
     ? topDrops.map((c, i) => {
-        return `${medals[i]} ${c.county} County
+        return `${medals[i]} ${winnerEmojiFor(c)} ${c.county} County
 \u{1F535} DEM: ${sign(c.demNew)}
 \u{1F534} REP: ${sign(c.repNew)}
 \u{1F7E3} OTHER: ${sign(c.otherNew)}
@@ -1978,14 +1972,14 @@ ${leaderEmoji} ${leaderFull} lead by ${fmt(voteLead)} votes statewide, or ${form
       }).join('\n\n')
     : 'No counties updated this drop.';
 
-  const section5 =
-`\u{1F3C6} Largest County Updates
+  const section3 =
+`Top 3 Largest Updates
 
 ${topDropsText}
 
-#Florida #EarlyVoting #VoteByMail`;
+#FlaPol #Midterms2026`;
 
-  return [section1, section2, section3, section4, section5];
+  return [section1, section2, section3];
 }
 
 function escapeHtmlForCard(str){
@@ -2054,22 +2048,14 @@ document.getElementById('tweetCopyBtn').addEventListener('click', async () => {
   const fullText = [
     tweetCards[0],
     '',
-    '____',
+    '___',
     tweetCards[1],
-    '____',
-    '',
+    '___',
     tweetCards[2],
     '',
-    '____',
-    '',
-    tweetCards[3],
-    '',
-    '____',
-    '',
-    tweetCards[4],
-    '',
     '\u2014\u2014\u2014',
-    'Compiled by Jayson Frascatore'
+    'Compiled by Jayson Frascatore',
+    'https://jaysonfrascatore.github.io/FloridaElection2026/'
   ].join('\n');
   const originalText = btn.textContent;
   try{

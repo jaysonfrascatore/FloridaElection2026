@@ -765,7 +765,7 @@ const RATING_CATS = [
   { key:'Safe R',   color:'#880d1e' },
   { key:'Likely R', color:'#dd2d4a' },
   { key:'Lean R',   color:'#f49cbb' },
-  { key:'Toss Up',  color:'#3a0ca3' },
+  { key:'Toss Up',  color:'#F5B942' },
   { key:'Tie',      color:'#e9c46a' },
   { key:'Lean D',   color:'#90e0ef' },
   { key:'Likely D', color:'#00b4d8' },
@@ -781,19 +781,33 @@ const UPDATED_CATS = [
 ];
 // Which party (or NPA/Other combined) won each county's most recent
 // hourly vote drop (not the county's overall standing — just the
-// incremental batch of votes added this run).
+// incremental batch of votes added this run). Two-way ties (any two of
+// DEM/REP/NPA-Other new votes exactly equal) are shown as stripes on the
+// map, not a solid color -- gold is deliberately avoided here since it's
+// now the Toss Up forecast color, and a solid tie color would be easy to
+// confuse with it. A genuine three-way tie is solid dark green instead.
+// These "color" values are only used for the legend swatch / table chip
+// (readable solid colors); the actual map cells for the three two-way
+// ties get a real diagonal stripe pattern via dropTieStripeFor() below.
 const DROP_WINNER_CATS = [
   { key:'No new votes', color:'#141a26' },
-  { key:'Tied drop',    color:'#e9c46a' },
+  { key:'D-R Tied Drop', color:'#8a6d99' },
+  { key:'D-NPA Tied Drop', color:'#8fa8dd' },
+  { key:'R-NPA Tied Drop', color:'#d98fa8' },
+  { key:'3-Way Tie Drop', color:'#145a32' },
   { key:'D won drop',   color:'#00b4d8' },
   { key:'R won drop',   color:'#dd2d4a' },
   { key:'NPA/Other won drop', color:'#c77dff' }
 ];
 function dropWinnerCategoryFor(c){
   if(!c.totalNew) return 'No new votes';
-  if(c.otherNew > c.demNew && c.otherNew > c.repNew) return 'NPA/Other won drop';
-  if(c.demNew === c.repNew) return 'Tied drop';
-  return c.demNew > c.repNew ? 'D won drop' : 'R won drop';
+  const d = c.demNew, r = c.repNew, o = c.otherNew;
+  if(d === r && d === o) return '3-Way Tie Drop';
+  if(d === r) return 'D-R Tied Drop';
+  if(d === o) return 'D-NPA Tied Drop';
+  if(r === o) return 'R-NPA Tied Drop';
+  if(o > d && o > r) return 'NPA/Other won drop';
+  return d > r ? 'D won drop' : 'R won drop';
 }
 function categoryFor(c){
   if(c.marginPct === 0) return 'Tie';
@@ -1483,10 +1497,14 @@ function tooltipText(list){
       if(!c.totalNew){
         return `<b>${c.county}</b><br>No additional votes at this time.`;
       }
+      const d = c.demNew, r = c.repNew, o = c.otherNew;
       let winner;
-      if(c.otherNew > c.demNew && c.otherNew > c.repNew) winner = 'NPA/Other';
-      else if(c.demNew === c.repNew) winner = 'Tied';
-      else winner = c.demNew > c.repNew ? 'Democrats' : 'Republicans';
+      if(d === r && d === o) winner = 'Tied 3 ways (DEM / REP / NPA-Other)';
+      else if(d === r) winner = 'Tied (DEM / REP)';
+      else if(d === o) winner = 'Tied (DEM / NPA-Other)';
+      else if(o === r) winner = 'Tied (REP / NPA-Other)';
+      else if(o > d && o > r) winner = 'NPA/Other';
+      else winner = d > r ? 'Democrats' : 'Republicans';
       return `<b>${c.county}</b><br>` +
         `<b>${winner} won this drop</b><br>` +
         `DEM +${fmt(c.demNew)} &middot; REP +${fmt(c.repNew)} &middot; Other +${fmt(c.otherNew)}<br>` +
@@ -1587,6 +1605,10 @@ function ensureStripeDefs(svg){
     '<pattern id="stripe-d-npa" width="12" height="12" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">' +
       '<rect width="12" height="12" fill="#5b9bd9"></rect>' +
       '<rect width="6" height="12" fill="#c77dff"></rect>' +
+    '</pattern>' +
+    '<pattern id="stripe-d-r" width="12" height="12" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">' +
+      '<rect width="12" height="12" fill="#5b9bd9"></rect>' +
+      '<rect width="6" height="12" fill="#d4675a"></rect>' +
     '</pattern>';
   svg.insertBefore(defs, svg.firstChild);
 }
@@ -1596,12 +1618,26 @@ function ensureStripeDefs(svg){
 // logic above, so the two systems agree -- a county that outright wins
 // on NPA/Other (npaOtherLeadCategoryFor) never also matches here, and a
 // genuine 3-way tie (already solid dark green) is explicitly excluded
-// so the stripe can't paint over it.
+// so the stripe can't paint over it. Used by the General Election
+// (demrepnpa) map.
 function tieStripeFor(c){
   const combined = npaOtherTotal(c);
   if(c.dem === c.rep && c.dem === combined) return null; // 3-way tie -- solid green handles this
   if(c.rep > 0 && combined === c.rep && combined >= c.dem) return 'url(#stripe-r-npa)';
   if(c.dem > 0 && combined === c.dem && combined >= c.rep) return 'url(#stripe-d-npa)';
+  return null;
+}
+// Same idea, but for the Drop Winners map: any two of this hour's new
+// DEM/REP/NPA-Other votes tied with each other. A genuine three-way tie
+// is excluded here too (solid green handles that, via
+// dropWinnerCategoryFor's '3-Way Tie Drop' category).
+function dropTieStripeFor(c){
+  if(!c.totalNew) return null;
+  const d = c.demNew, r = c.repNew, o = c.otherNew;
+  if(d === r && d === o) return null; // 3-way tie -- solid green handles this
+  if(d === r) return 'url(#stripe-d-r)';
+  if(d === o) return 'url(#stripe-d-npa)';
+  if(r === o) return 'url(#stripe-r-npa)';
   return null;
 }
 function applyTieStripes(svg, activeCounties){
@@ -1618,7 +1654,12 @@ function applyTieStripes(svg, activeCounties){
     const fips = bound && (bound.id || bound.location || (bound.properties && bound.properties.id));
     const c = (fips && byFips[fips]) || activeCounties[i];
     if(!c) return;
-    const stripe = (currentMetric === 'demrepnpa' && !isCountyPending(c)) ? tieStripeFor(c) : null;
+    let stripe = null;
+    if(currentMetric === 'demrepnpa' && !isCountyPending(c)){
+      stripe = tieStripeFor(c);
+    }else if(currentMetric === 'dropwinner'){
+      stripe = dropTieStripeFor(c);
+    }
     if(stripe){
       path.setAttribute('fill', stripe);
       path.style.fill = stripe;
@@ -1701,7 +1742,7 @@ async function renderMap(){
     margin:{t:10,b:10,l:10,r:10}, font:{family:'Inter, sans-serif'}
   };
   Plotly.newPlot('map', [trace], layout, {displayModeBar:false, responsive:true}).then(() => {
-    if(currentMetric === 'demrepnpa' && !shiftSliderActive){
+    if((currentMetric === 'demrepnpa' && !shiftSliderActive) || currentMetric === 'dropwinner'){
       applyTieStripes(document.querySelector('#map svg'), activeCounties);
     }
   });
@@ -2370,7 +2411,7 @@ async function renderMetricMapCanvas(metric, activeCounties, cssWidth, cssHeight
     await Plotly.newPlot(tempDiv, [trace], layout, { displayModeBar:false, responsive:false });
 
     const svg = tempDiv.querySelector('svg');
-    if(metric === 'demrepnpa' && !shiftSliderActive){
+    if((metric === 'demrepnpa' && !shiftSliderActive) || metric === 'dropwinner'){
       applyTieStripes(svg, activeCounties);
     }
 

@@ -1507,7 +1507,7 @@ function tooltipText(list){
       else winner = d > r ? 'Democrats' : 'Republicans';
       return `<b>${c.county}</b><br>` +
         `<b>${winner} won this drop</b><br>` +
-        `DEM +${fmt(c.demNew)} &middot; REP +${fmt(c.repNew)} &middot; Other +${fmt(c.otherNew)}<br>` +
+        `DEM +${fmt(c.demNew)} \u00b7 REP +${fmt(c.repNew)} \u00b7 NPA/Other +${fmt(c.otherNew)}<br>` +
         `Total +${fmt(c.totalNew)}`;
     });
   }

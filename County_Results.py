@@ -164,7 +164,7 @@ COUNTY_SPIKE_OVERRIDES = {
 # ============================================================
 
 COUNTY_DATA_GATES = {
-    "BRO": False,   # Broward -- CLOSED as of 2026-09-17. The county's
+    "BRO": True,   # Broward -- CLOSED as of 2026-09-17. The county's
                      # own site posted inaccurate numbers this morning,
                      # and floridados.gov's public VBM/EV stats
                      # (countyfilesvbm-ev.floridados.gov) show Broward

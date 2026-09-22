@@ -1917,6 +1917,14 @@ df["Rating Change"] = "No"
 
 if previous is not None:
 
+    # LEFT join (not the default inner join): a county present in THIS
+    # run but absent from "previous" -- e.g. the first run after
+    # reopening it via COUNTY_DATA_GATES -- must still appear here, or
+    # its "New" vote columns silently never get computed at all (they
+    # stay at their 0 default from the init block above) even though
+    # its actual DEM/REP/NPA/OTHER totals are correct and already
+    # showing on the site. An inner join was quietly dropping that
+    # county from this entire comparison step.
     comparison = df.merge(
 
         previous,
@@ -1926,9 +1934,34 @@ if previous is not None:
         suffixes=(
             "_NEW",
             "_OLD"
-        )
+        ),
+
+        how="left"
 
     )
+
+
+    # After a left join, a county with no previous match has NaN in
+    # every _OLD column. Treat that as "starting from scratch": the
+    # vote _OLD columns become 0, so this run's FULL current total is
+    # correctly credited as new votes (matching what actually happened
+    # -- the county went from not being tracked to reporting real
+    # numbers). _had_previous records which rows this applies to, so
+    # rating-change detection below can be skipped for them entirely --
+    # there's no earlier rating to meaningfully compare against.
+    comparison["_had_previous"] = comparison["DEM_OLD"].notna()
+
+    for party in [
+
+        "DEM",
+        "REP",
+        "IND",
+        "NPA",
+        "OTHER"
+
+    ]:
+
+        comparison[f"{party}_OLD"] = comparison[f"{party}_OLD"].fillna(0)
 
 
     for _, row in comparison.iterrows():
@@ -1939,70 +1972,14 @@ if previous is not None:
 
 
         # ----------------------------------------------------
-        # Margin change
+        # Margin change -- only meaningful with a real previous
+        # baseline. A reopening county (no previous row) gets a plain
+        # note instead of comparing against a nonexistent margin.
         # ----------------------------------------------------
 
-        margin_diff = (
+        if row["_had_previous"]:
 
-            row["Signed Margin_NEW"]
-            -
-            row["Signed Margin_OLD"]
-
-        )
-
-
-        if margin_diff > 0:
-
-            margin_diff_text = (
-
-                f"+{margin_diff:.2%} "
-                "toward Democrats"
-
-            )
-
-
-        elif margin_diff < 0:
-
-            margin_diff_text = (
-
-                f"{margin_diff:.2%} "
-                "toward Republicans"
-
-            )
-
-
-        else:
-
-            margin_diff_text = (
-                "No change"
-            )
-
-
-        df.loc[
-            df["Code"] == row["Code"],
-            "Margin Diff"
-        ] = margin_diff_text
-
-
-        # ----------------------------------------------------
-        # Rating change
-        # ----------------------------------------------------
-
-        if (
-
-            row["Rating_NEW"]
-            !=
-            row["Rating_OLD"]
-
-            or
-
-            row["Leader_NEW"]
-            !=
-            row["Leader_OLD"]
-
-        ):
-
-            margin_change = (
+            margin_diff = (
 
                 row["Signed Margin_NEW"]
                 -
@@ -2011,56 +1988,124 @@ if previous is not None:
             )
 
 
-            rating_changes.append({
+            if margin_diff > 0:
 
-                "County":
-                    row["County"],
+                margin_diff_text = (
 
-                "Code":
-                    row["Code"],
+                    f"+{margin_diff:.2%} "
+                    "toward Democrats"
 
-                "Old":
-                    (
-                        f"{row['Rating_OLD']} "
-                        f"{row['Leader_OLD']}"
-                    ),
-
-                "New":
-                    (
-                        f"{row['Rating_NEW']} "
-                        f"{row['Leader_NEW']}"
-                    ),
-
-                "Margin Change":
-                    margin_change
-
-            })
+                )
 
 
-            df.loc[
-                df["Code"] == row["Code"],
-                "Rating Change"
-            ] = "Yes"
+            elif margin_diff < 0:
+
+                margin_diff_text = (
+
+                    f"{margin_diff:.2%} "
+                    "toward Republicans"
+
+                )
+
+
+            else:
+
+                margin_diff_text = (
+                    "No change"
+                )
 
 
             df.loc[
                 df["Code"] == row["Code"],
-                "Rating Move"
-            ] = (
+                "Margin Diff"
+            ] = margin_diff_text
 
-                f"{row['Rating_OLD']} "
-                f"{row['Leader_OLD']}"
-                " → "
-                f"{row['Rating_NEW']} "
-                f"{row['Leader_NEW']}"
 
-            )
+            # ----------------------------------------------------
+            # Rating change
+            # ----------------------------------------------------
 
+            if (
+
+                row["Rating_NEW"]
+                !=
+                row["Rating_OLD"]
+
+                or
+
+                row["Leader_NEW"]
+                !=
+                row["Leader_OLD"]
+
+            ):
+
+                margin_change = (
+
+                    row["Signed Margin_NEW"]
+                    -
+                    row["Signed Margin_OLD"]
+
+                )
+
+
+                rating_changes.append({
+
+                    "County":
+                        row["County"],
+
+                    "Code":
+                        row["Code"],
+
+                    "Old":
+                        (
+                            f"{row['Rating_OLD']} "
+                            f"{row['Leader_OLD']}"
+                        ),
+
+                    "New":
+                        (
+                            f"{row['Rating_NEW']} "
+                            f"{row['Leader_NEW']}"
+                        ),
+
+                    "Margin Change":
+                        margin_change
+
+                })
+
+
+                df.loc[
+                    df["Code"] == row["Code"],
+                    "Rating Change"
+                ] = "Yes"
+
+
+                df.loc[
+                    df["Code"] == row["Code"],
+                    "Rating Move"
+                ] = (
+
+                    f"{row['Rating_OLD']} "
+                    f"{row['Leader_OLD']}"
+                    " → "
+                    f"{row['Rating_NEW']} "
+                    f"{row['Leader_NEW']}"
+
+                )
+
+
+                df.loc[
+                    df["Code"] == row["Code"],
+                    "Margin Move"
+                ] = margin_change
+
+
+        else:
 
             df.loc[
                 df["Code"] == row["Code"],
-                "Margin Move"
-            ] = margin_change
+                "Margin Diff"
+            ] = "First update since reopening"
 
 
         # ----------------------------------------------------

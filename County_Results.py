@@ -164,7 +164,7 @@ COUNTY_SPIKE_OVERRIDES = {
 # ============================================================
 
 COUNTY_DATA_GATES = {
-    "BRO": True,   # Broward -- CLOSED as of 2026-09-17. The county's
+    "BRO": False,   # Broward -- CLOSED as of 2026-09-17. The county's
                      # own site posted inaccurate numbers this morning,
                      # and floridados.gov's public VBM/EV stats
                      # (countyfilesvbm-ev.floridados.gov) show Broward
@@ -2222,18 +2222,45 @@ for _, row in df.iterrows():
     ]
 
 
-    if (
-        rejected
-        and
-        not previous_tracker_rows.empty
-    ):
+    had_new_votes = row["Total New"] != 0
 
+
+    if rejected and not previous_tracker_rows.empty:
+
+        # This run's numbers for this county were rejected by the
+        # drop/spike guardrail and reverted -- nothing real actually
+        # changed, so keep whatever "Last Updated" was already on file.
+        last_updated = (
+            previous_tracker_rows.iloc[0]["Last Updated"]
+        )
+
+    elif had_new_votes:
+
+        # The county's vote totals actually moved this run (up or
+        # down) -- that's a real update, so stamp it with this run's
+        # time.
+        last_updated = RUN_TIME
+
+    elif not previous_tracker_rows.empty:
+
+        # No change this run, but this county has a recorded update
+        # from an earlier run -- keep THAT time rather than restamping
+        # it to "now" just because the script happened to run again.
+        # This is what actually lets "hasn't updated since X" mean
+        # something: without this branch, every county that's simply
+        # sitting still would get its clock reset on every single run.
         last_updated = (
             previous_tracker_rows.iloc[0]["Last Updated"]
         )
 
     else:
 
+        # Never tracked before, and no votes yet either (e.g. the very
+        # first run, or a county that hasn't started reporting at all).
+        # Start the clock today as a clean baseline rather than leaving
+        # this blank until the county's first real update -- so "hasn't
+        # updated since X" comparisons are meaningful from day one,
+        # with no backlog to account for.
         last_updated = RUN_TIME
 
 

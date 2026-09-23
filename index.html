@@ -1147,6 +1147,11 @@ const PREVIOUS_PATH = 'data/previous_turnout.csv';
 const AUTO_REFRESH_MS = 60000; // re-check for newer data every 60s; set to 0 to disable
 let lastLoadedAt = null;
 let autoLoadFailed = false;
+// Which top-level tab is showing right now: 'live' (Live Results) or
+// 'sim' (Build Your Own Map). Auto-refresh checks this before touching
+// anything visual, so background data fetches on a timer never yank the
+// page back to Live Results or disrupt a scenario in progress.
+let currentMode = 'live';
 let activeSourceLabel = '';
 
 function rowTimestamp(rows){
@@ -1272,10 +1277,24 @@ async function loadLatestCSV(isManualRefresh){
 
     loadStatus.textContent = 'Live \u00b7 ' + sourceLabel;
     fileMeta.textContent = 'last checked ' + lastLoadedAt.toLocaleTimeString();
-    document.getElementById('emptyState').style.display = 'none';
-    document.getElementById('dashboard').classList.add('active');
-    document.getElementById('errorMsg').style.display = 'none';
-    render();
+
+    // The data itself (COUNTIES) is always kept current regardless of
+    // which tab is open -- no backlog, so Live Results is fully caught
+    // up the moment you switch back to it. But the actual VISUAL
+    // re-render (map/table/dashboard) only happens while Live Results
+    // is the tab actually on screen. Forcing it every refresh
+    // regardless of tab was the bug: it kept re-activating the Live
+    // Results dashboard out from under Build Your Own Map, which is why
+    // the page appeared to "jump" and the map kept shifting under your
+    // cursor every ~60 seconds.
+    if(currentMode === 'live'){
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('dashboard').classList.add('active');
+      document.getElementById('errorMsg').style.display = 'none';
+      render();
+    }else{
+      updateFooterNote();
+    }
   }catch(e){
     // No live feed yet (or the refresh failed) — keep showing whatever's
     // currently loaded (which starts at 0 for every county) rather than
@@ -2044,15 +2063,18 @@ function renderTweetCarousel(){
   restartTweetCarouselTimer();
 }
 
+function updateFooterNote(){
+  const refreshedNote = lastLoadedAt ? ` \u00b7 data refreshed ${lastLoadedAt.toLocaleTimeString()}` : ' \u00b7 live feed not yet reporting (0 votes)';
+  document.getElementById('footerNote').textContent =
+    `${activeCountiesFor(currentMetric).length} counties parsed \u00b7 Florida Votes 2026 · Created by Jayson Frascatore${refreshedNote}`;
+}
 function render(){
   renderStats();
   renderMap();
   renderTable();
   renderUpdatesTable();
   renderTweetCarousel();
-  const refreshedNote = lastLoadedAt ? ` \u00b7 data refreshed ${lastLoadedAt.toLocaleTimeString()}` : ' \u00b7 live feed not yet reporting (0 votes)';
-  document.getElementById('footerNote').textContent =
-    `${activeCountiesFor(currentMetric).length} counties parsed \u00b7 Florida Votes 2026 · Created by Jayson Frascatore${refreshedNote}`;
+  updateFooterNote();
 }
 
 document.getElementById('refreshBtn').addEventListener('click', () => loadLatestCSV(true));
@@ -3141,6 +3163,7 @@ function renderSim(){
 }
 
 function switchMode(mode){
+  currentMode = mode;
   document.getElementById('modeLiveBtn').classList.toggle('active', mode==='live');
   document.getElementById('modeSimBtn').classList.toggle('active', mode==='sim');
   if(mode === 'sim'){
@@ -3152,6 +3175,10 @@ function switchMode(mode){
   }else{
     document.getElementById('simDashboard').classList.remove('active');
     document.getElementById('dashboard').classList.add('active');
+    // Catch up on any data auto-refresh fetched in the background while
+    // Build Your Own Map was open (COUNTIES itself was kept current the
+    // whole time -- only the visual render was held off).
+    render();
   }
 }
 document.getElementById('modeLiveBtn').addEventListener('click', () => switchMode('live'));

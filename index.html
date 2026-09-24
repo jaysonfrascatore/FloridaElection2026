@@ -1235,6 +1235,13 @@ let autoLoadFailed = false;
 // anything visual, so background data fetches on a timer never yank the
 // page back to Live Results or disrupt a scenario in progress.
 let currentMode = 'live';
+// Name of the county currently zoomed in on the General Election map,
+// or null. Declared here (not down near the rest of the county-zoom
+// feature code) because render() -- called once at page load, well
+// before that later code runs -- checks this; declaring it with `let`
+// down there would leave it in the temporal dead zone at that first
+// call and throw a ReferenceError on load.
+let zoomedCounty = null;
 let activeSourceLabel = '';
 
 function rowTimestamp(rows){
@@ -1876,6 +1883,7 @@ async function renderMap(){
   legendEl.innerHTML = legendHtml;
 
   const layout = {
+    dragmode:false,
     geo:{ scope:'usa', fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' },
     paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
     margin:{t:10,b:10,l:10,r:10}, font:{family:'Inter, sans-serif'}
@@ -2158,8 +2166,20 @@ function updateFooterNote(){
 }
 function render(){
   renderStats();
-  renderMap();
-  renderTable();
+  // If a county is currently zoomed, an unconditional renderMap() here
+  // would silently redraw the full statewide map underneath the still-
+  // active zoom UI (info panel, green reset button, table-replaced-by-
+  // charts all stay put) every time auto-refresh ticks -- the same
+  // class of bug as the earlier Build Your Own Map refresh issue, just
+  // surfacing here now that the zoom feature exists. Refreshing the
+  // zoomed view instead (with the newly-fetched data) keeps the zoom
+  // intact rather than quietly reverting to the full map underneath it.
+  if(zoomedCounty){
+    refreshZoomedCountyView();
+  }else{
+    renderMap();
+    renderTable();
+  }
   renderUpdatesTable();
   renderTweetCarousel();
   updateFooterNote();
@@ -2537,6 +2557,7 @@ async function renderMetricMapCanvas(metric, activeCounties, cssWidth, cssHeight
   try{
     const { trace } = buildMapTrace(metric, activeCounties);
     const layout = {
+      dragmode:false,
       geo:{ scope:'usa', fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' },
       paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
       margin:{t:6,b:6,l:6,r:6}, font:{family:'Inter, sans-serif'}
@@ -3054,6 +3075,7 @@ async function renderSimMap(){
     showscale:false
   };
   const layout = {
+    dragmode:false,
     geo:{ scope:'usa', fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' },
     paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
     margin:{t:10,b:10,l:10,r:10}, font:{family:'Inter, sans-serif'}
@@ -3539,7 +3561,8 @@ const COUNTY_HISTORY_FULL_PATH = 'data/county_history_full.csv';
 
 let countyHistoryData = null;
 let countyHistoryLoadPromise = null;
-let zoomedCounty = null; // county name, or null when not zoomed
+// zoomedCounty is declared earlier in this file, alongside currentMode
+// (see the comment there for why).
 
 // Fetches data/county_history_full.csv exactly once and caches it in
 // memory for the rest of the session.
@@ -3576,6 +3599,7 @@ function parseHistoryTimestamp(str){
 function renderZoomedCountyMap(c){
   const { trace } = buildMapTrace(currentMetric, [c]);
   const layout = {
+    dragmode:false,
     geo:{ scope:'usa', fitbounds:'locations', visible:false, bgcolor:'rgba(0,0,0,0)' },
     paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
     margin:{t:10,b:10,l:10,r:10}, font:{family:'Inter, sans-serif'}
@@ -3660,6 +3684,11 @@ const COUNTY_DETAIL_CHART_LAYOUT_BASE = {
   paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
   font:{family:'IBM Plex Mono, monospace', size:11, color:'#7c879c'},
   margin:{t:10,b:40,l:54,r:16},
+  // Plotly's default dragmode on a cartesian chart like this is 'zoom'
+  // (drag to draw a box and zoom in) -- same issue as the maps: on
+  // mobile that hijacks what should be a normal scroll gesture. false
+  // disables it; the unified hover below still works fine without it.
+  dragmode:false,
   legend:{orientation:'h', y:-0.16, font:{size:11}},
   // Unified hover: one shared tooltip box listing every trace's value
   // at that x-position together, with a vertical guide line connecting

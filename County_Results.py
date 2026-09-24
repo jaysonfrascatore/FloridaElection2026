@@ -164,7 +164,7 @@ COUNTY_SPIKE_OVERRIDES = {
 # ============================================================
 
 COUNTY_DATA_GATES = {
-    "BRO": True,   # Broward -- CLOSED as of 2026-09-17. The county's
+    "BRO": False,   # Broward -- CLOSED as of 2026-09-17. The county's
                      # own site posted inaccurate numbers this morning,
                      # and floridados.gov's public VBM/EV stats
                      # (countyfilesvbm-ev.floridados.gov) show Broward
@@ -295,6 +295,18 @@ HISTORY_FILE = os.path.join(
     "county_history.csv"
 )
 
+# Separate from HISTORY_FILE above (which only logs deltas for counties
+# that changed this run). This one logs a full snapshot -- cumulative
+# vote totals and shares -- for every county, every run, meant to power
+# county-by-county trend charts over the whole election. Append-only,
+# never edited or rewritten in place during a normal run; see the
+# REBUILD_HISTORY_FROM_ARCHIVES switch below for how to regenerate it
+# from scratch if it's ever in doubt.
+COUNTY_HISTORY_FULL_FILE = os.path.join(
+    DATA_DIR,
+    "county_history_full.csv"
+)
+
 LATEST_REPORT_FILE = os.path.join(
     REPORT_DIR,
     "latest_report.txt"
@@ -304,6 +316,258 @@ LATEST_JSON_FILE = os.path.join(
     DATA_DIR,
     "latest.json"
 )
+
+
+# ============================================================
+# BACKFILL COUNTY HISTORY -- manual switch, runs once
+# ------------------------------------------------------------
+# Normally False, and the script runs exactly as usual below -- this
+# whole block does nothing in that case.
+#
+# Flip to True to (re)build data/county_history_full.csv (the log that
+# powers the county-by-county trend chart) from your EXISTING archive/
+# files, starting from BACKFILL_START_DATE. When True, this run does
+# NOT scrape anything: it replays every archive snapshot from that date
+# onward, writes county_history_full.csv, and stops. Nothing else --
+# previous_turnout.csv, county_tracker.csv, the archive files
+# themselves -- is read for writing or touched in any way.
+#
+# Flip it back to False afterward so the next run scrapes normally.
+# Safe to re-run as many times as you like -- it only ever overwrites
+# county_history_full.csv wholesale (never appends to it), and every
+# other part of the script is completely unaffected by it either way.
+# ============================================================
+
+BACKFILL_COUNTY_HISTORY = False
+
+BACKFILL_START_DATE = date(2026, 9, 21)
+
+
+def _parse_run_date(timestamp_str):
+
+    # Timestamps are stored like "Updated at September 21st, 2026 at
+    # 11:02am" -- this pulls out just the calendar date. Returns None
+    # if the text doesn't match (so a malformed row is skipped rather
+    # than crashing the backfill).
+
+    import re
+
+    match = re.search(
+        r"([A-Za-z]+) (\d+)\w*, (\d{4})",
+        str(timestamp_str)
+    )
+
+    if not match:
+
+        return None
+
+
+    month_name, day, year = match.groups()
+
+    try:
+
+        return datetime.strptime(
+            f"{month_name} {day} {year}",
+            "%B %d %Y"
+        ).date()
+
+    except ValueError:
+
+        return None
+
+
+def backfill_county_history_from_archives():
+
+    import glob
+
+
+    archive_files = sorted(
+        glob.glob(
+            os.path.join(ARCHIVE_DIR, "florida_turnout_*.csv")
+        )
+    )
+
+    if not archive_files:
+
+        print(
+            f"No archive files found in {ARCHIVE_DIR}/ -- nothing to backfill."
+        )
+
+        return
+
+
+    print(
+        f"Found {len(archive_files)} archive files. "
+        f"Backfilling history from {BACKFILL_START_DATE.isoformat()} onward..."
+    )
+
+
+    all_rows = []
+
+    previous_codes = set()
+
+    previous_totals_by_code = {}
+
+    skipped_before_start = 0
+
+
+    for path in archive_files:
+
+        snapshot = pd.read_csv(path)
+
+        if snapshot.empty:
+
+            continue
+
+
+        # Every row in one archive file shares the same run timestamp.
+        run_time = snapshot["Timestamp"].iloc[0]
+
+        run_date = _parse_run_date(run_time)
+
+
+        if run_date is not None and run_date < BACKFILL_START_DATE:
+
+            skipped_before_start += 1
+
+            continue
+
+
+        rows_this_run = 0
+
+
+        for _, row in snapshot.iterrows():
+
+            code = row["Code"]
+
+            total = row["TOTAL"]
+
+
+            had_previous = code in previous_codes
+
+            unchanged = (
+
+                had_previous
+
+                and
+
+                previous_totals_by_code.get(code) == total
+
+            )
+
+
+            # Always track the latest total for this county, even on a
+            # skipped (unchanged) row, so the NEXT archive file's
+            # comparison is against the right baseline.
+            previous_totals_by_code[code] = total
+
+
+            if unchanged:
+
+                continue
+
+
+            dem_pct = row["DEM %"]
+
+            rep_pct = row["REP %"]
+
+            npa_other = (
+                row["IND"]
+                + row["NPA"]
+                + row["OTHER"]
+            )
+
+            npa_other_pct = (
+                npa_other / total
+
+                if total
+
+                else 0
+
+            )
+
+
+            all_rows.append({
+
+                "Timestamp": run_time,
+                "Code": code,
+                "County": row["County"],
+                "DEM": row["DEM"],
+                "REP": row["REP"],
+                "NPA": row["NPA"],
+                "OTHER": row["OTHER"],
+                "IND": row["IND"],
+                "Total": total,
+                "DEM %": dem_pct,
+                "REP %": rep_pct,
+                "NPA/Other %": npa_other_pct,
+                "Note": "" if had_previous else "First entry / reopened",
+
+            })
+
+
+            rows_this_run += 1
+
+
+        previous_codes = set(snapshot["Code"])
+
+
+        print(
+            f"  {os.path.basename(path)}: {rows_this_run} row(s) logged"
+        )
+
+
+    if skipped_before_start:
+
+        print(
+            f"  ({skipped_before_start} archive file(s) skipped -- "
+            f"dated before {BACKFILL_START_DATE.isoformat()})"
+        )
+
+
+    result_df = pd.DataFrame(all_rows)
+
+    os.makedirs(DATA_DIR, exist_ok=True)
+
+    result_df.to_csv(
+        COUNTY_HISTORY_FULL_FILE,
+        index=False
+    )
+
+
+    print()
+
+    print(
+        f"Done. Wrote {len(result_df)} total rows to "
+        f"{COUNTY_HISTORY_FULL_FILE}"
+    )
+
+
+if BACKFILL_COUNTY_HISTORY:
+
+    print(
+        "\n================================="
+    )
+
+    print(
+        "BACKFILL_COUNTY_HISTORY is True"
+    )
+
+    print(
+        "================================="
+    )
+
+    print(
+        "Backfilling county_history_full.csv from archive/ "
+        f"(starting {BACKFILL_START_DATE.isoformat()}) and stopping -- "
+        "nothing will be scraped this run.\n"
+        "Remember to flip BACKFILL_COUNTY_HISTORY back to "
+        "False afterward.\n"
+    )
+
+    backfill_county_history_from_archives()
+
+    raise SystemExit(0)
 
 
 # ============================================================
@@ -2446,6 +2710,228 @@ with open(
         file,
         indent=2,
         ensure_ascii=False
+    )
+
+
+# ============================================================
+# COUNTY HISTORY (FULL -- for trend charts)
+# ------------------------------------------------------------
+# Deliberately placed here, AFTER every existing save above
+# (previous_turnout.csv, county_tracker.csv, the archive file, and
+# latest.json) has already completed successfully -- and wrapped in
+# its own try/except. This is new, additive logging for an upcoming
+# county-by-county trend chart; it does not change how anything above
+# behaves, and if anything in this block ever goes wrong, it can only
+# ever skip writing this one new file -- it can't undo or block any of
+# the saves that already happened, and can't crash the run.
+#
+# One row per county per run, with cumulative totals and shares (not
+# just the delta) -- this is what the trend chart will read. Three
+# safeguards, matching what got discussed for the Broward mixup:
+#   1. A county whose data was REJECTED by the drop/spike guardrail this
+#      run is skipped entirely -- a bad scrape can never enter the log,
+#      even transiently.
+#   2. A county with NO real change since its last logged row is also
+#      skipped, to keep the file from growing with identical repeats --
+#      a flat stretch on the chart is just a gap between two real
+#      points, not thousands of duplicate rows.
+#   3. A county's first-ever row (true first run, OR its first row back
+#      after being closed via COUNTY_DATA_GATES) is tagged in a "Note"
+#      column, so the chart can show that point as a restart -- a
+#      visibly different marker or a break in the line -- instead of a
+#      misleading vertical jump that looks like organic growth.
+# Always appends; never edits or rewrites an existing row. If this file
+# is ever in doubt, set BACKFILL_COUNTY_HISTORY = True near the top of
+# this script and run it once -- that regenerates this file from
+# scratch by replaying every file already sitting in archive/, rather
+# than requiring by-hand surgery on a live, growing CSV.
+# ============================================================
+
+try:
+
+    rejected_codes_this_run = {
+
+        item["Code"]
+
+        for item in rejected_counties
+
+    }
+
+    previous_codes_for_history = (
+
+        set(previous["Code"])
+
+        if previous is not None
+
+        else set()
+
+    )
+
+    previous_totals_by_code_for_history = (
+
+        dict(
+            zip(
+                previous["Code"],
+                previous["TOTAL"]
+            )
+        )
+
+        if previous is not None
+
+        else {}
+
+    )
+
+
+    full_history_rows = []
+
+
+    for _, row in df.iterrows():
+
+        code = row["Code"]
+
+
+        if code in rejected_codes_this_run:
+
+            continue
+
+
+        had_previous = code in previous_codes_for_history
+
+        unchanged = (
+
+            had_previous
+
+            and
+
+            previous_totals_by_code_for_history.get(code) == row["TOTAL"]
+
+        )
+
+
+        if unchanged:
+
+            continue
+
+
+        total = row["TOTAL"]
+
+        dem_pct = row["DEM %"]
+
+        rep_pct = row["REP %"]
+
+        npa_other = (
+            row["IND"]
+            + row["NPA"]
+            + row["OTHER"]
+        )
+
+        npa_other_pct = (
+            npa_other / total
+
+            if total
+
+            else 0
+
+        )
+
+
+        full_history_rows.append({
+
+            "Timestamp":
+                RUN_TIME,
+
+            "Code":
+                code,
+
+            "County":
+                row["County"],
+
+            "DEM":
+                row["DEM"],
+
+            "REP":
+                row["REP"],
+
+            "NPA":
+                row["NPA"],
+
+            "OTHER":
+                row["OTHER"],
+
+            "IND":
+                row["IND"],
+
+            "Total":
+                total,
+
+            "DEM %":
+                dem_pct,
+
+            "REP %":
+                rep_pct,
+
+            "NPA/Other %":
+                npa_other_pct,
+
+            "Note":
+                "" if had_previous else "First entry / reopened"
+
+        })
+
+
+    if full_history_rows:
+
+        full_history = pd.DataFrame(
+            full_history_rows
+        )
+
+
+        if (
+
+            not NEW_ELECTION_CYCLE
+
+            and
+
+            os.path.exists(COUNTY_HISTORY_FULL_FILE)
+
+        ):
+
+            full_history.to_csv(
+                COUNTY_HISTORY_FULL_FILE,
+                mode="a",
+                header=False,
+                index=False
+            )
+
+        else:
+
+            full_history.to_csv(
+                COUNTY_HISTORY_FULL_FILE,
+                mode="w",
+                header=True,
+                index=False
+            )
+
+
+        print(
+            f"\nCounty history (full): logged {len(full_history_rows)} "
+            f"row(s) to {COUNTY_HISTORY_FULL_FILE}"
+        )
+
+    else:
+
+        print(
+            "\nCounty history (full): no changes to log this run."
+        )
+
+
+except Exception as history_error:
+
+    print(
+        "\nWARNING: county history (full) logging failed -- "
+        "everything else this run completed normally and was saved. "
+        f"Error: {history_error}"
     )
 
 

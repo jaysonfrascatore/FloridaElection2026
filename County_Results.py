@@ -338,7 +338,7 @@ LATEST_JSON_FILE = os.path.join(
 # other part of the script is completely unaffected by it either way.
 # ============================================================
 
-BACKFILL_COUNTY_HISTORY = True
+BACKFILL_COUNTY_HISTORY = False
 
 BACKFILL_START_DATE = date(2026, 9, 21)
 
@@ -374,6 +374,29 @@ def _parse_run_date(timestamp_str):
     except ValueError:
 
         return None
+
+
+def _row_county_name(row):
+
+    # Further down, df.merge(tracker, on="Code", how="left") is used to
+    # bring in the Last-Updated tracker -- and since BOTH df and tracker
+    # have their own "County" column, and "County" isn't the merge key,
+    # pandas automatically renames both to "County_x" (from df, the
+    # real source of truth) and "County_y" (from tracker). From that
+    # point on for the rest of the run -- and in every archive file
+    # saved afterward -- there is no plain "County" column anymore.
+    # Older archives, saved before the Last-Updated tracker existed,
+    # may still have a plain "County" column. Checking all three here
+    # (preferring County_x, the original un-suffixed source) makes this
+    # work correctly across the whole archive history either way.
+
+    for col in ("County_x", "County", "County_y"):
+
+        if col in row.index and pd.notna(row[col]) and row[col] != "":
+
+            return row[col]
+
+    return ""
 
 
 def backfill_county_history_from_archives():
@@ -491,7 +514,7 @@ def backfill_county_history_from_archives():
 
                 "Timestamp": run_time,
                 "Code": code,
-                "County": row["County"],
+                "County": _row_county_name(row),
                 "DEM": row["DEM"],
                 "REP": row["REP"],
                 "NPA": row["NPA"],
@@ -2845,7 +2868,7 @@ try:
                 code,
 
             "County":
-                row["County"],
+                _row_county_name(row),
 
             "DEM":
                 row["DEM"],

@@ -3591,7 +3591,22 @@ const COUNTY_DETAIL_CHART_LAYOUT_BASE = {
   font:{family:'IBM Plex Mono, monospace', size:11, color:'#7c879c'},
   margin:{t:10,b:40,l:54,r:16},
   legend:{orientation:'h', y:-0.16, font:{size:11}},
-  xaxis:{gridcolor:'#212a3b', tickfont:{size:10}},
+  // Unified hover: one shared tooltip box listing every trace's value
+  // at that x-position together, with a vertical guide line connecting
+  // them all -- rather than three separate tooltips you'd have to hunt
+  // for individually.
+  hovermode:'x unified',
+  hoverlabel:{ bgcolor:'#151b28', bordercolor:'#212a3b', font:{family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5'} },
+  // The underlying Date objects already carry the run's literal Eastern
+  // wall-clock time (the CSV timestamps are always Eastern); these
+  // formats just control how that's displayed -- 12-hour with AM/PM,
+  // never 24-hour.
+  xaxis:{
+    gridcolor:'#212a3b', tickfont:{size:10},
+    tickformat:'%b %d, %I:%M %p', hoverformat:'%b %d, %Y, %I:%M %p',
+    showspikes:true, spikemode:'across', spikesnap:'cursor',
+    spikethickness:1, spikecolor:'#000000', spikedash:'solid'
+  },
   yaxis:{gridcolor:'#212a3b', tickfont:{size:10}}
 };
 
@@ -3619,18 +3634,20 @@ function renderCountyDetailCharts(countyRows){
     .map((r,i) => pick(r,['Note']) ? i : -1)
     .filter(i => i >= 0);
 
-  const lineBase = { mode:'lines+markers', marker:{size:5}, line:{width:2.5} };
+  // mode:'lines+markers' is what puts a visible dot at every logged
+  // update, not just a smooth line between them.
+  const lineBase = { mode:'lines+markers', marker:{size:6}, line:{width:2.5} };
 
   const cumulativeTraces = [
-    { ...lineBase, x:times, y:dem, name:'DEM', line:{color:'#5b9bd9', width:2.5} },
-    { ...lineBase, x:times, y:rep, name:'REP', line:{color:'#d4675a', width:2.5} },
-    { ...lineBase, x:times, y:npaOther, name:'NPA/Other', line:{color:'#c77dff', width:2.5} }
+    { ...lineBase, x:times, y:dem, name:'DEM', line:{color:'#5b9bd9', width:2.5}, hovertemplate:'%{y:,.0f}<extra></extra>' },
+    { ...lineBase, x:times, y:rep, name:'REP', line:{color:'#d4675a', width:2.5}, hovertemplate:'%{y:,.0f}<extra></extra>' },
+    { ...lineBase, x:times, y:npaOther, name:'NPA/Other', line:{color:'#c77dff', width:2.5}, hovertemplate:'%{y:,.0f}<extra></extra>' }
   ];
   if(restartIdx.length){
     cumulativeTraces.push({
       mode:'markers', x:restartIdx.map(i=>times[i]), y:restartIdx.map(i=>dem[i]+rep[i]+npaOther[i]),
       marker:{size:11, symbol:'star', color:'#F5B942', line:{width:1, color:'#0d1119'}},
-      name:'Restarted tracking', hoverinfo:'name+x'
+      name:'Restarted tracking', hoverinfo:'skip'
     });
   }
 
@@ -3640,9 +3657,11 @@ function renderCountyDetailCharts(countyRows){
   }, {displayModeBar:false, responsive:true});
 
   const shareTraces = [
-    { ...lineBase, x:times, y:demPct, name:'DEM %', line:{color:'#5b9bd9', width:2.5} },
-    { ...lineBase, x:times, y:repPct, name:'REP %', line:{color:'#d4675a', width:2.5} },
-    { ...lineBase, x:times, y:npaOtherPct, name:'NPA/Other %', line:{color:'#c77dff', width:2.5} }
+    // "xx.xx%" formatting: always 2 decimal places, unlike the .0f
+    // integer formatting used for the raw-vote chart above.
+    { ...lineBase, x:times, y:demPct, name:'DEM %', line:{color:'#5b9bd9', width:2.5}, hovertemplate:'%{y:.2f}%<extra></extra>' },
+    { ...lineBase, x:times, y:repPct, name:'REP %', line:{color:'#d4675a', width:2.5}, hovertemplate:'%{y:.2f}%<extra></extra>' },
+    { ...lineBase, x:times, y:npaOtherPct, name:'NPA/Other %', line:{color:'#c77dff', width:2.5}, hovertemplate:'%{y:.2f}%<extra></extra>' }
   ];
 
   Plotly.newPlot(shareEl, shareTraces, {

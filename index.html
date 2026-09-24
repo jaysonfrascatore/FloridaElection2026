@@ -453,31 +453,43 @@
   }
 
   /* ============================================================
-     COUNTY DETAIL VIEW — new, fully additive. Lives INSIDE the same
-     panel the map already occupies, as a sibling of #map/#mapLegend,
-     hidden by default. Opening it hides the map/legend and shows this
-     instead (same panel, same footprint, so the charts get the full
-     width and height the map normally uses); closing it just reverses
-     that — plain visibility toggling, no Plotly calls involved, so it
-     can never get stuck the way live-map zooming did.
+     COUNTY ZOOM — new, additive.
+     - .map-header-row wraps the existing map title + a new reset
+       button, which is hidden until a county is zoomed and turns
+       green while active.
+     - #mapZoomRow wraps #map (untouched, same element/CSS as always)
+       alongside a new info panel that only appears once zoomed, so the
+       county's numbers are readable without hovering (the whole point
+       on mobile, where the shift slider can't be hovered at all).
+     - #countyChartsView lives in the County Table panel and swaps in
+       for the table while zoomed; #tableWrap is what gets hidden.
      ============================================================ */
-  #countyDetailView{ display:none; }
-  #countyDetailView.active{ display:block; }
-  .county-detail-topbar{
-    display:flex; align-items:center; justify-content:space-between;
-    gap:12px; margin-bottom:14px; flex-wrap:wrap;
+  .map-header-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;
   }
-  #countyDetailBackBtn{
-    display:flex; align-items:center; gap:6px;
+  .map-header-row h2{ margin-bottom:0; }
+  #countyZoomResetBtn{
+    display:none; align-items:center; gap:6px;
     background:var(--panel-2); border:1px solid var(--border); color:var(--text);
-    padding:8px 14px; border-radius:8px; cursor:pointer; font-family:var(--mono); font-size:11.5px;
+    padding:7px 14px; border-radius:8px; cursor:pointer; font-family:var(--mono); font-size:11px;
+    transition:background .2s, border-color .2s, color .2s;
   }
-  #countyDetailBackBtn:hover{ border-color:var(--gold); }
-  .county-detail-title h2{ font-size:21px; margin:0; }
-  .county-detail-title .sub{ font-family:var(--mono); font-size:10.5px; color:var(--muted); margin-top:3px; }
-  .county-detail-stats{
-    display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:18px;
+  #countyZoomResetBtn.active{
+    background:rgba(14,173,105,0.2); border-color:#0ead69; color:#4ade80; font-weight:700;
   }
+  #mapZoomRow{ display:flex; gap:14px; align-items:stretch; }
+  #mapZoomRow #map{ flex:1 1 auto; min-width:0; width:auto; }
+  #countyZoomInfoPanel{
+    display:none; flex:0 0 270px; background:var(--panel-2); border:1px solid var(--border);
+    border-radius:10px; padding:16px 18px; font-family:var(--mono); font-size:13px; line-height:2;
+    color:var(--text); overflow-y:auto;
+  }
+  #mapZoomRow.zoomed #countyZoomInfoPanel{ display:block; }
+  #countyZoomInfoPanel b{ font-size:15px; }
+
+  #countyChartsView{ display:none; }
+  #countyChartsView.active{ display:block; }
+  #countyChartsView h2{ font-size:15px; margin-bottom:14px; }
   .county-detail-chart-wrap{ margin-bottom:26px; }
   .county-detail-chart-wrap h3{
     font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted);
@@ -490,6 +502,8 @@
   }
 
   @media (max-width:640px){
+    #mapZoomRow.zoomed{ flex-direction:column; }
+    #countyZoomInfoPanel{ flex:0 0 auto; }
     .county-detail-chart{ min-height:280px; }
   }
 </style>
@@ -572,7 +586,12 @@
 
   <div class="grid">
     <div class="panel">
-      <h2 id="mapTitle">Rating by county</h2>
+      <div class="map-header-row">
+        <h2 id="mapTitle">Rating by county</h2>
+        <button id="countyZoomResetBtn" title="Return to the statewide map">
+          <span>&#8635;</span> <span id="countyZoomResetLabel">Reset Zoom</span>
+        </button>
+      </div>
       <div class="npa-slider-wrap" id="npaSliderWrap" style="display:none;">
         <div class="shift-slider-row">
           <div class="shift-slider-badge" id="shiftSliderBadge">Shift Slider Not Yet In Use</div>
@@ -604,37 +623,20 @@
           <span class="val" id="npaStatewideMargin">&mdash;</span>
         </div>
       </div>
-      <div id="map"></div>
-      <div class="legend" id="mapLegend"></div>
 
-      <!-- County Detail View — new, additive. Sits inside this same
-           panel, hidden by default. Opening it hides #map/#mapLegend
-           above and shows this instead, so the charts get the map's
-           full width. Closing it is a plain visibility toggle back —
-           #map's own Plotly instance is never touched either way, so
-           this can't get stuck the way live-map zooming could. -->
-      <div id="countyDetailView">
-        <div class="county-detail-topbar">
-          <button id="countyDetailBackBtn">&larr; Back to Map</button>
-          <div class="county-detail-title">
-            <h2 id="countyDetailName">County</h2>
-            <div class="sub" id="countyDetailSub">&mdash;</div>
-          </div>
-        </div>
-        <div class="county-detail-stats" id="countyDetailStats"></div>
-        <div class="county-detail-chart-wrap">
-          <h3>Cumulative Votes</h3>
-          <div class="county-detail-chart" id="countyDetailCumulativeChart"></div>
-        </div>
-        <div class="county-detail-chart-wrap">
-          <h3>Vote Share Over Time</h3>
-          <div class="county-detail-chart" id="countyDetailShareChart"></div>
-        </div>
+      <!-- #mapZoomRow: #map itself is untouched (same element/CSS as
+           always). The info panel next to it is new and additive,
+           only shown once a county is zoomed -- gives readable numbers
+           without needing to hover, which is the point on mobile. -->
+      <div id="mapZoomRow">
+        <div id="map"></div>
+        <div id="countyZoomInfoPanel"></div>
       </div>
+      <div class="legend" id="mapLegend"></div>
     </div>
     <div class="panel">
       <h2>County table</h2>
-      <div class="table-wrap">
+      <div class="table-wrap" id="tableWrap">
         <table id="voteTable">
           <thead>
             <tr>
@@ -651,6 +653,21 @@
           </thead>
           <tbody id="tableBody"></tbody>
         </table>
+      </div>
+
+      <!-- Swaps in for the table above while a county is zoomed (see
+           #mapZoomRow). Closed via the single Reset Zoom button next to
+           the map, which controls both at once. -->
+      <div id="countyChartsView">
+        <h2 id="countyChartsTitle">County Trend</h2>
+        <div class="county-detail-chart-wrap">
+          <h3>Cumulative Votes</h3>
+          <div class="county-detail-chart" id="countyDetailCumulativeChart"></div>
+        </div>
+        <div class="county-detail-chart-wrap">
+          <h3>Vote Share Over Time</h3>
+          <div class="county-detail-chart" id="countyDetailShareChart"></div>
+        </div>
       </div>
 
       <div class="tweet-carousel">
@@ -960,7 +977,7 @@ function resetShiftSliders(){
   const resetBtn = document.getElementById('shiftSliderResetBtn');
   if(resetBtn) resetBtn.classList.remove('visible');
 
-  if(currentMetric === 'demrepnpa'){ renderMap(); renderTable(); }
+  if(currentMetric === 'demrepnpa'){ if(zoomedCounty){ refreshZoomedCountyView(); } else { renderMap(); renderTable(); } }
 }
 
 // Reallocates a county's DEM, REP, and NPA votes according to the current
@@ -2220,7 +2237,7 @@ document.getElementById('npaSlider').addEventListener('input', e => {
   activateShiftSlider();
   updateNpaSliderLabel();
   updateStatewideNpaMargin();
-  if(currentMetric === 'demrepnpa'){ renderMap(); renderTable(); }
+  if(currentMetric === 'demrepnpa'){ if(zoomedCounty){ refreshZoomedCountyView(); } else { renderMap(); renderTable(); } }
 });
 updateNpaSliderLabel();
 
@@ -2234,7 +2251,7 @@ document.getElementById('demLoyaltySlider').addEventListener('input', e => {
   activateShiftSlider();
   updateDemLoyaltyLabel();
   updateStatewideNpaMargin();
-  if(currentMetric === 'demrepnpa'){ renderMap(); renderTable(); }
+  if(currentMetric === 'demrepnpa'){ if(zoomedCounty){ refreshZoomedCountyView(); } else { renderMap(); renderTable(); } }
 });
 updateDemLoyaltyLabel();
 
@@ -2248,7 +2265,7 @@ document.getElementById('repLoyaltySlider').addEventListener('input', e => {
   activateShiftSlider();
   updateRepLoyaltyLabel();
   updateStatewideNpaMargin();
-  if(currentMetric === 'demrepnpa'){ renderMap(); renderTable(); }
+  if(currentMetric === 'demrepnpa'){ if(zoomedCounty){ refreshZoomedCountyView(); } else { renderMap(); renderTable(); } }
 });
 updateRepLoyaltyLabel();
 
@@ -3498,30 +3515,34 @@ document.getElementById('simCsvFileInput').addEventListener('change', e => {
 });
 
 // ============================================================
-// COUNTY DETAIL VIEW (historical trend charts, in place of the map)
+// COUNTY ZOOM (frozen zoomed map + live info panel + trend charts)
 // ------------------------------------------------------------
 // Entirely new and additive: a second click listener layered on top of
 // the existing one in renderMap() (which still does exactly what it
-// always did -- highlight the row in the table). Opening/closing this
-// view is a PLAIN CSS VISIBILITY TOGGLE on #map/#mapLegend and this
-// view -- #map's own Plotly instance is never touched, relaid-out, or
-// re-rendered by any of this, so there's nothing for it to get stuck
-// in. (An earlier version tried to zoom the live map itself via
-// Plotly.relayout with geo.lonaxis/lataxis -- that doesn't work
-// reliably against the Albers USA projection the map uses, which is
-// why it was blanking the map out. This version doesn't touch the
-// live map's geo state at all, so that whole class of bug can't
-// happen here.)
+// always did -- highlight the row in the table).
+//
+// Zooming the map itself reuses buildMapTrace() (the same function the
+// normal statewide render already uses) restricted to just the clicked
+// county, with fitbounds:'locations' -- Plotly's own robust auto-fit,
+// not manual projection math. An earlier version tried to zoom by
+// setting geo.lonaxis/lataxis directly via Plotly.relayout, which
+// doesn't work reliably against the Albers USA projection this map
+// uses and is why the map used to blank out; this avoids that entirely
+// by just drawing a fresh, real (if single-county) choropleth.
+//
+// The info panel and the resulting trend-chart swap are why the shift
+// sliders are actually usable on mobile now: both refresh live as the
+// sliders move, with no hover required.
 // ============================================================
 
 const COUNTY_HISTORY_FULL_PATH = 'data/county_history_full.csv';
 
 let countyHistoryData = null;
 let countyHistoryLoadPromise = null;
+let zoomedCounty = null; // county name, or null when not zoomed
 
 // Fetches data/county_history_full.csv exactly once and caches it in
-// memory for the rest of the session -- opening the view again for the
-// same or a different county reuses this, no repeat fetch.
+// memory for the rest of the session.
 async function ensureCountyHistoryLoaded(){
   if(countyHistoryData) return countyHistoryData;
   if(!countyHistoryLoadPromise){
@@ -3549,42 +3570,91 @@ function parseHistoryTimestamp(str){
   return new Date(parseInt(m[3],10), monthIdx, parseInt(m[2],10), hour, minute);
 }
 
-// Shows the county detail view in place of the map, and hides the map
-// (and its slider controls, if visible) while it's open. Purely a
-// display toggle on elements that already exist -- nothing here is
-// created, destroyed, or re-plotted, so it's instant and can't fail.
-function showCountyDetailView(){
-  document.getElementById('map').style.display = 'none';
-  document.getElementById('mapLegend').style.display = 'none';
-  document.getElementById('npaSliderWrap').style.display = 'none';
-  document.getElementById('countyDetailView').classList.add('active');
+// Draws a fresh single-county choropleth into #map, auto-fit to fill
+// the box. Reused whenever the zoomed county's colors need to reflect
+// a shift-slider change.
+function renderZoomedCountyMap(c){
+  const { trace } = buildMapTrace(currentMetric, [c]);
+  const layout = {
+    geo:{ scope:'usa', fitbounds:'locations', visible:false, bgcolor:'rgba(0,0,0,0)' },
+    paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+    margin:{t:10,b:10,l:10,r:10}, font:{family:'Inter, sans-serif'}
+  };
+  Plotly.newPlot('map', [trace], layout, {displayModeBar:false, responsive:true}).then(() => {
+    if((currentMetric === 'demrepnpa' && !shiftSliderActive) || currentMetric === 'dropwinner'){
+      applyTieStripes(document.querySelector('#map svg'), [c]);
+    }
+  });
 }
 
-// Reverses showCountyDetailView(). Since the map itself was only ever
-// hidden (never re-rendered or relaid-out), this just brings it back
-// exactly as it was -- always works, every time, with nothing to get
-// stuck.
-function closeCountyDetailView(){
-  document.getElementById('countyDetailView').classList.remove('active');
-  document.getElementById('map').style.display = '';
-  document.getElementById('mapLegend').style.display = '';
-  // Restores the slider wrap's correct visibility for whichever metric
-  // is currently selected (it's only ever shown for General Election),
-  // the same rule renderMap() itself applies.
-  document.getElementById('npaSliderWrap').style.display = (currentMetric === 'demrepnpa') ? 'block' : 'none';
+// Fills the info panel with exactly the same content the map's own
+// tooltip would show for this county -- reusing tooltipText() directly
+// so the two can never drift out of sync, and so it already correctly
+// reflects the shift-slider-active breakdown when relevant.
+function renderCountyZoomInfoPanel(c){
+  document.getElementById('countyZoomInfoPanel').innerHTML = tooltipText([c])[0];
 }
-document.getElementById('countyDetailBackBtn').addEventListener('click', closeCountyDetailView);
 
-function renderCountyDetailStats(c){
-  const statsEl = document.getElementById('countyDetailStats');
-  if(!c){ statsEl.innerHTML = ''; return; }
-  const npaOther = c.npa + c.ind + c.other;
-  statsEl.innerHTML = `
-    <div class="stat-card"><div class="v" style="color:#5b9bd9;">${fmt(c.dem)}</div><div class="k">DEM</div></div>
-    <div class="stat-card"><div class="v" style="color:#d4675a;">${fmt(c.rep)}</div><div class="k">REP</div></div>
-    <div class="stat-card"><div class="v" style="color:#c77dff;">${fmt(npaOther)}</div><div class="k">NPA/Other</div></div>
-  `;
+function setZoomResetButtonActive(active){
+  const btn = document.getElementById('countyZoomResetBtn');
+  btn.style.display = active ? 'inline-flex' : 'none';
+  btn.classList.toggle('active', active);
+  document.getElementById('countyZoomResetLabel').textContent = active ? 'Zoom Active \u2014 Reset' : 'Reset Zoom';
 }
+
+// Re-renders just the zoomed county's map coloring + info panel --
+// called whenever the shift sliders move while a county is zoomed, so
+// moving them stays useful without needing to hover (the whole reason
+// this exists: the slider can't be hovered on mobile at all).
+function refreshZoomedCountyView(){
+  if(!zoomedCounty) return;
+  const c = activeCountiesFor(currentMetric).find(c => c.county === zoomedCounty);
+  if(!c) return;
+  renderZoomedCountyMap(c);
+  renderCountyZoomInfoPanel(c);
+}
+
+async function loadAndRenderCountyCharts(countyName){
+  const rows = await ensureCountyHistoryLoaded();
+  const countyRows = rows
+    .filter(r => normName(pick(r,['County'])) === countyName)
+    .map(r => ({ ...r, _time: parseHistoryTimestamp(pick(r,['Timestamp'])) }))
+    .filter(r => r._time)
+    .sort((a,b) => a._time - b._time);
+  renderCountyDetailCharts(countyRows);
+}
+
+function openCountyZoom(countyName){
+  const c = activeCountiesFor(currentMetric).find(c => c.county === countyName);
+  if(!c) return;
+  zoomedCounty = countyName;
+
+  document.getElementById('mapZoomRow').classList.add('zoomed');
+  renderZoomedCountyMap(c);
+  renderCountyZoomInfoPanel(c);
+  setZoomResetButtonActive(true);
+
+  document.getElementById('tableWrap').style.display = 'none';
+  document.getElementById('countyChartsView').classList.add('active');
+  document.getElementById('countyChartsTitle').textContent = countyName + ' County \u2014 Historical Trend';
+
+  loadAndRenderCountyCharts(countyName);
+}
+
+// Un-zooms everything at once: the map (a plain full re-render, safe
+// since the live map's Plotly state was never mutated in place -- it
+// was always a fresh newPlot, whether statewide or single-county), the
+// info panel, and the table/chart swap.
+function closeCountyZoom(){
+  zoomedCounty = null;
+  document.getElementById('mapZoomRow').classList.remove('zoomed');
+  setZoomResetButtonActive(false);
+  renderMap();
+
+  document.getElementById('tableWrap').style.display = '';
+  document.getElementById('countyChartsView').classList.remove('active');
+}
+document.getElementById('countyZoomResetBtn').addEventListener('click', closeCountyZoom);
 
 const COUNTY_DETAIL_CHART_LAYOUT_BASE = {
   paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
@@ -3670,41 +3740,21 @@ function renderCountyDetailCharts(countyRows){
   }, {displayModeBar:false, responsive:true});
 }
 
-async function openCountyDetailView(countyName){
-  document.getElementById('countyDetailName').textContent = countyName + ' County';
-  document.getElementById('countyDetailSub').textContent = 'Loading history\u2026';
-  showCountyDetailView();
-
-  const c = COUNTIES.find(c => c.county === countyName);
-  renderCountyDetailStats(c);
-
-  const rows = await ensureCountyHistoryLoaded();
-  const countyRows = rows
-    .filter(r => normName(pick(r,['County'])) === countyName)
-    .map(r => ({ ...r, _time: parseHistoryTimestamp(pick(r,['Timestamp'])) }))
-    .filter(r => r._time)
-    .sort((a,b) => a._time - b._time);
-
-  const latest = countyRows.length ? countyRows[countyRows.length-1] : null;
-  document.getElementById('countyDetailSub').textContent = latest
-    ? ('Last logged ' + pick(latest,['Timestamp']).replace(/^Updated at /i,''))
-    : 'No trend history logged yet';
-
-  renderCountyDetailCharts(countyRows);
-}
-
 // Second click listener on the live map, alongside the existing one in
 // renderMap() -- Plotly supports multiple listeners per event, and this
 // is re-registered every render the same way the existing one is. The
 // single line that calls this from inside renderMap() is the only
-// change made to that existing function.
+// change made to that existing function. Does nothing while already
+// zoomed, since the zoomed view only ever contains the one county
+// anyway (nothing else to click there).
 function attachCountyDetailClickHandler(){
   const mapEl = document.getElementById('map');
   if(!mapEl || !mapEl.on) return;
   mapEl.on('plotly_click', function(ev){
+    if(zoomedCounty) return;
     const fips = ev.points[0].location;
     const c = activeCountiesFor(currentMetric).find(c => c.fips === fips);
-    if(c) openCountyDetailView(c.county);
+    if(c) openCountyZoom(c.county);
   });
 }
 </script>

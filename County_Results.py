@@ -346,7 +346,7 @@ LATEST_JSON_FILE = os.path.join(
 # other part of the script is completely unaffected by it either way.
 # ============================================================
 
-BACKFILL_COUNTY_HISTORY = True
+BACKFILL_COUNTY_HISTORY = False
 
 BACKFILL_START_DATE = date(2026, 9, 21)
 

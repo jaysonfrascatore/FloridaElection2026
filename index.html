@@ -701,6 +701,21 @@
     </div>
   </div>
 
+  <!-- Statewide Historical Trend -- new, additive, always visible (not
+       tied to clicking a county). Reuses the same chart styling as the
+       per-county trend view for consistency. -->
+  <div class="panel" id="statewideHistoryPanel" style="margin-top:18px;">
+    <h2>Statewide Historical Trend</h2>
+    <div class="county-detail-chart-wrap">
+      <h3>Cumulative Votes</h3>
+      <div class="county-detail-chart" id="statewideCumulativeChart"></div>
+    </div>
+    <div class="county-detail-chart-wrap">
+      <h3>Vote Share Over Time</h3>
+      <div class="county-detail-chart" id="statewideShareChart"></div>
+    </div>
+  </div>
+
   <footer id="footerNote"></footer>
 </div>
 
@@ -1281,7 +1296,7 @@ function zeroCountyRecord(name){
     marginPct:0, marginNpaAdj:0, leader:'D', rating:'Toss Up',
     marginMove:0, ratingChanged:false, ratingMove:'',
     demNew:0, repNew:0, otherNew:0, totalNew:0,
-    lastUpdated:''
+    lastUpdated:'', runTimestamp:''
   };
   rec.category = categoryFor(rec);
   return rec;
@@ -1443,13 +1458,21 @@ function buildCountyRecords(rows){
     const otherNew = num(pick(row,['IND New'])) + num(pick(row,['NPA New'])) + num(pick(row,['OTHER New']));
     const totalNew = num(pick(row,['Total New','TOTAL NEW','New Total','Total_New']));
     const diff = Math.abs(dem - rep);
+    // The CSV's "Timestamp" column (as opposed to "Last Updated") is
+    // written fresh on every single run, regardless of whether any
+    // votes actually changed -- it's "when the script last checked,"
+    // not "when this county's data last moved." Kept separately so the
+    // UI can tell the difference between "nothing new has come in
+    // since X" and "we haven't actually checked since X."
+    const runTimestamp = normName(pick(row,['Timestamp']));
     const rec = {
       county:name, fips:FL_FIPS[name], code:normName(pick(row,['Code'])),
       dem,rep,ind,npa,other,total,demShare,repShare,npaShare,indShare,diff,
       marginPct: signedMargin, marginNpaAdj, leader, rating,
       marginMove, ratingChanged, ratingMove,
       demNew, repNew, otherNew, totalNew,
-      lastUpdated: pick(row,['Last Updated']) || ''
+      lastUpdated: pick(row,['Last Updated']) || '',
+      runTimestamp
     };
     rec.category = categoryFor(rec);
     out.push(rec);
@@ -1588,8 +1611,13 @@ function renderStats(){
   document.getElementById('statCounties').textContent = activeCounties.filter(c=>c.total>0).length + ' / 67';
   document.getElementById('statInd').textContent = fmt(totalNpaOther);
   document.getElementById('statMoved').textContent = activeCounties.filter(c=>c.ratingChanged).length;
-  const times = activeCounties.map(c=>c.lastUpdated).filter(Boolean).sort();
-  document.getElementById('statUpdated').textContent = times.length ? times[times.length-1] : '—';
+  // Uses runTimestamp (written fresh on every run) rather than
+  // lastUpdated (which freezes on purpose when a county's data hasn't
+  // actually changed) -- this box is meant to answer "did it just
+  // check," not "when did the data last move." Using lastUpdated here
+  // was why a completely quiet run still made this look stale.
+  const checkTimes = activeCounties.map(c=>c.runTimestamp).filter(Boolean).sort();
+  document.getElementById('statUpdated').textContent = checkTimes.length ? checkTimes[checkTimes.length-1] : '—';
 
   const totalNewVotes = activeCounties.reduce((s,c)=>s+(c.totalNew||0),0);
   document.getElementById('statTotalSub').textContent = totalNewVotes > 0
@@ -1883,12 +1911,11 @@ async function renderMap(){
   legendEl.innerHTML = legendHtml;
 
   const layout = {
-    dragmode:false,
     geo:{ scope:'usa', fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' },
     paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
     margin:{t:10,b:10,l:10,r:10}, font:{family:'Inter, sans-serif'}
   };
-  Plotly.newPlot('map', [trace], layout, {displayModeBar:false, responsive:true}).then(() => {
+  Plotly.newPlot('map', [trace], layout, {displayModeBar:false, responsive:true, scrollZoom:true}).then(() => {
     if((currentMetric === 'demrepnpa' && !shiftSliderActive) || currentMetric === 'dropwinner'){
       applyTieStripes(document.querySelector('#map svg'), activeCounties);
     }
@@ -2033,6 +2060,19 @@ function buildTweetSections(){
   const lastUpdatedRaw = list.map(c=>c.lastUpdated).filter(Boolean).sort().pop() || '';
   const asOf = (lastUpdatedRaw ? formatAsOf(lastUpdatedRaw) : formatAsOfFromDate(new Date())).replace(/^As of /i, '');
 
+  // "asOf" above only reflects the last REAL vote change and can lag
+  // behind on purpose (that's the point of Last Updated freezing when
+  // nothing moves). runTimestamp is written fresh every single run
+  // regardless -- when the two differ, that means the tracker HAS been
+  // checking on schedule, it's just that nothing new has come in since
+  // asOf. Surfacing that distinction avoids reading a frozen asOf as
+  // "this looks stuck."
+  const lastCheckedRaw = list.map(c=>c.runTimestamp).filter(Boolean).sort().pop() || '';
+  const lastChecked = lastCheckedRaw ? formatAsOf(lastCheckedRaw).replace(/^As of /i, '') : '';
+  const noNewVotesNote = (countiesUpdatedCount === 0 && lastChecked && lastChecked !== asOf)
+    ? `\n\n(Last checked ${lastChecked} \u2014 no new votes since then.)`
+    : '';
+
   const topDrops = list.filter(c=>c.totalNew).slice().sort((a,b)=>b.totalNew-a.totalNew).slice(0,3);
   const topCountyName = topDrops.length ? topDrops[0].county : 'No county';
 
@@ -2067,7 +2107,7 @@ Statewide Total Votes
 Statewide Total Votes: ${fmt(totalVotes)}
 ${leaderFull} lead by ${fmt(voteLead)} votes statewide.
 
-${countiesReporting} of 67 counties have votes.`;
+${countiesReporting} of 67 counties have votes.${noNewVotesNote}`;
 
   // Card 2: short transition line into the per-county breakdown.
   // County ratings and margin changes are intentionally left out for
@@ -2183,6 +2223,10 @@ function render(){
   renderUpdatesTable();
   renderTweetCarousel();
   updateFooterNote();
+  // Always visible (not behind a click, unlike the per-county charts),
+  // so this refreshes on every render() call -- including every
+  // auto-refresh tick -- rather than being fetched once and cached.
+  renderStatewideHistoryCharts();
 }
 
 document.getElementById('refreshBtn').addEventListener('click', () => loadLatestCSV(true));
@@ -2557,7 +2601,6 @@ async function renderMetricMapCanvas(metric, activeCounties, cssWidth, cssHeight
   try{
     const { trace } = buildMapTrace(metric, activeCounties);
     const layout = {
-      dragmode:false,
       geo:{ scope:'usa', fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' },
       paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
       margin:{t:6,b:6,l:6,r:6}, font:{family:'Inter, sans-serif'}
@@ -3075,12 +3118,11 @@ async function renderSimMap(){
     showscale:false
   };
   const layout = {
-    dragmode:false,
     geo:{ scope:'usa', fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' },
     paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
     margin:{t:10,b:10,l:10,r:10}, font:{family:'Inter, sans-serif'}
   };
-  Plotly.newPlot('simMap', [trace], layout, {displayModeBar:false, responsive:true});
+  Plotly.newPlot('simMap', [trace], layout, {displayModeBar:false, responsive:true, scrollZoom:true});
   document.getElementById('simMap').on('plotly_click', ev => {
     const fips = ev.points[0].location;
     const name = SIM_COUNTY_NAMES.find(n => FL_FIPS[n] === fips);
@@ -3599,12 +3641,11 @@ function parseHistoryTimestamp(str){
 function renderZoomedCountyMap(c){
   const { trace } = buildMapTrace(currentMetric, [c]);
   const layout = {
-    dragmode:false,
     geo:{ scope:'usa', fitbounds:'locations', visible:false, bgcolor:'rgba(0,0,0,0)' },
     paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
     margin:{t:10,b:10,l:10,r:10}, font:{family:'Inter, sans-serif'}
   };
-  Plotly.newPlot('map', [trace], layout, {displayModeBar:false, responsive:true}).then(() => {
+  Plotly.newPlot('map', [trace], layout, {displayModeBar:false, responsive:true, scrollZoom:true}).then(() => {
     if((currentMetric === 'demrepnpa' && !shiftSliderActive) || currentMetric === 'dropwinner'){
       applyTieStripes(document.querySelector('#map svg'), [c]);
     }
@@ -3758,6 +3799,77 @@ function renderCountyDetailCharts(countyRows){
   const shareTraces = [
     // "xx.xx%" formatting: always 2 decimal places, unlike the .0f
     // integer formatting used for the raw-vote chart above.
+    { ...lineBase, x:times, y:demPct, name:'DEM %', line:{color:'#5b9bd9', width:2.5}, hovertemplate:'%{y:.2f}%<extra></extra>' },
+    { ...lineBase, x:times, y:repPct, name:'REP %', line:{color:'#d4675a', width:2.5}, hovertemplate:'%{y:.2f}%<extra></extra>' },
+    { ...lineBase, x:times, y:npaOtherPct, name:'NPA/Other %', line:{color:'#c77dff', width:2.5}, hovertemplate:'%{y:.2f}%<extra></extra>' }
+  ];
+
+  Plotly.newPlot(shareEl, shareTraces, {
+    ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
+    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:[0,100]}
+  }, {displayModeBar:false, responsive:true});
+}
+
+// ============================================================
+// STATEWIDE HISTORICAL TREND -- new, additive, always visible.
+// ------------------------------------------------------------
+// Reads data/statewide_history.csv (one row per RUN, not per county --
+// written by the Python script alongside the per-county log). Unlike
+// the per-county charts, this section isn't behind a click, so it's
+// re-fetched and re-rendered on every auto-refresh (see render()) to
+// stay current on a long-open tab, rather than being cached forever
+// after the first load.
+// ============================================================
+
+const STATEWIDE_HISTORY_PATH = 'data/statewide_history.csv';
+
+async function renderStatewideHistoryCharts(){
+  const cumulativeEl = document.getElementById('statewideCumulativeChart');
+  const shareEl = document.getElementById('statewideShareChart');
+  if(!cumulativeEl || !shareEl) return;
+
+  let rows;
+  try{
+    rows = await fetchCSV(STATEWIDE_HISTORY_PATH);
+  }catch(e){
+    rows = [];
+  }
+
+  const parsed = rows
+    .map(r => ({ ...r, _time: parseHistoryTimestamp(pick(r,['Timestamp'])) }))
+    .filter(r => r._time)
+    .sort((a,b) => a._time - b._time);
+
+  if(!parsed.length){
+    cumulativeEl.innerHTML = '<div class="county-detail-note">No statewide history logged yet. Once the tracker has run a few times, the statewide trend will build here.</div>';
+    shareEl.innerHTML = '';
+    return;
+  }
+
+  const times = parsed.map(r => r._time);
+  const dem = parsed.map(r => num(pick(r,['DEM'])));
+  const rep = parsed.map(r => num(pick(r,['REP'])));
+  // The statewide file stores NPA/Other as one combined column already
+  // (unlike the per-county file, which keeps NPA/OTHER/IND separate).
+  const npaOther = parsed.map(r => num(pick(r,['NPA/Other'])));
+  const demPct = parsed.map(r => num(pick(r,['DEM %'])) * 100);
+  const repPct = parsed.map(r => num(pick(r,['REP %'])) * 100);
+  const npaOtherPct = parsed.map(r => num(pick(r,['NPA/Other %'])) * 100);
+
+  const lineBase = { mode:'lines+markers', marker:{size:6}, line:{width:2.5} };
+
+  const cumulativeTraces = [
+    { ...lineBase, x:times, y:dem, name:'DEM', line:{color:'#5b9bd9', width:2.5}, hovertemplate:'%{y:,.0f}<extra></extra>' },
+    { ...lineBase, x:times, y:rep, name:'REP', line:{color:'#d4675a', width:2.5}, hovertemplate:'%{y:,.0f}<extra></extra>' },
+    { ...lineBase, x:times, y:npaOther, name:'NPA/Other', line:{color:'#c77dff', width:2.5}, hovertemplate:'%{y:,.0f}<extra></extra>' }
+  ];
+
+  Plotly.newPlot(cumulativeEl, cumulativeTraces, {
+    ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
+    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'Votes', font:{size:10}}}
+  }, {displayModeBar:false, responsive:true});
+
+  const shareTraces = [
     { ...lineBase, x:times, y:demPct, name:'DEM %', line:{color:'#5b9bd9', width:2.5}, hovertemplate:'%{y:.2f}%<extra></extra>' },
     { ...lineBase, x:times, y:repPct, name:'REP %', line:{color:'#d4675a', width:2.5}, hovertemplate:'%{y:.2f}%<extra></extra>' },
     { ...lineBase, x:times, y:npaOtherPct, name:'NPA/Other %', line:{color:'#c77dff', width:2.5}, hovertemplate:'%{y:.2f}%<extra></extra>' }

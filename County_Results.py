@@ -164,7 +164,7 @@ COUNTY_SPIKE_OVERRIDES = {
 # ============================================================
 
 COUNTY_DATA_GATES = {
-    "BRO": False,   # Broward -- CLOSED as of 2026-09-17. The county's
+    "BRO": True,   # Broward -- CLOSED as of 2026-09-17. The county's
                      # own site posted inaccurate numbers this morning,
                      # and floridados.gov's public VBM/EV stats
                      # (countyfilesvbm-ev.floridados.gov) show Broward
@@ -490,9 +490,18 @@ def backfill_county_history_from_archives():
                 continue
 
 
-            dem_pct = row["DEM %"]
+            # Computed fresh against TOTAL votes here (not read from the
+            # row's own "DEM %"/"REP %" columns) -- those are
+            # deliberately two-party-only (DEM/(DEM+REP)) for the
+            # D-vs-R rating logic elsewhere in this script, which is
+            # correct for that purpose but would make these three
+            # percentages NOT sum to 100% if reused directly here
+            # alongside an NPA/Other share computed against the full
+            # total. All three below share the same denominator, so
+            # they always add up to 100%.
+            dem_pct = (row["DEM"] / total) if total else 0
 
-            rep_pct = row["REP %"]
+            rep_pct = (row["REP"] / total) if total else 0
 
             npa_other = (
                 row["IND"]
@@ -2839,9 +2848,17 @@ try:
 
         total = row["TOTAL"]
 
-        dem_pct = row["DEM %"]
+        # Computed fresh against TOTAL votes here (not read from the
+        # row's own "DEM %"/"REP %" columns) -- those are deliberately
+        # two-party-only (DEM/(DEM+REP)) for the D-vs-R rating logic
+        # elsewhere in this script, which is correct for that purpose
+        # but would make these three percentages NOT sum to 100% if
+        # reused directly here alongside an NPA/Other share computed
+        # against the full total. All three below share the same
+        # denominator, so they always add up to 100%.
+        dem_pct = (row["DEM"] / total) if total else 0
 
-        rep_pct = row["REP %"]
+        rep_pct = (row["REP"] / total) if total else 0
 
         npa_other = (
             row["IND"]

@@ -2064,7 +2064,28 @@ function buildTweetSections(){
   // vote counts/percentages below are always accurate regardless of
   // which clock labels them; this only changes what the timestamp says.
   const lastCheckedRaw = list.map(c=>c.runTimestamp).filter(Boolean).sort().pop() || '';
-  const asOf = (lastCheckedRaw ? formatAsOf(lastCheckedRaw) : formatAsOfFromDate(new Date())).replace(/^As of /i, '');
+
+  // Header date format is deliberately different from formatAsOf
+  // elsewhere in the app: "September 24, 2026, 7:01pm" -- no ordinal
+  // suffix on the day, comma instead of "at" before the time.
+  const formatHeaderDate = raw => {
+    const m = String(raw).match(/^Updated at ([A-Za-z]+) (\d+)\w*, (\d{4}) at (.+)$/i);
+    if(!m) return String(raw).replace(/^Updated at /i, '');
+    return `${m[1]} ${m[2]}, ${m[3]}, ${m[4]}`;
+  };
+  // Fallback for when no county has a runTimestamp yet -- builds the
+  // same clean format directly from right now, rather than routing
+  // through formatAsOfFromDate (which uses "As of "/an ordinal suffix
+  // and wouldn't match the regex above).
+  const formatHeaderDateFromNow = d => {
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    let hours = d.getHours();
+    const minutes = d.getMinutes().toString().padStart(2,'0');
+    const ampm = hours >= 12 ? 'pm' : 'am';
+    hours = hours % 12; if(hours === 0) hours = 12;
+    return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}, ${hours}:${minutes}${ampm}`;
+  };
+  const headerDate = lastCheckedRaw ? formatHeaderDate(lastCheckedRaw) : formatHeaderDateFromNow(new Date());
 
   const topDrops = list.filter(c=>c.totalNew).slice().sort((a,b)=>b.totalNew-a.totalNew).slice(0,3);
   const topCountyName = topDrops.length ? topDrops[0].county : 'No county';
@@ -2079,12 +2100,20 @@ function buildTweetSections(){
   const rPct = totalVotes ? totalR/totalVotes : 0;
   const oPct = totalVotes ? totalOther/totalVotes : 0;
 
-  // Card 1: opening update line, this drop's DEM/REP/OTHER/TOTAL, the
-  // statewide running totals with percentages, the statewide grand
-  // total, the leader line, and the counties-with-votes line -- all one
-  // card, matching the exact wording and order of the reference example.
+  // Card 1: ballot-emoji header with the date/time, statewide totals
+  // right up top, then this drop's DEM/REP/OTHER/TOTAL, the statewide
+  // grand total, the leader line, and the counties-with-votes line --
+  // all one card, matching the exact wording and order of the
+  // reference example.
   const section1 =
-`New votes have been counted in ${countiesUpdatedCount} of 67 counties as of ${asOf}, with the largest update coming from ${topCountyName} County.
+`\u{1F5F3}\u{FE0F} Florida VBM Update, ${headerDate}
+
+Statewide Total Votes:
+\u{1F535} DEM: ${fmt(totalD)} (${formatPctTweet(dPct)})
+\u{1F534} REP: ${fmt(totalR)} (${formatPctTweet(rPct)})
+\u{1F7E3} OTHER: ${fmt(totalOther)} (${formatPctTweet(oPct)})
+
+${fmt(totalNewTotal)} new VBM ballots across ${countiesUpdatedCount} counties have been counted, with the largest update coming from ${topCountyName} County.
 
 Latest Drop:
 \u{1F535} DEM: ${sign(demNewTotal)}
@@ -2092,13 +2121,8 @@ Latest Drop:
 \u{1F7E3} OTHER: ${sign(otherNewTotal)}
 \u{1F7E2} TOTAL: ${sign(totalNewTotal)}
 
-Statewide Total Votes
-\u{1F535} DEM: ${fmt(totalD)} (${formatPctTweet(dPct)})
-\u{1F534} REP: ${fmt(totalR)} (${formatPctTweet(rPct)})
-\u{1F7E3} OTHER: ${fmt(totalOther)} (${formatPctTweet(oPct)})
-
-Statewide Total Votes: ${fmt(totalVotes)}
-${leaderFull} lead by ${fmt(voteLead)} votes statewide.
+ Total Votes Statewide: ${fmt(totalVotes)}
+${leaderFull} lead statewide by ${fmt(voteLead)} votes.
 
 ${countiesReporting} of 67 counties have votes.`;
 
@@ -2140,7 +2164,7 @@ ${countiesReporting} of 67 counties have votes.`;
 
 ${topDropsText}
 
-#FlaPol #Midterms2026`;
+#FlaPol #Midterms2026 #FLSen #FLGov`;
 
   return [section1, section2, section3];
 }

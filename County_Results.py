@@ -300,11 +300,19 @@ HISTORY_FILE = os.path.join(
 # vote totals and shares -- for every county, every run, meant to power
 # county-by-county trend charts over the whole election. Append-only,
 # never edited or rewritten in place during a normal run; see the
-# REBUILD_HISTORY_FROM_ARCHIVES switch below for how to regenerate it
-# from scratch if it's ever in doubt.
+# BACKFILL_COUNTY_HISTORY switch below for how to regenerate it from
+# scratch if it's ever in doubt.
 COUNTY_HISTORY_FULL_FILE = os.path.join(
     DATA_DIR,
     "county_history_full.csv"
+)
+
+# Same idea as COUNTY_HISTORY_FULL_FILE, but one row per RUN (not per
+# county) with the statewide totals -- powers a statewide trend chart
+# alongside the per-county ones.
+STATEWIDE_HISTORY_FILE = os.path.join(
+    DATA_DIR,
+    "statewide_history.csv"
 )
 
 LATEST_REPORT_FILE = os.path.join(
@@ -338,7 +346,7 @@ LATEST_JSON_FILE = os.path.join(
 # other part of the script is completely unaffected by it either way.
 # ============================================================
 
-BACKFILL_COUNTY_HISTORY = False
+BACKFILL_COUNTY_HISTORY = True
 
 BACKFILL_START_DATE = date(2026, 9, 21)
 
@@ -427,9 +435,13 @@ def backfill_county_history_from_archives():
 
     all_rows = []
 
+    statewide_rows = []
+
     previous_codes = set()
 
     previous_totals_by_code = {}
+
+    previous_statewide_total = None
 
     skipped_before_start = 0
 
@@ -544,6 +556,43 @@ def backfill_county_history_from_archives():
         previous_codes = set(snapshot["Code"])
 
 
+        # Statewide aggregate for this archive file -- summed across
+        # EVERY county in the snapshot (not just the ones that changed
+        # above), since a county sitting still doesn't mean the
+        # statewide total is standing still too. Only logged when it
+        # actually differs from the last logged statewide row.
+        snap_dem = snapshot["DEM"].sum()
+
+        snap_rep = snapshot["REP"].sum()
+
+        snap_other = (
+            snapshot["IND"].sum()
+            + snapshot["NPA"].sum()
+            + snapshot["OTHER"].sum()
+        )
+
+        snap_total = snap_dem + snap_rep + snap_other
+
+
+        if previous_statewide_total is None or snap_total != previous_statewide_total:
+
+            statewide_rows.append({
+
+                "Timestamp": run_time,
+                "DEM": int(snap_dem),
+                "REP": int(snap_rep),
+                "NPA/Other": int(snap_other),
+                "Total": int(snap_total),
+                "DEM %": (snap_dem / snap_total) if snap_total else 0,
+                "REP %": (snap_rep / snap_total) if snap_total else 0,
+                "NPA/Other %": (snap_other / snap_total) if snap_total else 0
+
+            })
+
+
+        previous_statewide_total = snap_total
+
+
         print(
             f"  {os.path.basename(path)}: {rows_this_run} row(s) logged"
         )
@@ -564,6 +613,22 @@ def backfill_county_history_from_archives():
     result_df.to_csv(
         COUNTY_HISTORY_FULL_FILE,
         index=False
+    )
+
+
+    statewide_result_df = pd.DataFrame(statewide_rows)
+
+    statewide_result_df.to_csv(
+        STATEWIDE_HISTORY_FILE,
+        index=False
+    )
+
+
+    print()
+
+    print(
+        f"Statewide history: wrote {len(statewide_result_df)} rows to "
+        f"{STATEWIDE_HISTORY_FILE}"
     )
 
 
@@ -590,9 +655,9 @@ if BACKFILL_COUNTY_HISTORY:
     )
 
     print(
-        "Backfilling county_history_full.csv from archive/ "
-        f"(starting {BACKFILL_START_DATE.isoformat()}) and stopping -- "
-        "nothing will be scraped this run.\n"
+        "Backfilling county_history_full.csv and statewide_history.csv "
+        f"from archive/ (starting {BACKFILL_START_DATE.isoformat()}) and "
+        "stopping -- nothing will be scraped this run.\n"
         "Remember to flip BACKFILL_COUNTY_HISTORY back to "
         "False afterward.\n"
     )
@@ -2972,6 +3037,142 @@ except Exception as history_error:
         "\nWARNING: county history (full) logging failed -- "
         "everything else this run completed normally and was saved. "
         f"Error: {history_error}"
+    )
+
+
+# ============================================================
+# STATEWIDE HISTORY (for a statewide trend chart)
+# ------------------------------------------------------------
+# Same safety shape as the county history block just above: additive,
+# wrapped in its own try/except, and placed after every real save has
+# already completed -- a failure here can only skip writing this one
+# file, never touch anything else. One row per RUN (not per county),
+# using the statewide_totals already computed above, skipped when
+# nothing has actually changed since the last logged row so a run with
+# zero new votes anywhere doesn't add a duplicate.
+# ============================================================
+
+try:
+
+    state_total_now = statewide_totals["TOTAL"]
+
+    state_dem_pct = (state_dem / state_total_now) if state_total_now else 0
+
+    state_rep_pct = (state_rep / state_total_now) if state_total_now else 0
+
+    state_npa_other_pct = (state_other / state_total_now) if state_total_now else 0
+
+
+    previous_statewide_total = None
+
+    if (
+
+        not NEW_ELECTION_CYCLE
+
+        and
+
+        os.path.exists(STATEWIDE_HISTORY_FILE)
+
+    ):
+
+        existing_statewide_history = pd.read_csv(
+            STATEWIDE_HISTORY_FILE
+        )
+
+        if len(existing_statewide_history):
+
+            previous_statewide_total = (
+                existing_statewide_history.iloc[-1]["Total"]
+            )
+
+
+    statewide_unchanged = (
+
+        previous_statewide_total is not None
+
+        and
+
+        previous_statewide_total == state_total_now
+
+    )
+
+
+    if statewide_unchanged:
+
+        print(
+            "\nStatewide history: no change since the last logged row "
+            "-- skipping."
+        )
+
+    else:
+
+        statewide_history_row = pd.DataFrame([{
+
+            "Timestamp":
+                RUN_TIME,
+
+            "DEM":
+                statewide_totals["DEM"],
+
+            "REP":
+                statewide_totals["REP"],
+
+            "NPA/Other":
+                statewide_totals["OTHER"],
+
+            "Total":
+                state_total_now,
+
+            "DEM %":
+                state_dem_pct,
+
+            "REP %":
+                state_rep_pct,
+
+            "NPA/Other %":
+                state_npa_other_pct
+
+        }])
+
+
+        if (
+
+            not NEW_ELECTION_CYCLE
+
+            and
+
+            os.path.exists(STATEWIDE_HISTORY_FILE)
+
+        ):
+
+            statewide_history_row.to_csv(
+                STATEWIDE_HISTORY_FILE,
+                mode="a",
+                header=False,
+                index=False
+            )
+
+        else:
+
+            statewide_history_row.to_csv(
+                STATEWIDE_HISTORY_FILE,
+                mode="w",
+                header=True,
+                index=False
+            )
+
+
+        print(
+            f"\nStatewide history: logged 1 row to {STATEWIDE_HISTORY_FILE}"
+        )
+
+
+except Exception as statewide_history_error:
+
+    print(
+        "\nWARNING: statewide history logging failed -- "
+        "everything else this run completed normally and was saved. "
+        f"Error: {statewide_history_error}"
     )
 
 

@@ -2057,21 +2057,14 @@ function buildTweetSections(){
   const countiesUpdatedCount = list.filter(c=>c.totalNew).length;
   const countiesReporting = list.filter(c=>c.total>0).length;
 
-  const lastUpdatedRaw = list.map(c=>c.lastUpdated).filter(Boolean).sort().pop() || '';
-  const asOf = (lastUpdatedRaw ? formatAsOf(lastUpdatedRaw) : formatAsOfFromDate(new Date())).replace(/^As of /i, '');
-
-  // "asOf" above only reflects the last REAL vote change and can lag
-  // behind on purpose (that's the point of Last Updated freezing when
-  // nothing moves). runTimestamp is written fresh every single run
-  // regardless -- when the two differ, that means the tracker HAS been
-  // checking on schedule, it's just that nothing new has come in since
-  // asOf. Surfacing that distinction avoids reading a frozen asOf as
-  // "this looks stuck."
+  // Uses runTimestamp (written fresh on EVERY run) rather than
+  // lastUpdated (which freezes on purpose when a county's data hasn't
+  // actually changed) -- this is the same fix already applied to the
+  // "Most Recent Update" stat box, so the two now always agree. The
+  // vote counts/percentages below are always accurate regardless of
+  // which clock labels them; this only changes what the timestamp says.
   const lastCheckedRaw = list.map(c=>c.runTimestamp).filter(Boolean).sort().pop() || '';
-  const lastChecked = lastCheckedRaw ? formatAsOf(lastCheckedRaw).replace(/^As of /i, '') : '';
-  const noNewVotesNote = (countiesUpdatedCount === 0 && lastChecked && lastChecked !== asOf)
-    ? `\n\n(Last checked ${lastChecked} \u2014 no new votes since then.)`
-    : '';
+  const asOf = (lastCheckedRaw ? formatAsOf(lastCheckedRaw) : formatAsOfFromDate(new Date())).replace(/^As of /i, '');
 
   const topDrops = list.filter(c=>c.totalNew).slice().sort((a,b)=>b.totalNew-a.totalNew).slice(0,3);
   const topCountyName = topDrops.length ? topDrops[0].county : 'No county';
@@ -2107,7 +2100,7 @@ Statewide Total Votes
 Statewide Total Votes: ${fmt(totalVotes)}
 ${leaderFull} lead by ${fmt(voteLead)} votes statewide.
 
-${countiesReporting} of 67 counties have votes.${noNewVotesNote}`;
+${countiesReporting} of 67 counties have votes.`;
 
   // Card 2: short transition line into the per-county breakdown.
   // County ratings and margin changes are intentionally left out for

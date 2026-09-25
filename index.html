@@ -487,6 +487,11 @@
   }
   #mapZoomRow.zoomed #countyZoomInfoPanel{ display:block; }
   #countyZoomInfoPanel b{ font-size:15px; }
+  /* Only populated (and only takes up space) for the Drop Winners
+     metric -- fills what would otherwise be empty space below the
+     county data with a tally of drops won by each party. */
+  #countyZoomBarChart{ min-height:0; margin-top:4px; }
+  #countyZoomBarChart:empty{ margin-top:0; }
 
   #countyChartsView{ display:none; }
   #countyChartsView.active{ display:block; }
@@ -653,7 +658,10 @@
            without needing to hover, which is the point on mobile. -->
       <div id="mapZoomRow">
         <div id="map"></div>
-        <div id="countyZoomInfoPanel"></div>
+        <div id="countyZoomInfoPanel">
+          <div id="countyZoomInfoText"></div>
+          <div id="countyZoomBarChart"></div>
+        </div>
       </div>
       <div class="legend" id="mapLegend"></div>
     </div>
@@ -684,11 +692,11 @@
       <div id="countyChartsView">
         <h2 id="countyChartsTitle">County Trend</h2>
         <div class="county-detail-chart-wrap">
-          <h3>Cumulative Votes</h3>
+          <h3 id="countyDetailCumulativeLabel">Cumulative Votes</h3>
           <div class="county-detail-chart" id="countyDetailCumulativeChart"></div>
         </div>
         <div class="county-detail-chart-wrap">
-          <h3>Vote Share Over Time</h3>
+          <h3 id="countyDetailShareLabel">Vote Share Over Time</h3>
           <div class="county-detail-chart" id="countyDetailShareChart"></div>
         </div>
       </div>
@@ -1711,8 +1719,8 @@ function tooltipText(list){
       }
       return `<b>${c.county}</b><br>` +
         `<b>${winner} won this drop</b><br>` +
-        `DEM +${fmt(c.demNew)} \u00b7 REP +${fmt(c.repNew)} \u00b7 NPA/Other +${fmt(c.otherNew)}<br>` +
-        `Total +${fmt(c.totalNew)}`;
+        `\u{1F535} DEM +${fmt(c.demNew)} \u00b7 \u{1F534} REP +${fmt(c.repNew)} \u00b7 \u{1F7E3} NPA/Other +${fmt(c.otherNew)}<br>` +
+        `\u{1F7E2} Total +${fmt(c.totalNew)}`;
     });
   }
   if(currentMetric === 'party-dem'){
@@ -3706,7 +3714,7 @@ function renderZoomedCountyMap(c){
 // so the two can never drift out of sync, and so it already correctly
 // reflects the shift-slider-active breakdown when relevant.
 function renderCountyZoomInfoPanel(c){
-  document.getElementById('countyZoomInfoPanel').innerHTML = tooltipText([c])[0];
+  document.getElementById('countyZoomInfoText').innerHTML = tooltipText([c])[0];
 }
 
 function setZoomResetButtonActive(active){
@@ -3728,6 +3736,145 @@ function refreshZoomedCountyView(){
   renderCountyZoomInfoPanel(c);
 }
 
+// ------------------------------------------------------------
+// DROP WINNER TRACKING (Drop Winners metric only)
+// ------------------------------------------------------------
+// For each logged county_history_full.csv row, figures out who won
+// THAT drop -- same max-based logic as dropLeaders/dropWinnerCategoryFor
+// (the live Drop Winners map), applied to the delta between this row
+// and the previous one. Consecutive rows only exist where something
+// actually changed, so that delta IS that update's drop (the very
+// first row is treated as a delta from zero, same convention used when
+// logging the history file itself). Two- and three-way ties are pooled
+// into one "Tie" bucket here, rather than split into every combination
+// the map itself distinguishes, to keep a 4-series chart/bar readable.
+function computeDropWinnerHistory(countyRows){
+  const times = [];
+  const cumDem = [], cumRep = [], cumOther = [], cumTie = [];
+  const shareDem = [], shareRep = [], shareOther = [], shareTie = [];
+  let runDem = 0, runRep = 0, runOther = 0, runTie = 0;
+
+  countyRows.forEach((r, i) => {
+    const dem = num(pick(r,['DEM']));
+    const rep = num(pick(r,['REP']));
+    const npaOther = num(pick(r,['NPA'])) + num(pick(r,['OTHER'])) + num(pick(r,['IND']));
+
+    const prev = i > 0 ? countyRows[i-1] : null;
+    const prevDem = prev ? num(pick(prev,['DEM'])) : 0;
+    const prevRep = prev ? num(pick(prev,['REP'])) : 0;
+    const prevNpaOther = prev ? (num(pick(prev,['NPA'])) + num(pick(prev,['OTHER'])) + num(pick(prev,['IND']))) : 0;
+
+    const demDelta = dem - prevDem;
+    const repDelta = rep - prevRep;
+    const otherDelta = npaOther - prevNpaOther;
+
+    const max = Math.max(demDelta, repDelta, otherDelta);
+    const dAtMax = demDelta === max, rAtMax = repDelta === max, oAtMax = otherDelta === max;
+    const leadersCount = (dAtMax?1:0) + (rAtMax?1:0) + (oAtMax?1:0);
+
+    if(leadersCount >= 2) runTie++;
+    else if(dAtMax) runDem++;
+    else if(rAtMax) runRep++;
+    else runOther++;
+
+    times.push(r._time);
+    cumDem.push(runDem); cumRep.push(runRep); cumOther.push(runOther); cumTie.push(runTie);
+
+    const soFar = i + 1;
+    shareDem.push(runDem/soFar*100);
+    shareRep.push(runRep/soFar*100);
+    shareOther.push(runOther/soFar*100);
+    shareTie.push(runTie/soFar*100);
+  });
+
+  return {
+    times, cumDem, cumRep, cumOther, cumTie,
+    shareDem, shareRep, shareOther, shareTie,
+    totals: { dem: runDem, rep: runRep, other: runOther, tie: runTie }
+  };
+}
+
+// Compact bar chart of final drop-win tallies, filling the space below
+// the county data in the info panel -- only populated for Drop
+// Winners; cleared (and takes up no space) for every other metric.
+function renderDropWinnerBarChart(totals){
+  const el = document.getElementById('countyZoomBarChart');
+  if(!el) return;
+  const totalDrops = totals.dem + totals.rep + totals.other + totals.tie;
+  if(totalDrops === 0){
+    el.innerHTML = '';
+    return;
+  }
+  const labels = ['DEM','REP','NPA/Other','Tie'];
+  const values = [totals.dem, totals.rep, totals.other, totals.tie];
+  const trace = {
+    type:'bar', x:labels, y:values,
+    marker:{ color:['#5b9bd9','#d4675a','#c77dff','#e9c46a'] },
+    text:values.map(String), textposition:'outside',
+    textfont:{ color:'#e9edf5', size:11 },
+    hoverinfo:'skip'
+  };
+  const layout = {
+    paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+    font:{family:'IBM Plex Mono, monospace', size:10, color:'#7c879c'},
+    margin:{t:30,b:26,l:28,r:10}, height:170,
+    dragmode:false,
+    title:{text:'Drops Won by Party', font:{size:11, color:'#7c879c'}},
+    xaxis:{tickfont:{size:10}},
+    yaxis:{gridcolor:'#212a3b', tickfont:{size:9}, rangemode:'tozero'},
+    showlegend:false
+  };
+  Plotly.newPlot(el, [trace], layout, {displayModeBar:false, responsive:true});
+}
+
+// The two step-line charts (raw cumulative win count, and cumulative
+// win share %) -- reuses the SAME chart slots the vote-trend view uses
+// for other metrics, relabeled, so General Election keeps its own
+// vote-trend charts completely untouched while Drop Winners gets this
+// instead when a county is zoomed there.
+function renderDropWinnerLineCharts(history){
+  const cumulativeEl = document.getElementById('countyDetailCumulativeChart');
+  const shareEl = document.getElementById('countyDetailShareChart');
+
+  if(!history.times.length){
+    cumulativeEl.innerHTML = '<div class="county-detail-note">No drop history logged for this county yet.</div>';
+    shareEl.innerHTML = '';
+    return;
+  }
+
+  // shape:'hv' draws a proper step/staircase line (horizontal then
+  // vertical) between points -- correct for a running integer tally,
+  // where a smooth diagonal line between points would misleadingly
+  // imply fractional wins in between.
+  const stepBase = { mode:'lines+markers', marker:{size:6} };
+
+  const cumulativeTraces = [
+    { ...stepBase, x:history.times, y:history.cumDem, name:'DEM', line:{color:'#5b9bd9', width:2.5, shape:'hv'} },
+    { ...stepBase, x:history.times, y:history.cumRep, name:'REP', line:{color:'#d4675a', width:2.5, shape:'hv'} },
+    { ...stepBase, x:history.times, y:history.cumOther, name:'NPA/Other', line:{color:'#c77dff', width:2.5, shape:'hv'} },
+    { ...stepBase, x:history.times, y:history.cumTie, name:'Tie', line:{color:'#e9c46a', width:2.5, shape:'hv'} }
+  ];
+
+  Plotly.newPlot(cumulativeEl, cumulativeTraces, {
+    ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
+    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'Drops Won', font:{size:10}}}
+  }, {displayModeBar:false, responsive:true});
+  attachSortedHoverTooltip(cumulativeEl, fmtCumulativeHoverValue);
+
+  const shareTraces = [
+    { ...stepBase, x:history.times, y:history.shareDem, name:'DEM %', line:{color:'#5b9bd9', width:2.5, shape:'hv'} },
+    { ...stepBase, x:history.times, y:history.shareRep, name:'REP %', line:{color:'#d4675a', width:2.5, shape:'hv'} },
+    { ...stepBase, x:history.times, y:history.shareOther, name:'NPA/Other %', line:{color:'#c77dff', width:2.5, shape:'hv'} },
+    { ...stepBase, x:history.times, y:history.shareTie, name:'Tie %', line:{color:'#e9c46a', width:2.5, shape:'hv'} }
+  ];
+
+  Plotly.newPlot(shareEl, shareTraces, {
+    ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
+    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:[0,100]}
+  }, {displayModeBar:false, responsive:true});
+  attachSortedHoverTooltip(shareEl, fmtShareHoverValue);
+}
+
 async function loadAndRenderCountyCharts(countyName){
   const rows = await ensureCountyHistoryLoaded();
   const countyRows = rows
@@ -3735,7 +3882,21 @@ async function loadAndRenderCountyCharts(countyName){
     .map(r => ({ ...r, _time: parseHistoryTimestamp(pick(r,['Timestamp'])) }))
     .filter(r => r._time)
     .sort((a,b) => a._time - b._time);
-  renderCountyDetailCharts(countyRows);
+
+  if(currentMetric === 'dropwinner'){
+    document.getElementById('countyDetailCumulativeLabel').textContent = 'Cumulative Drop Wins';
+    document.getElementById('countyDetailShareLabel').textContent = 'Drop Win Share Over Time';
+    const history = computeDropWinnerHistory(countyRows);
+    renderDropWinnerLineCharts(history);
+    renderDropWinnerBarChart(history.totals);
+  }else{
+    document.getElementById('countyDetailCumulativeLabel').textContent = 'Cumulative Votes';
+    document.getElementById('countyDetailShareLabel').textContent = 'Vote Share Over Time';
+    // Clears out any bar chart left over from a previous Drop Winners
+    // zoom -- every other metric's info panel has no bar chart at all.
+    document.getElementById('countyZoomBarChart').innerHTML = '';
+    renderCountyDetailCharts(countyRows);
+  }
 }
 
 function openCountyZoom(countyName){
@@ -3767,6 +3928,7 @@ function closeCountyZoom(){
 
   document.getElementById('tableWrap').style.display = '';
   document.getElementById('countyChartsView').classList.remove('active');
+  document.getElementById('countyZoomBarChart').innerHTML = '';
 }
 document.getElementById('countyZoomResetBtn').addEventListener('click', closeCountyZoom);
 
@@ -3818,8 +3980,8 @@ function ensureSortedHoverTooltipEl(){
 }
 
 const TREND_TRACE_COLORS = {
-  'DEM':'#5b9bd9', 'REP':'#d4675a', 'NPA/Other':'#c77dff',
-  'DEM %':'#5b9bd9', 'REP %':'#d4675a', 'NPA/Other %':'#c77dff'
+  'DEM':'#5b9bd9', 'REP':'#d4675a', 'NPA/Other':'#c77dff', 'Tie':'#e9c46a',
+  'DEM %':'#5b9bd9', 'REP %':'#d4675a', 'NPA/Other %':'#c77dff', 'Tie %':'#e9c46a'
 };
 
 function fmtCumulativeHoverValue(name, y){ return fmt(Math.round(y)); }
@@ -4021,28 +4183,50 @@ function renderCountyDetailCharts(countyRows){
 
 const STATEWIDE_HISTORY_PATH = 'data/statewide_history.csv';
 
+let statewideHistoryCallId = 0;
+let statewideHistoryEverLoaded = false;
+
 async function renderStatewideHistoryCharts(){
   const cumulativeEl = document.getElementById('statewideCumulativeChart');
   const shareEl = document.getElementById('statewideShareChart');
   if(!cumulativeEl || !shareEl) return;
 
-  let rows;
+  // render() (and therefore this) can fire again before a previous
+  // call's fetch has resolved -- e.g. auto-refresh ticking while the
+  // page just loaded. Without this, whichever call happens to finish
+  // LAST wins, even if it's an older, now-superseded one; this makes
+  // sure only the most recently STARTED call's result ever gets
+  // applied.
+  const callId = ++statewideHistoryCallId;
+
+  let rows = null;
   try{
     rows = await fetchCSV(STATEWIDE_HISTORY_PATH);
   }catch(e){
-    rows = [];
+    rows = null;
   }
 
-  const parsed = rows
+  if(callId !== statewideHistoryCallId) return; // a newer call superseded this one
+
+  const parsed = (rows || [])
     .map(r => ({ ...r, _time: parseHistoryTimestamp(pick(r,['Timestamp'])) }))
     .filter(r => r._time)
     .sort((a,b) => a._time - b._time);
 
   if(!parsed.length){
-    cumulativeEl.innerHTML = '<div class="county-detail-note">No statewide history logged yet. Once the tracker has run a few times, the statewide trend will build here.</div>';
-    shareEl.innerHTML = '';
+    // Only show "no data" the first time this has ever come up empty --
+    // a LATER run that transiently fails to fetch (network hiccup, a
+    // request landing mid-write on the server, etc.) should leave
+    // whatever was last successfully shown on screen rather than
+    // replacing real data with a false "nothing logged yet" message.
+    if(!statewideHistoryEverLoaded){
+      cumulativeEl.innerHTML = '<div class="county-detail-note">No statewide history logged yet. Once the tracker has run a few times, the statewide trend will build here.</div>';
+      shareEl.innerHTML = '';
+    }
     return;
   }
+
+  statewideHistoryEverLoaded = true;
 
   const times = parsed.map(r => r._time);
   const dem = parsed.map(r => num(pick(r,['DEM'])));

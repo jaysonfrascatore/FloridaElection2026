@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Florida Vote Tracker</title>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
@@ -1652,11 +1653,20 @@ const METRICS = {
 // Builds the "PARTY count (pct%)" lines for a tooltip, ordered by vote
 // count descending -- whichever party is actually leading shows first,
 // instead of always listing DEM before REP regardless of who's ahead.
+// Colored circle matching each party's established color language
+// throughout the app (blue/red/purple/green) -- used to prefix party
+// lines in tooltips and info panels.
+function partyEmoji(label){
+  if(label === 'DEM') return '\u{1F535}';
+  if(label === 'REP') return '\u{1F534}';
+  if(label === 'NPA/Other' || label === 'NPA') return '\u{1F7E3}';
+  return '';
+}
 function partyLeadLines(parties){
   return parties
     .slice()
     .sort((a, b) => b.count - a.count)
-    .map(p => `${p.label} ${fmt(p.count)} (${pct(p.pct)})`)
+    .map(p => `${partyEmoji(p.label)} ${p.label} ${fmt(p.count)} (${pct(p.pct)})`)
     .join('<br>');
 }
 
@@ -1725,7 +1735,7 @@ function tooltipText(list){
         return `<b>${c.county}</b><br>` +
           `Rating: ${categoryForNpaDisplay(c)}<br>` +
           `${lines}<br>` +
-          `Total ${fmt(c.total)}<br>` +
+          `\u{1F7E2} Total ${fmt(c.total)}<br>` +
           `Margin ${(c.marginNpaAdj>=0?'+':'')}${pct(c.marginNpaAdj)}`;
       }
       const demToD = c.dem * (demLoyalty/100), demToR = c.dem - demToD;
@@ -1734,10 +1744,10 @@ function tooltipText(list){
       const margin = marginWithNpaSplit(c);
       return `<b>${c.county}</b><br>` +
         `Rating: ${categoryForNpaDisplay(c)}<br>` +
-        `DEM ${fmt(c.dem)} \u2192 ${fmt(Math.round(demToD))} D / ${fmt(Math.round(demToR))} R<br>` +
-        `REP ${fmt(c.rep)} \u2192 ${fmt(Math.round(repToR))} R / ${fmt(Math.round(repToD))} D<br>` +
-        `NPA ${fmt(c.npa)} \u2192 ${fmt(Math.round(npaDem))} D / ${fmt(Math.round(npaRep))} R<br>` +
-        `Total ${fmt(c.total)}<br>` +
+        `\u{1F535} DEM ${fmt(c.dem)} \u2192 ${fmt(Math.round(demToD))} D / ${fmt(Math.round(demToR))} R<br>` +
+        `\u{1F534} REP ${fmt(c.rep)} \u2192 ${fmt(Math.round(repToR))} R / ${fmt(Math.round(repToD))} D<br>` +
+        `\u{1F7E3} NPA ${fmt(c.npa)} \u2192 ${fmt(Math.round(npaDem))} D / ${fmt(Math.round(npaRep))} R<br>` +
+        `\u{1F7E2} Total ${fmt(c.total)}<br>` +
         `Adjusted margin: ${marginLabel(margin)}`;
     });
   }
@@ -3753,6 +3763,12 @@ const COUNTY_DETAIL_CHART_LAYOUT_BASE = {
   // them all -- rather than three separate tooltips you'd have to hunt
   // for individually.
   hovermode:'x unified',
+  // Plotly's default for unified hover is "trace" order (whichever
+  // order the DEM/REP/NPA-Other traces were added in), NOT sorted by
+  // value -- this explicitly sorts the hover box's rows greatest-to-
+  // least by value at that point instead, matching the click-to-zoom
+  // info panel's own party ordering.
+  hoversort:'value descending',
   hoverlabel:{ bgcolor:'#151b28', bordercolor:'#212a3b', font:{family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5'} },
   // The underlying Date objects already carry the run's literal Eastern
   // wall-clock time (the CSV timestamps are always Eastern); these

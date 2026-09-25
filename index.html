@@ -132,6 +132,10 @@
 
   .stat-cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-top:14px; }
   .stat-card{ background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:10px 14px; }
+  .stat-card-clickable{ cursor:pointer; transition:border-color .2s, background .2s; }
+  .stat-card-clickable:hover{ border-color:var(--gold); background:#171d2c; }
+  .net-gain-row{ display:flex; flex-direction:column; gap:4px; margin-top:7px; font-family:var(--mono); font-size:12px; }
+  .net-gain-row b{ font-weight:700; }
   .stat-card .v{ font-family:var(--mono); font-size:19px; font-weight:600; }
   #statTotal{ color:var(--total-green); }
   .stat-card .k{ font-size:11px; color:var(--muted); margin-top:2px; }
@@ -525,6 +529,10 @@
   .sorted-hover-row{ display:flex; align-items:center; gap:7px; padding:2px 0; }
   .sorted-hover-dot{ width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
   .sorted-hover-gap{ color:#7c879c; margin-left:2px; }
+  .sorted-hover-gain-header{
+    margin-top:7px; padding-top:7px; border-top:1px solid #212a3b; color:#7c879c;
+    font-size:10.5px; text-transform:uppercase; letter-spacing:.03em; margin-bottom:3px;
+  }
   .sorted-hover-rating{
     margin-top:7px; padding-top:7px; border-top:1px solid #212a3b; color:#d8b466;
   }
@@ -593,6 +601,14 @@
       <div class="stat-card"><div class="v" id="statInd">&mdash;</div><div class="k">IND + NPA + Other</div></div>
       <div class="stat-card"><div class="v" id="statMoved">&mdash;</div><div class="k">Rating changes</div></div>
       <div class="stat-card"><div class="v" id="statUpdated">&mdash;</div><div class="k">Most recent update</div></div>
+      <div class="stat-card stat-card-clickable" id="statNetGainCard" title="Jump to the statewide historical trend">
+        <div class="k">Last update net gain</div>
+        <div class="net-gain-row">
+          <span style="color:#5b9bd9;">DEM <b id="statGainDem">&mdash;</b></span>
+          <span style="color:#d4675a;">REP <b id="statGainRep">&mdash;</b></span>
+          <span style="color:#c77dff;">NPA/Other <b id="statGainOther">&mdash;</b></span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1654,6 +1670,16 @@ function renderStats(){
   document.getElementById('statTotalSub').textContent = totalNewVotes > 0
     ? '+' + fmt(totalNewVotes) + ' since last update'
     : 'No additional votes at this time.';
+
+  // Statewide net gain since the last update -- always from COUNTIES
+  // (the live feed) regardless of which tab is selected, same as the
+  // tweet summary's "Latest Drop" section, so this always reflects the
+  // actual tracker's last real update rather than whichever metric
+  // happens to be on screen.
+  const signedGain = n => (n>=0?'+':'') + fmt(n);
+  document.getElementById('statGainDem').textContent = signedGain(COUNTIES.reduce((s,c)=>s+(c.demNew||0),0));
+  document.getElementById('statGainRep').textContent = signedGain(COUNTIES.reduce((s,c)=>s+(c.repNew||0),0));
+  document.getElementById('statGainOther').textContent = signedGain(COUNTIES.reduce((s,c)=>s+(c.otherNew||0),0));
 }
 
 const METRICS = {
@@ -3932,6 +3958,14 @@ function closeCountyZoom(){
 }
 document.getElementById('countyZoomResetBtn').addEventListener('click', closeCountyZoom);
 
+// Clicking the Last Update Net Gain card jumps down to the statewide
+// historical trend panel -- that's the "where did this come from, over
+// time" answer to the single-update number shown on the card itself.
+document.getElementById('statNetGainCard').addEventListener('click', () => {
+  const panel = document.getElementById('statewideHistoryPanel');
+  if(panel) panel.scrollIntoView({ behavior:'smooth', block:'start' });
+});
+
 const COUNTY_DETAIL_CHART_LAYOUT_BASE = {
   paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
   font:{family:'IBM Plex Mono, monospace', size:11, color:'#7c879c'},
@@ -4037,6 +4071,26 @@ function buildRatingLookup(dem, rep, npaOnly, npaOtherFull){
   };
 }
 
+// Net gain since the previous logged point, per party -- pointIndex 0
+// is treated as a gain from zero, matching how the history log itself
+// treats a county's very first entry. Used only on the cumulative
+// (raw vote) charts, county and statewide alike -- a "net gain" in
+// percentage points isn't the same useful question, so the share/%
+// charts don't get this.
+function buildNetGainLookup(dem, rep, npaOther){
+  return function(pointIndex){
+    if(pointIndex == null || pointIndex < 0 || pointIndex >= dem.length) return null;
+    const prevDem = pointIndex > 0 ? dem[pointIndex-1] : 0;
+    const prevRep = pointIndex > 0 ? rep[pointIndex-1] : 0;
+    const prevNpaOther = pointIndex > 0 ? npaOther[pointIndex-1] : 0;
+    return {
+      'DEM': dem[pointIndex] - prevDem,
+      'REP': rep[pointIndex] - prevRep,
+      'NPA/Other': npaOther[pointIndex] - prevNpaOther
+    };
+  };
+}
+
 function formatSortedHoverDate(x){
   const d = (x instanceof Date) ? x : new Date(x);
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -4065,7 +4119,10 @@ function positionSortedHoverTooltip(el, evt){
 // valueFormatter(name, y) -> display string for one trace's value.
 // ratingLookup(pointIndex) -> {rating, prevRating, changed} | null;
 // omit it (statewide charts do) to leave the rating line out entirely.
-function attachSortedHoverTooltip(chartEl, valueFormatter, ratingLookup){
+// netGainLookup(pointIndex) -> {traceName: deltaSincePrevPoint, ...} |
+// null; omit it (share/% charts do) to leave the net-gain section out
+// entirely -- it's only meaningful for the cumulative (raw vote) charts.
+function attachSortedHoverTooltip(chartEl, valueFormatter, ratingLookup, netGainLookup){
   const tooltipEl = ensureSortedHoverTooltipEl();
 
   chartEl.on('plotly_hover', function(data){
@@ -4087,6 +4144,32 @@ function attachSortedHoverTooltip(chartEl, valueFormatter, ratingLookup){
       return `<div class="sorted-hover-row"><span class="sorted-hover-dot" style="background:${color}"></span><b>${name}</b>&nbsp;${valueStr}${gapNote}</div>`;
     }).join('');
 
+    // Net gain since the previous logged point -- sorted the same way
+    // (greatest gain first), with its OWN leader-over-2nd gap. This is
+    // a different question than the cumulative gap above: that one is
+    // "who's ahead overall right now," this one is "who gained the
+    // most just in this update."
+    let gainHtml = '';
+    if(netGainLookup){
+      const gains = netGainLookup(sorted[0].pointIndex);
+      if(gains){
+        const gainEntries = sorted
+          .map(p => ({ name:p.data.name, color:TREND_TRACE_COLORS[p.data.name], gain:gains[p.data.name] }))
+          .filter(g => g.gain !== undefined && g.gain !== null);
+        const sortedGains = gainEntries.slice().sort((a,b) => b.gain - a.gain);
+        const gainRows = sortedGains.map((g, i) => {
+          const signedVal = (g.gain >= 0 ? '+' : '') + valueFormatter(g.name, g.gain);
+          let gapNote = '';
+          if(i === 0 && sortedGains.length > 1){
+            const gap = sortedGains[0].gain - sortedGains[1].gain;
+            gapNote = ` <span class="sorted-hover-gap">(+${valueFormatter(g.name, gap)} over 2nd)</span>`;
+          }
+          return `<div class="sorted-hover-row"><span class="sorted-hover-dot" style="background:${g.color}"></span><b>${g.name}</b>&nbsp;${signedVal}${gapNote}</div>`;
+        }).join('');
+        gainHtml = `<div class="sorted-hover-gain-header">Net gain this update:</div>${gainRows}`;
+      }
+    }
+
     let ratingHtml = '';
     if(ratingLookup){
       const info = ratingLookup(sorted[0].pointIndex);
@@ -4097,7 +4180,7 @@ function attachSortedHoverTooltip(chartEl, valueFormatter, ratingLookup){
       }
     }
 
-    tooltipEl.innerHTML = `<div class="sorted-hover-date">${dateLabel}</div>${rows}${ratingHtml}`;
+    tooltipEl.innerHTML = `<div class="sorted-hover-date">${dateLabel}</div>${rows}${gainHtml}${ratingHtml}`;
     tooltipEl.style.display = 'block';
     positionSortedHoverTooltip(tooltipEl, data.event);
   });
@@ -4127,6 +4210,7 @@ function renderCountyDetailCharts(countyRows){
   const npaOtherPct = countyRows.map(r => num(pick(r,['NPA/Other %'])) * 100);
 
   const ratingLookup = buildRatingLookup(dem, rep, npaOnly, npaOther);
+  const netGainLookup = buildNetGainLookup(dem, rep, npaOther);
 
   // Points tagged as a restart (first entry / reopened) get their own
   // marker layer so a jump from 0 doesn't read as organic growth.
@@ -4155,7 +4239,7 @@ function renderCountyDetailCharts(countyRows){
     ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
     yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'Votes', font:{size:10}}}
   }, {displayModeBar:false, responsive:true});
-  attachSortedHoverTooltip(cumulativeEl, fmtCumulativeHoverValue, ratingLookup);
+  attachSortedHoverTooltip(cumulativeEl, fmtCumulativeHoverValue, ratingLookup, netGainLookup);
 
   const shareTraces = [
     { ...lineBase, x:times, y:demPct, name:'DEM %', line:{color:'#5b9bd9', width:2.5} },
@@ -4239,6 +4323,7 @@ async function renderStatewideHistoryCharts(){
   const npaOtherPct = parsed.map(r => num(pick(r,['NPA/Other %'])) * 100);
 
   const lineBase = { mode:'lines+markers', marker:{size:6}, line:{width:2.5} };
+  const netGainLookup = buildNetGainLookup(dem, rep, npaOther);
 
   const cumulativeTraces = [
     { ...lineBase, x:times, y:dem, name:'DEM', line:{color:'#5b9bd9', width:2.5} },
@@ -4250,7 +4335,7 @@ async function renderStatewideHistoryCharts(){
     ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
     yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'Votes', font:{size:10}}}
   }, {displayModeBar:false, responsive:true});
-  attachSortedHoverTooltip(cumulativeEl, fmtCumulativeHoverValue);
+  attachSortedHoverTooltip(cumulativeEl, fmtCumulativeHoverValue, null, netGainLookup);
 
   const shareTraces = [
     { ...lineBase, x:times, y:demPct, name:'DEM %', line:{color:'#5b9bd9', width:2.5} },

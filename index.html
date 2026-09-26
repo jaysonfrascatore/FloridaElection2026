@@ -482,6 +482,14 @@
   #countyZoomResetBtn.active{
     background:rgba(14,173,105,0.2); border-color:#0ead69; color:#4ade80; font-weight:700;
   }
+  #countyZoomPngBtn{
+    display:none; align-items:center; gap:6px;
+    background:var(--panel-2); border:1px solid var(--border); color:var(--text);
+    padding:7px 14px; border-radius:8px; cursor:pointer; font-family:var(--mono); font-size:11px;
+    transition:background .2s, border-color .2s, color .2s;
+  }
+  #countyZoomPngBtn:hover{ border-color:var(--gold); }
+  #countyZoomPngBtn.visible{ display:inline-flex; }
   #mapZoomRow{ display:flex; gap:14px; align-items:stretch; }
   #mapZoomRow #map{ flex:1 1 auto; min-width:0; width:auto; }
   #countyZoomInfoPanel{
@@ -632,9 +640,14 @@
     <div class="panel">
       <div class="map-header-row">
         <h2 id="mapTitle">Rating by county</h2>
-        <button id="countyZoomResetBtn" title="Return to the statewide map">
-          <span>&#8635;</span> <span id="countyZoomResetLabel">Reset Zoom</span>
-        </button>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button id="countyZoomPngBtn" title="Download a PNG of this county's map, data, and trend charts">
+            <span>&#8681;</span> Download PNG
+          </button>
+          <button id="countyZoomResetBtn" title="Return to the statewide map">
+            <span>&#8635;</span> <span id="countyZoomResetLabel">Reset Zoom</span>
+          </button>
+        </div>
       </div>
       <div class="npa-slider-wrap" id="npaSliderWrap" style="display:none;">
         <div class="shift-slider-row">
@@ -3934,6 +3947,7 @@ function openCountyZoom(countyName){
   renderZoomedCountyMap(c);
   renderCountyZoomInfoPanel(c);
   setZoomResetButtonActive(true);
+  document.getElementById('countyZoomPngBtn').classList.add('visible');
 
   document.getElementById('tableWrap').style.display = 'none';
   document.getElementById('countyChartsView').classList.add('active');
@@ -3950,6 +3964,7 @@ function closeCountyZoom(){
   zoomedCounty = null;
   document.getElementById('mapZoomRow').classList.remove('zoomed');
   setZoomResetButtonActive(false);
+  document.getElementById('countyZoomPngBtn').classList.remove('visible');
   renderMap();
 
   document.getElementById('tableWrap').style.display = '';
@@ -3957,6 +3972,241 @@ function closeCountyZoom(){
   document.getElementById('countyZoomBarChart').innerHTML = '';
 }
 document.getElementById('countyZoomResetBtn').addEventListener('click', closeCountyZoom);
+
+// ============================================================
+// COUNTY ZOOM PNG EXPORT
+// ------------------------------------------------------------
+// Captures exactly what's on screen while a county is zoomed -- the
+// map, whichever two charts are currently showing (vote trend for
+// General Election, drop-win tracking for Drop Winners, etc.), the
+// same info-panel data, and a plain-language summary -- into one
+// downloadable PNG. Reuses the app's existing PNG-export conventions
+// (drawSourceCredit, the dark background/font choices) rather than
+// inventing a new look.
+// ============================================================
+
+function loadImageFromDataUrl(dataUrl){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
+// Returns null (rather than throwing) if the target div isn't actually
+// showing a rendered Plotly chart right now -- e.g. a "no data yet"
+// note is displayed there instead -- so the export can just skip that
+// section instead of failing outright.
+async function captureChartImage(elId, width, height, scale){
+  const el = document.getElementById(elId);
+  if(!el || el.querySelector('.county-detail-note')) return null;
+  try{
+    const dataUrl = await Plotly.toImage(elId, { format:'png', width, height, scale });
+    return await loadImageFromDataUrl(dataUrl);
+  }catch(e){
+    return null;
+  }
+}
+
+// Plain word-wrap for canvas text -- canvas has no native wrapping.
+function wrapCanvasText(ctx, text, maxWidth){
+  const words = text.split(' ');
+  const lines = [];
+  let current = '';
+  words.forEach(word => {
+    const test = current ? current + ' ' + word : word;
+    if(ctx.measureText(test).width > maxWidth && current){
+      lines.push(current);
+      current = word;
+    }else{
+      current = test;
+    }
+  });
+  if(current) lines.push(current);
+  return lines;
+}
+
+// Turns tooltipText()'s HTML (which already has the right colored
+// emoji prefixes) into plain {text, color} lines for canvas drawing,
+// rather than re-deriving the content and risking it drifting out of
+// sync with what the on-screen tooltip/info panel actually shows.
+function colorForEmojiPrefix(text){
+  if(text.startsWith('\u{1F535}')) return '#5b9bd9';
+  if(text.startsWith('\u{1F534}')) return '#d4675a';
+  if(text.startsWith('\u{1F7E3}')) return '#c77dff';
+  if(text.startsWith('\u{1F7E2}')) return '#80ed99';
+  return '#e9edf5';
+}
+function parseTooltipHtmlToLines(html){
+  return html.split('<br>')
+    .map(line => line.replace(/<\/?b>/g, '').trim())
+    .filter(Boolean)
+    .map(text => ({ text, color: colorForEmojiPrefix(text) }));
+}
+
+function buildDemrepnpaPngSummary(c, countyName){
+  const npaOther = c.npa + c.ind + c.other;
+  const parties = [
+    { label:'Democrats', count:c.dem },
+    { label:'Republicans', count:c.rep },
+    { label:'NPA/Other voters', count:npaOther }
+  ].sort((a,b) => b.count - a.count);
+  const leader = parties[0], second = parties[1];
+  const gap = leader.count - second.count;
+  const secondLabel = second.label === 'NPA/Other voters' ? second.label : second.label.toLowerCase();
+  return `${countyName} County is currently rated ${categoryForNpaDisplay(c)}. ${leader.label} lead with ${fmt(leader.count)} votes, ${fmt(gap)} ahead of ${secondLabel} in second place (${fmt(second.count)}). ${fmt(c.total)} total votes have been counted in this county so far.`;
+}
+
+function buildDropWinnerPngSummary(countyName, totals){
+  const entries = [
+    { label:'Democrats', count:totals.dem },
+    { label:'Republicans', count:totals.rep },
+    { label:'NPA/Other', count:totals.other },
+    { label:'Ties', count:totals.tie }
+  ].sort((a,b) => b.count - a.count);
+  const totalDrops = totals.dem + totals.rep + totals.other + totals.tie;
+  if(totalDrops === 0) return `${countyName} County has not logged any vote drops yet.`;
+  return `${countyName} County has logged ${totalDrops} vote drop${totalDrops===1?'':'s'} since tracking began. ${entries[0].label} have won the most (${entries[0].count}), followed by ${entries[1].label.toLowerCase()} (${entries[1].count}).`;
+}
+
+async function downloadCountyZoomPng(){
+  if(!zoomedCounty) return;
+  const btn = document.getElementById('countyZoomPngBtn');
+  const originalHtml = btn.innerHTML;
+  btn.innerHTML = '<span>&#8681;</span> Rendering\u2026';
+  btn.disabled = true;
+
+  try{
+    const c = activeCountiesFor(currentMetric).find(c => c.county === zoomedCounty);
+    if(!c) return;
+
+    const scale = 2;
+    const cssW = 1200;
+    const mapCssW = 480, mapCssH = 320;
+    const chartCssW = cssW - 48;
+    const chartCssH = 320;
+
+    const mapDataUrl = await Plotly.toImage('map', { format:'png', width:mapCssW, height:mapCssH, scale });
+    const mapImg = await loadImageFromDataUrl(mapDataUrl);
+
+    const chart1Img = await captureChartImage('countyDetailCumulativeChart', chartCssW, chartCssH, scale);
+    const chart2Img = await captureChartImage('countyDetailShareChart', chartCssW, chartCssH, scale);
+
+    const infoLines = parseTooltipHtmlToLines(tooltipText([c])[0]);
+
+    let summary;
+    if(currentMetric === 'dropwinner'){
+      const rows = await ensureCountyHistoryLoaded();
+      const countyRows = rows
+        .filter(r => normName(pick(r,['County'])) === zoomedCounty)
+        .map(r => ({ ...r, _time: parseHistoryTimestamp(pick(r,['Timestamp'])) }))
+        .filter(r => r._time)
+        .sort((a,b) => a._time - b._time);
+      summary = buildDropWinnerPngSummary(zoomedCounty, computeDropWinnerHistory(countyRows).totals);
+    }else if(currentMetric === 'demrepnpa'){
+      summary = buildDemrepnpaPngSummary(c, zoomedCounty);
+    }else{
+      summary = `${zoomedCounty} County \u2014 ${fmt(c.total)} total votes counted so far.`;
+    }
+
+    const pad = 24 * scale;
+    const canvasW = cssW * scale;
+
+    const scratch = document.createElement('canvas').getContext('2d');
+    const infoLineH = 24 * scale;
+    const infoBlockH = infoLines.length * infoLineH + 16*scale;
+
+    scratch.font = `${14*scale}px IBM Plex Mono, monospace`;
+    const summaryMaxW = canvasW - pad*2;
+    const summaryLines = wrapCanvasText(scratch, summary, summaryMaxW);
+    const summaryLineH = 22 * scale;
+    const summaryBlockH = summaryLines.length * summaryLineH + 16*scale;
+
+    const headerH = 74 * scale;
+    const mapInfoRowH = Math.max(mapImg.height, infoBlockH) + 20*scale;
+    const chart1H = chart1Img ? chart1Img.height + 34*scale : 0;
+    const chart2H = chart2Img ? chart2Img.height + 34*scale : 0;
+    const footerH = 40 * scale;
+
+    const canvasH = pad + headerH + mapInfoRowH + chart1H + chart2H + summaryBlockH + footerH + pad;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = canvasW;
+    canvas.height = canvasH;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#0a0e17';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    let y = pad;
+
+    const metricTitle = (METRICS[currentMetric] && METRICS[currentMetric].title) || currentMetric;
+    ctx.fillStyle = '#e9edf5';
+    ctx.font = `600 ${22*scale}px Inter, Arial, sans-serif`;
+    ctx.fillText(`${zoomedCounty} County \u2014 ${metricTitle}`, pad, y + 26*scale);
+    ctx.fillStyle = '#7c879c';
+    ctx.font = `${12*scale}px IBM Plex Mono, monospace`;
+    const asOfRaw = c.runTimestamp ? formatAsOf(c.runTimestamp) : '';
+    ctx.fillText(`Florida Vote Tracker 2026${asOfRaw ? '  \u00b7  ' + asOfRaw : ''}`, pad, y + 50*scale);
+    y += headerH;
+
+    ctx.drawImage(mapImg, pad, y, mapImg.width, mapImg.height);
+
+    let infoX = pad + mapImg.width + 30*scale;
+    let infoY = y + 22*scale;
+    ctx.font = `${13*scale}px IBM Plex Mono, monospace`;
+    infoLines.forEach(line => {
+      ctx.fillStyle = line.color;
+      ctx.fillText(line.text, infoX, infoY);
+      infoY += infoLineH;
+    });
+
+    y += mapInfoRowH;
+
+    if(chart1Img){
+      ctx.fillStyle = '#7c879c';
+      ctx.font = `600 ${13*scale}px IBM Plex Mono, monospace`;
+      ctx.fillText((document.getElementById('countyDetailCumulativeLabel').textContent || '').toUpperCase(), pad, y + 16*scale);
+      ctx.drawImage(chart1Img, pad, y + 24*scale, chart1Img.width, chart1Img.height);
+      y += chart1H;
+    }
+
+    if(chart2Img){
+      ctx.fillStyle = '#7c879c';
+      ctx.font = `600 ${13*scale}px IBM Plex Mono, monospace`;
+      ctx.fillText((document.getElementById('countyDetailShareLabel').textContent || '').toUpperCase(), pad, y + 16*scale);
+      ctx.drawImage(chart2Img, pad, y + 24*scale, chart2Img.width, chart2Img.height);
+      y += chart2H;
+    }
+
+    ctx.fillStyle = '#e9edf5';
+    ctx.font = `${14*scale}px IBM Plex Mono, monospace`;
+    summaryLines.forEach(line => {
+      ctx.fillText(line, pad, y + 16*scale);
+      y += summaryLineH;
+    });
+
+    drawSourceCredit(ctx, pad, canvas.height - (14*scale), scale);
+
+    const pngUrl = canvas.toDataURL('image/png');
+    const asOfForFilename = c.runTimestamp ? formatAsOf(c.runTimestamp) : formatAsOfFromDate(new Date());
+    const countySlug = zoomedCounty.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const metricSlug = currentMetric.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const a = document.createElement('a');
+    a.href = pngUrl;
+    a.download = `florida-vote-tracker-${countySlug}-${metricSlug}-${filenameSafeTimestamp(asOfForFilename)}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }catch(e){
+    alert('Could not generate the PNG: ' + e.message);
+  }finally{
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+  }
+}
+document.getElementById('countyZoomPngBtn').addEventListener('click', downloadCountyZoomPng);
 
 // Clicking the Last Update Net Gain card jumps down to the statewide
 // historical trend panel -- that's the "where did this come from, over

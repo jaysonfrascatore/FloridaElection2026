@@ -3995,12 +3995,13 @@ function loadImageFromDataUrl(dataUrl){
 }
 
 // Returns null (rather than throwing) if the target div isn't actually
-// showing a rendered Plotly chart right now -- e.g. a "no data yet"
-// note is displayed there instead -- so the export can just skip that
-// section instead of failing outright.
+// showing a rendered Plotly chart right now -- either a "no data yet"
+// note is displayed there instead, or it's simply empty (e.g. the Drop
+// Winners bar chart, which has no content at all outside that metric)
+// -- so the export can just skip that section instead of failing.
 async function captureChartImage(elId, width, height, scale){
   const el = document.getElementById(elId);
-  if(!el || el.querySelector('.county-detail-note')) return null;
+  if(!el || !el.children.length || el.querySelector('.county-detail-note')) return null;
   try{
     const dataUrl = await Plotly.toImage(elId, { format:'png', width, height, scale });
     return await loadImageFromDataUrl(dataUrl);
@@ -4090,6 +4091,12 @@ async function downloadCountyZoomPng(){
     const mapDataUrl = await Plotly.toImage('map', { format:'png', width:mapCssW, height:mapCssH, scale });
     const mapImg = await loadImageFromDataUrl(mapDataUrl);
 
+    // Only present at all for Drop Winners (empty div otherwise, which
+    // captureChartImage already skips gracefully) -- a moderate width
+    // rather than the full chart width, since 4 bars stretched across
+    // the full row would look thin and sparse.
+    const barChartImg = await captureChartImage('countyZoomBarChart', 560, 250, scale);
+
     const chart1Img = await captureChartImage('countyDetailCumulativeChart', chartCssW, chartCssH, scale);
     const chart2Img = await captureChartImage('countyDetailShareChart', chartCssW, chartCssH, scale);
 
@@ -4125,11 +4132,12 @@ async function downloadCountyZoomPng(){
 
     const headerH = 74 * scale;
     const mapInfoRowH = Math.max(mapImg.height, infoBlockH) + 20*scale;
+    const barChartH = barChartImg ? barChartImg.height + 34*scale : 0;
     const chart1H = chart1Img ? chart1Img.height + 34*scale : 0;
     const chart2H = chart2Img ? chart2Img.height + 34*scale : 0;
     const footerH = 40 * scale;
 
-    const canvasH = pad + headerH + mapInfoRowH + chart1H + chart2H + summaryBlockH + footerH + pad;
+    const canvasH = pad + headerH + mapInfoRowH + barChartH + chart1H + chart2H + summaryBlockH + footerH + pad;
 
     const canvas = document.createElement('canvas');
     canvas.width = canvasW;
@@ -4163,6 +4171,11 @@ async function downloadCountyZoomPng(){
     });
 
     y += mapInfoRowH;
+
+    if(barChartImg){
+      ctx.drawImage(barChartImg, pad, y + 10*scale, barChartImg.width, barChartImg.height);
+      y += barChartH;
+    }
 
     if(chart1Img){
       ctx.fillStyle = '#7c879c';

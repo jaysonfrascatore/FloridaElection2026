@@ -1607,8 +1607,12 @@ function toggleBarParty(party){
     const defaultBtn = document.querySelector('#metricSelect button[data-metric="demrepnpa"]');
     if(defaultBtn) defaultBtn.classList.add('active');
   }
-  renderMap();
-  renderTable();
+  if(zoomedCounty){
+    openCountyZoom(zoomedCounty);
+  }else{
+    renderMap();
+    renderTable();
+  }
 }
 
 // This top summary bar now follows whichever tab is selected: on "D vs R"
@@ -2379,8 +2383,23 @@ document.getElementById('metricSelect').addEventListener('click', e => {
   btn.classList.add('active');
   currentMetric = btn.dataset.metric;
   renderStats();
-  renderMap();
-  renderTable();
+  if(zoomedCounty){
+    // Switching metric tabs while a county is zoomed re-opens the SAME
+    // county under the new metric -- refreshing the map coloring, info
+    // panel, AND (critically) the charts/bar chart for whichever metric
+    // is now active. Calling renderMap()/renderTable() directly here
+    // (the old behavior) had no zoomedCounty check at all, unlike
+    // render() and the shift-slider handlers -- so it was silently
+    // reverting the map to the full statewide view out from under a
+    // zoom UI that was still technically "on", and never re-rendering
+    // the charts for the new metric (e.g. leaving Drop Winners' bar
+    // chart empty if the zoom had originally been opened from a
+    // different tab).
+    openCountyZoom(zoomedCounty);
+  }else{
+    renderMap();
+    renderTable();
+  }
 });
 
 function updateNpaSliderLabel(){
@@ -3256,7 +3275,7 @@ function renderSimStats(){
   const sw = simStatewide();
   const leaderEl = document.getElementById('simStateLeader');
   const leader = sw.dem >= sw.rep ? 'D' : 'R';
-  leaderEl.textContent = (leader==='D'?'DEM':'REP') + ' +' + fmt(Math.abs(sw.dem-sw.rep)) + ' \u00b7 ' + sw.rating;
+  leaderEl.textContent = (leader==='D'?'DEM':'REP') + ' +' + fmt(Math.abs(sw.dem-sw.rep)) + ' (' + formatPctTweet(Math.abs(sw.margin)) + ') \u00b7 ' + sw.rating;
   leaderEl.className = 'leader ' + leader;
 
   const dPct = sw.total ? (sw.dem/sw.total)*100 : 50;

@@ -160,12 +160,8 @@
   #modeLiveBtn.active{ background:#d8b466; color:#0a0e17; border-bottom-color:#d8b466; font-weight:700; }
   #modeSimBtn{ background:rgba(199,125,255,0.14); color:#c77dff; }
   #modeSimBtn.active{ background:#c77dff; color:#0a0e17; border-bottom-color:#c77dff; font-weight:700; }
-  #modeOutlookBtn{ background:rgba(61,220,151,0.14); color:#3ddc97; }
-  #modeOutlookBtn.active{ background:#3ddc97; color:#0a0e17; border-bottom-color:#3ddc97; font-weight:700; }
   #simDashboard{ display:none; }
   #simDashboard.active{ display:block; }
-  #outlookDashboard{ display:none; }
-  #outlookDashboard.active{ display:block; }
   .sim-editor{
     background:var(--panel-2); border:1px solid var(--border); border-radius:10px;
     padding:14px 16px; margin-bottom:14px;
@@ -210,15 +206,6 @@
   .sim-placeholder{
     font-family:var(--mono); font-size:12px; color:var(--muted); text-align:center; padding:28px 12px;
   }
-  .outlook-panel{
-    background:var(--panel-2); border:1px solid rgba(61,220,151,0.35); border-radius:12px;
-    padding:48px 32px; text-align:center; max-width:640px; margin:40px auto;
-  }
-  .outlook-panel h2{ color:#3ddc97; margin-bottom:14px; }
-  .outlook-panel p{
-    font-family:var(--mono); font-size:14px; color:var(--text); line-height:1.7; margin-bottom:0;
-  }
-  .outlook-panel .outlook-date{ color:#3ddc97; font-weight:700; }
   .sim-turnout-strip{
     display:flex; align-items:center; gap:16px; flex-wrap:wrap; margin-bottom:14px;
   }
@@ -587,7 +574,6 @@
 <div class="mode-tabs">
   <button class="mode-tab active" id="modeLiveBtn">Live Results</button>
   <button class="mode-tab" id="modeSimBtn">Build Your Own Map</button>
-  <button class="mode-tab" id="modeOutlookBtn">Current Outlook</button>
 </div>
 
 <div class="error-msg" id="errorMsg"></div>
@@ -795,13 +781,6 @@
 
 <div id="simDashboard">
 
-  <div class="segmented" id="simBuildModeSelect" style="margin-bottom:16px;">
-    <button class="active" data-build="easy">Easy Build</button>
-    <button data-build="advanced">Advanced Build</button>
-  </div>
-
-  <div id="simEasyBuild">
-
   <div class="margin-strip">
     <div class="row">
       <span class="label">Hypothetical statewide margin</span>
@@ -920,159 +899,6 @@
   </div>
 
   <footer>Registration figures: Republican, Democratic, and Other (NPA + minor parties) share by county, Florida Division of Elections via Neurelect, as of Jun 2026. 2018 and 2022 results: certified county-level Florida Governor's race totals. &middot; hypothetical scenario only, not a forecast</footer>
-
-  </div>
-  <!-- /simEasyBuild -->
-
-  <!-- ============================================================
-       ADVANCED BUILD -- a separate, parallel scenario builder (does
-       not touch Easy Build's state or math at all). Blends two
-       independently-computed models per county:
-         1. Party Registration model: each county's REAL party
-            registration split (SIM_REG) with adjustable turnout,
-            DEM/REP loyalty, and an NPA lean slider -- the same shape
-            as the Live Results shift sliders.
-         2. Demographic model: each county's REAL White/Black/
-            Hispanic/Asian registration counts (COUNTY_DEMOGRAPHICS)
-            with an adjustable lean slider per group.
-       The map shows the average of the two models' margins -- shown
-       explicitly so it's clear this is a blend of two named models,
-       not a single precise number.
-       ============================================================ -->
-  <div id="simAdvancedBuild" style="display:none;">
-
-    <div class="margin-strip">
-      <div class="row">
-        <span class="label">Combined hypothetical statewide margin</span>
-        <span class="leader" id="advStateLeader">&mdash;</span>
-      </div>
-      <div class="bar-track">
-        <div class="bar-seg bar-d" id="advBarD" style="width:50%"></div>
-        <div class="bar-seg bar-r" id="advBarR" style="width:50%"></div>
-      </div>
-      <div class="bar-labels" id="advBarLabels">
-        <span class="d" id="advLabelD" style="left:25%">DEM &mdash;</span>
-        <span class="r" id="advLabelR" style="left:75%">REP &mdash;</span>
-      </div>
-      <div class="stat-cards">
-        <div class="stat-card"><div class="v" id="advStatTotal">&mdash;</div><div class="k">Total votes (this turnout)</div></div>
-        <div class="stat-card"><div class="v" id="advStatPartyMargin">&mdash;</div><div class="k">Party Registration model</div></div>
-        <div class="stat-card"><div class="v" id="advStatDemoMargin">&mdash;</div><div class="k">Demographic model</div></div>
-        <div class="stat-card"><div class="v" id="advStatRating">&mdash;</div><div class="k">Statewide rating</div></div>
-      </div>
-    </div>
-
-    <div class="panel sim-turnout-strip" style="margin-bottom:14px;">
-      <div style="flex:1; min-width:220px;">
-        <div class="npa-slider-label" style="margin-bottom:8px;">
-          <span>Statewide turnout (share of registered voters who vote)</span>
-          <span class="val" id="advTurnoutValue">75.0% &middot; &mdash; voters</span>
-        </div>
-        <input type="range" id="advTurnoutSlider" class="adj-slider" min="65" max="85" step="0.1" value="75">
-        <div class="npa-slider-ends"><span>65%</span><span>85%</span></div>
-      </div>
-      <button class="sim-btn" id="advResetAllBtn">Reset all sliders to defaults</button>
-    </div>
-
-    <div class="panel" style="margin-bottom:14px;">
-      <h2 style="margin-bottom:4px;">Step 1 &mdash; Party Registration model</h2>
-      <div class="sim-placeholder" style="padding:0 0 14px; text-align:left;">Uses each county's real DEM/REP/NPA registration shares. Same mechanic as the shift sliders on Live Results.</div>
-
-      <div class="npa-slider-label">
-        <span>If undecided/NPA voters lean one way, how far does it move the map?</span>
-        <span class="val" id="advNpaSliderValue">Even split (50% D / 50% R)</span>
-      </div>
-      <input type="range" id="advNpaSlider" class="adj-slider" min="0" max="100" step="0.1" value="50">
-      <div class="npa-slider-ends"><span>All NPA &rarr; D</span><span>Even split</span><span>All NPA &rarr; R</span></div>
-
-      <div class="npa-slider-label" style="margin-top:16px;">
-        <span>Democratic voter loyalty (share of DEM-registered voters who vote D)</span>
-        <span class="val" id="advDemLoyaltyValue">95.0% D (5.0% cross to R)</span>
-      </div>
-      <input type="range" id="advDemLoyaltySlider" class="adj-slider" min="65" max="100" step="0.1" value="95">
-      <div class="npa-slider-ends"><span>65% loyal</span><span>100% loyal</span></div>
-
-      <div class="npa-slider-label" style="margin-top:16px;">
-        <span>Republican voter loyalty (share of REP-registered voters who vote R)</span>
-        <span class="val" id="advRepLoyaltyValue">95.0% R (5.0% cross to D)</span>
-      </div>
-      <input type="range" id="advRepLoyaltySlider" class="adj-slider" min="65" max="100" step="0.1" value="95">
-      <div class="npa-slider-ends"><span>65% loyal</span><span>100% loyal</span></div>
-    </div>
-
-    <div class="panel" style="margin-bottom:14px;">
-      <h2 style="margin-bottom:4px;">Step 2 &mdash; Demographics</h2>
-      <div class="sim-placeholder" style="padding:0 0 14px; text-align:left;">Uses each county's real active-voter registration by race (Florida Division of Elections, book closing July 20, 2026). Each slider sets an assumed vote lean for that group; all start Even and don't imply a real lean until moved.</div>
-
-      <div class="npa-slider-label">
-        <span>White voters</span>
-        <span class="val" id="advWhiteValue">Even split (50% D / 50% R)</span>
-      </div>
-      <input type="range" id="advWhiteSlider" class="adj-slider" min="0" max="100" step="0.1" value="50">
-      <div class="npa-slider-ends"><span>All D</span><span>Even split</span><span>All R</span></div>
-
-      <div class="npa-slider-label" style="margin-top:16px;">
-        <span>Black voters</span>
-        <span class="val" id="advBlackValue">Even split (50% D / 50% R)</span>
-      </div>
-      <input type="range" id="advBlackSlider" class="adj-slider" min="0" max="100" step="0.1" value="50">
-      <div class="npa-slider-ends"><span>All D</span><span>Even split</span><span>All R</span></div>
-
-      <div class="npa-slider-label" style="margin-top:16px;">
-        <span>Hispanic/Latino voters</span>
-        <span class="val" id="advHispanicValue">Even split (50% D / 50% R)</span>
-      </div>
-      <input type="range" id="advHispanicSlider" class="adj-slider" min="0" max="100" step="0.1" value="50">
-      <div class="npa-slider-ends"><span>All D</span><span>Even split</span><span>All R</span></div>
-      <div class="sim-placeholder" style="padding:6px 0 0; text-align:left; font-style:italic;">A Cuban vs. Puerto Rican sub-split isn't in Florida's voter file at all -- it would need to be estimated from Census population data county by county. Not built yet; this slider treats Hispanic/Latino as one group for now.</div>
-
-      <div class="npa-slider-label" style="margin-top:16px;">
-        <span>Asian voters</span>
-        <span class="val" id="advAsianValue">Even split (50% D / 50% R)</span>
-      </div>
-      <input type="range" id="advAsianSlider" class="adj-slider" min="0" max="100" step="0.1" value="50">
-      <div class="npa-slider-ends"><span>All D</span><span>Even split</span><span>All R</span></div>
-    </div>
-
-    <div class="grid">
-      <div class="panel">
-        <h2>Combined result by county</h2>
-        <div id="advMap" style="height:480px;"></div>
-        <div class="legend" id="advMapLegend"></div>
-      </div>
-
-      <div class="panel">
-        <h2>County table</h2>
-        <div class="table-wrap">
-          <table id="advTable">
-            <thead>
-              <tr>
-                <th data-key="county">County</th>
-                <th data-key="voters">Registered</th>
-                <th data-key="turnoutTotal">Turnout votes</th>
-                <th data-key="demPct">DEM %</th>
-                <th data-key="repPct">REP %</th>
-                <th data-key="rating">Rating</th>
-              </tr>
-            </thead>
-            <tbody id="advTableBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <footer>Party registration: Florida Division of Elections, as of Jun 2026. Race/ethnicity registration: Florida Division of Elections, book closing July 20, 2026. &middot; hypothetical scenario blending two independent models, not a forecast</footer>
-
-  </div>
-  <!-- /simAdvancedBuild -->
-
-</div>
-
-<div id="outlookDashboard">
-  <div class="outlook-panel">
-    <h2>Current Outlook</h2>
-    <p>Analysis is too early to make. <span class="outlook-date">October 15th</span> will have a more in-depth outlook.</p>
-  </div>
 </div>
 
 <script>
@@ -3188,87 +3014,6 @@ const SIM_REG = {
 };
 const SIM_COUNTY_NAMES = Object.keys(SIM_REG).sort();
 
-// Active registered voters by race/ethnicity, per county -- Florida
-// Division of Elections, 2026 Primary Election book closing (July 20,
-// 2026), "Active Registered Voters by Race" report. white/black/
-// hispanic/asian are the four groups Advanced Build's Demographics
-// step models; total is the REAL county total across every category
-// in that report (including American Indian/Alaskan Native, Other,
-// Multi-Racial, and Unknown) -- kept so the unmodeled remainder can be
-// derived (total minus the four modeled groups) rather than silently
-// dropped. Hispanic here is one combined group; Florida's voter file
-// has no Cuban/Puerto Rican/etc. sub-code to split it further (see the
-// note under that slider in the UI).
-const COUNTY_DEMOGRAPHICS = {
-  "Alachua":{white:109218,black:25548,hispanic:14051,asian:7112,total:164928},
-  "Baker":{white:15484,black:1396,hispanic:283,asian:115,total:17754},
-  "Bay":{white:104362,black:10095,hispanic:4536,asian:2315,total:126286},
-  "Bradford":{white:14162,black:1761,hispanic:289,asian:88,total:16720},
-  "Brevard":{white:341241,black:36280,hispanic:34930,asian:9499,total:439740},
-  "Broward":{white:411765,black:258447,hispanic:266980,asian:29843,total:1085244},
-  "Calhoun":{white:6580,black:549,hispanic:120,asian:39,total:7555},
-  "Charlotte":{white:134069,black:5259,hispanic:7784,asian:1985,total:153264},
-  "Citrus":{white:106947,black:2782,hispanic:5107,asian:1429,total:119498},
-  "Clay":{white:113579,black:18619,hispanic:10748,asian:4186,total:153676},
-  "Collier":{white:202001,black:9926,hispanic:37883,asian:3442,total:262142},
-  "Columbia":{white:33335,black:4960,hispanic:1659,asian:394,total:41374},
-  "DeSoto":{white:12075,black:1203,hispanic:2173,asian:87,total:15869},
-  "Dixie":{white:9086,black:400,hispanic:190,asian:42,total:9943},
-  "Duval":{white:361324,black:175700,hispanic:45439,asian:25877,total:645825},
-  "Escambia":{white:147946,black:35564,hispanic:6688,asian:5535,total:204328},
-  "Flagler":{white:78050,black:7722,hispanic:7210,asian:1791,total:98714},
-  "Franklin":{white:6943,black:451,hispanic:79,asian:23,total:7606},
-  "Gadsden":{white:10013,black:14673,hispanic:1097,asian:78,total:26644},
-  "Gilchrist":{white:11920,black:268,hispanic:414,asian:40,total:12863},
-  "Glades":{white:5130,black:431,hispanic:885,asian:24,total:6765},
-  "Gulf":{white:9792,black:916,hispanic:104,asian:36,total:11038},
-  "Hamilton":{white:4939,black:1694,hispanic:264,asian:18,total:7061},
-  "Hardee":{white:7679,black:657,hispanic:2620,asian:111,total:11385},
-  "Hendry":{white:8611,black:2270,hispanic:7151,asian:167,total:18980},
-  "Hernando":{white:107044,black:6333,hispanic:16252,asian:1566,total:136152},
-  "Highlands":{white:46338,black:4506,hispanic:8767,asian:876,total:62235},
-  "Hillsborough":{white:458390,black:121229,hispanic:152428,asian:29025,total:807260},
-  "Holmes":{white:10745,black:204,hispanic:117,asian:54,total:11321},
-  "Indian River":{white:98695,black:6525,hispanic:7992,asian:1179,total:118078},
-  "Jackson":{white:20655,black:5047,hispanic:442,asian:135,total:27052},
-  "Jefferson":{white:6943,black:2550,hispanic:183,asian:45,total:9909},
-  "Lafayette":{white:3839,black:179,hispanic:153,asian:10,total:4238},
-  "Lake":{white:202001,black:24495,hispanic:34996,asian:5447,total:278917},
-  "Lee":{white:368725,black:27950,hispanic:72567,asian:6911,total:494303},
-  "Leon":{white:110654,black:49110,hispanic:9383,asian:4035,total:182806},
-  "Levy":{white:25465,black:2101,hispanic:1537,asian:174,total:30023},
-  "Liberty":{white:4006,black:375,hispanic:79,asian:13,total:4572},
-  "Madison":{white:6821,black:2899,hispanic:277,asian:39,total:10420},
-  "Manatee":{white:225184,black:15836,hispanic:23830,asian:6334,total:282417},
-  "Marion":{white:196634,black:24559,hispanic:32716,asian:3733,total:266192},
-  "Martin":{white:100641,black:3420,hispanic:7153,asian:1107,total:115631},
-  "Miami-Dade":{white:223808,black:170943,hispanic:796541,asian:15420,total:1288295},
-  "Monroe":{white:42457,black:1781,hispanic:7937,asian:519,total:54628},
-  "Nassau":{white:71352,black:4275,hispanic:2374,asian:828,total:80933},
-  "Okaloosa":{white:115825,black:11141,hispanic:7600,asian:4342,total:146166},
-  "Okeechobee":{white:16199,black:926,hispanic:2695,asian:147,total:20604},
-  "Orange":{white:363856,black:134437,hispanic:205892,asian:39039,total:804620},
-  "Osceola":{white:79451,black:23678,hispanic:108868,asian:6483,total:231802},
-  "Palm Beach":{white:560638,black:117790,hispanic:125494,asian:19329,total:876189},
-  "Pasco":{white:289249,black:26907,hispanic:53606,asian:12337,total:400459},
-  "Pinellas":{white:482768,black:43725,hispanic:36685,asian:16572,total:605325},
-  "Polk":{white:270055,black:60351,hispanic:96090,asian:7264,total:453991},
-  "Putnam":{white:36246,black:5076,hispanic:2065,asian:264,total:44806},
-  "St. Johns":{white:201088,black:10181,hispanic:12955,asian:7215,total:239742},
-  "St. Lucie":{white:146027,black:45839,hispanic:35518,asian:3372,total:241760},
-  "Santa Rosa":{white:123135,black:5848,hispanic:4723,asian:2942,total:141852},
-  "Sarasota":{white:283522,black:9067,hispanic:17187,asian:5535,total:328751},
-  "Seminole":{white:206340,black:35970,hispanic:60002,asian:12846,total:339590},
-  "Sumter":{white:113904,black:3320,hispanic:3934,asian:1526,total:128239},
-  "Suwannee":{white:22491,black:1973,hispanic:1396,asian:144,total:26668},
-  "Taylor":{white:9854,black:1334,hispanic:141,asian:74,total:11649},
-  "Union":{white:6346,black:588,hispanic:164,asian:25,total:7273},
-  "Volusia":{white:298227,black:32126,hispanic:44571,asian:5701,total:396164},
-  "Wakulla":{white:21669,black:2665,hispanic:539,asian:155,total:25616},
-  "Walton":{white:56564,black:1641,hispanic:1923,asian:727,total:62522},
-  "Washington":{white:12916,black:1146,hispanic:210,asian:82,total:14741}
-};
-
 // Actual certified county-level results, 2018 and 2022 Florida Governor's
 // races (Gillum-DeSantis, Crist-DeSantis). Used by the "2018" / "2022"
 // map modes to show real historical results, and as reference points
@@ -3468,269 +3213,6 @@ function initSim(){
   document.getElementById('simTurnoutSlider').value = simTurnoutPct;
   renderSim();
 }
-
-// ============================================================
-// ADVANCED BUILD -- separate scenario builder, entirely independent
-// of Easy Build's state and math (simDemPct, simCheckpointMode, etc.
-// are never read here). See the HTML comment above #simAdvancedBuild
-// for the two-model blend this computes.
-// ============================================================
-
-let advBuildMode = 'easy'; // 'easy' | 'advanced'
-let advInitialized = false;
-let advTurnoutPct = 75;
-let advDemLoyalty = 95;
-let advRepLoyalty = 95;
-let advNpaSplit = 50; // % of NPA/minor-party turnout assumed to go D
-let advWhiteSplit = 50; // % of this group's turnout assumed to go R (0=All D, 100=All R)
-let advBlackSplit = 50;
-let advHispanicSplit = 50;
-let advAsianSplit = 50;
-
-// One county's combined result: blends a Party Registration model
-// (real DEM/REP/NPA registration shares, turnout + loyalty + NPA-lean
-// sliders) with a Demographic model (real White/Black/Hispanic/Asian
-// registration counts, one lean slider per group), then averages the
-// two models' margins. Returns the raw party/demo building blocks too
-// (partyD/partyR/demoNum/demoDen) so advStatewide() can properly
-// weight-aggregate them across counties rather than just averaging 67
-// already-computed margins.
-function advCountyStats(name){
-  const reg = SIM_REG[name];
-  const totalReg = reg[0];
-  const repPct = reg[1], demPct = reg[2];
-  const npaPct = Math.max(0, 100 - repPct - demPct);
-  const turnoutFrac = advTurnoutPct/100;
-
-  const demRegT = totalReg * (demPct/100) * turnoutFrac;
-  const repRegT = totalReg * (repPct/100) * turnoutFrac;
-  const npaRegT = totalReg * (npaPct/100) * turnoutFrac;
-
-  const demRegD = demRegT * (advDemLoyalty/100);
-  const demRegR = demRegT - demRegD;
-  const repRegR = repRegT * (advRepLoyalty/100);
-  const repRegD = repRegT - repRegR;
-  const npaRegD = npaRegT * (advNpaSplit/100);
-  const npaRegR = npaRegT - npaRegD;
-
-  const partyD = demRegD + repRegD + npaRegD;
-  const partyR = demRegR + repRegR + npaRegR;
-  const partyTotal = partyD + partyR;
-  const partyMargin = partyTotal ? (partyD - partyR) / partyTotal : 0;
-
-  const demo = COUNTY_DEMOGRAPHICS[name];
-  const modeledSum = demo.white + demo.black + demo.hispanic + demo.asian;
-  // Each group slider is 0 (All D) to 100 (All R); (1 - 2*slider/100)
-  // turns that into a -1..1 D-lean, positive meaning D.
-  const demoNum =
-    demo.white * (1 - 2*advWhiteSplit/100) +
-    demo.black * (1 - 2*advBlackSplit/100) +
-    demo.hispanic * (1 - 2*advHispanicSplit/100) +
-    demo.asian * (1 - 2*advAsianSplit/100);
-  const demoMargin = modeledSum ? demoNum / modeledSum : 0;
-
-  const combinedMargin = Math.max(-1, Math.min(1, (partyMargin + demoMargin) / 2));
-
-  const total = Math.round(totalReg * turnoutFrac);
-  const demVotes = Math.round(total * (1 + combinedMargin) / 2);
-  const repVotes = total - demVotes;
-  const demPctOut = total ? (demVotes/total)*100 : 50;
-
-  return {
-    total, demVotes, repVotes, demPct: demPctOut, repPct: 100-demPctOut,
-    margin: combinedMargin, partyMargin, demoMargin,
-    partyD, partyR, demoNum, demoDen: modeledSum,
-    rating: simRatingFor(combinedMargin)
-  };
-}
-
-function advStatewide(){
-  let dem=0, rep=0, total=0, partyD=0, partyR=0, demoNum=0, demoDen=0;
-  SIM_COUNTY_NAMES.forEach(name => {
-    const s = advCountyStats(name);
-    dem += s.demVotes; rep += s.repVotes; total += s.total;
-    partyD += s.partyD; partyR += s.partyR;
-    demoNum += s.demoNum; demoDen += s.demoDen;
-  });
-  const margin = total ? (dem-rep)/total : 0;
-  const partyMargin = (partyD+partyR) ? (partyD-partyR)/(partyD+partyR) : 0;
-  const demoMargin = demoDen ? demoNum/demoDen : 0;
-  return { dem, rep, total, margin, rating: simRatingFor(margin), partyMargin, demoMargin };
-}
-
-async function renderAdvMap(){
-  await ensureGeojson();
-  const locations = SIM_COUNTY_NAMES.map(name => FL_FIPS[name]);
-  const n = RATING_CATS.length;
-  const z = SIM_COUNTY_NAMES.map(name => RATING_CATS.findIndex(cat=>cat.key===advCountyStats(name).rating) + 0.5);
-  const text = SIM_COUNTY_NAMES.map(name => {
-    const s = advCountyStats(name);
-    return `<b>${name}</b><br>Rating: ${s.rating}<br>DEM ${fmt(s.demVotes)} (${s.demPct.toFixed(1)}%)<br>REP ${fmt(s.repVotes)} (${s.repPct.toFixed(1)}%)<br>Turnout votes ${fmt(s.total)}<br>Party model: ${marginLabel(s.partyMargin)}<br>Demographic model: ${marginLabel(s.demoMargin)}`;
-  });
-  const trace = {
-    type:'choropleth', geojson: geojsonFL, locations, z,
-    featureidkey:'id', zmin:0, zmax:n,
-    colorscale: stepColorscale(RATING_CATS), marker:{line:{color:'#0a0e17', width:1}},
-    text, hoverinfo:'text', hoverlabel:{bgcolor:'#151b28', bordercolor:'#212a3b', font:{family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5'}},
-    showscale:false
-  };
-  const layout = {
-    dragmode:false,
-    geo:{ scope:'usa', fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' },
-    paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
-    margin:{t:10,b:10,l:10,r:10}, font:{family:'Inter, sans-serif'}
-  };
-  Plotly.newPlot('advMap', [trace], layout, {displayModeBar:false, responsive:true, scrollZoom:true});
-
-  const legendEl = document.getElementById('advMapLegend');
-  legendEl.innerHTML = RATING_CATS.map(cat => {
-    const count = SIM_COUNTY_NAMES.filter(name => advCountyStats(name).rating === cat.key).length;
-    if(!count) return '';
-    return `<span class="swatch" style="background:${cat.color};color:${contrastText(cat.color)}">${cat.key} \u00b7 ${count}</span>`;
-  }).join('');
-}
-
-function renderAdvTable(){
-  const body = document.getElementById('advTableBody');
-  body.innerHTML = SIM_COUNTY_NAMES.map(name => {
-    const s = advCountyStats(name);
-    return `
-    <tr>
-      <td class="county-name">${name}</td>
-      <td>${fmt(SIM_REG[name][0])}</td>
-      <td class="num-total">${fmt(s.total)}</td>
-      <td class="num-d">${s.demPct.toFixed(1)}%</td>
-      <td class="num-r">${s.repPct.toFixed(1)}%</td>
-      <td><span class="chip" style="background:${catColor(s.rating)};color:${contrastText(catColor(s.rating))}">${s.rating}</span></td>
-    </tr>`;
-  }).join('');
-}
-
-function renderAdvStats(){
-  const sw = advStatewide();
-  const leaderEl = document.getElementById('advStateLeader');
-  const leader = sw.dem >= sw.rep ? 'D' : 'R';
-  leaderEl.textContent = (leader==='D'?'DEM':'REP') + ' +' + fmt(Math.abs(sw.dem-sw.rep)) + ' (' + formatPctTweet(Math.abs(sw.margin)) + ') \u00b7 ' + sw.rating;
-  leaderEl.className = 'leader ' + leader;
-
-  const dPct = sw.total ? (sw.dem/sw.total)*100 : 50;
-  const rPct = sw.total ? (sw.rep/sw.total)*100 : 50;
-  document.getElementById('advBarD').style.width = dPct.toFixed(3)+'%';
-  document.getElementById('advBarR').style.width = rPct.toFixed(3)+'%';
-  document.getElementById('advLabelD').style.left = Math.min(96,Math.max(4,dPct/2))+'%';
-  document.getElementById('advLabelR').style.left = Math.min(96,Math.max(4,dPct+rPct/2))+'%';
-  document.getElementById('advLabelD').textContent = 'DEM ' + fmt(sw.dem) + ' (' + dPct.toFixed(1) + '%)';
-  document.getElementById('advLabelR').textContent = 'REP ' + fmt(sw.rep) + ' (' + rPct.toFixed(1) + '%)';
-
-  document.getElementById('advStatTotal').textContent = fmt(sw.total);
-  document.getElementById('advStatPartyMargin').textContent = marginLabel(sw.partyMargin);
-  document.getElementById('advStatDemoMargin').textContent = marginLabel(sw.demoMargin);
-  document.getElementById('advStatRating').textContent = sw.rating;
-}
-
-function updateAdvTurnoutLabel(){
-  const totalVoters = SIM_COUNTY_NAMES.reduce((s,name)=>s+Math.round(SIM_REG[name][0]*(advTurnoutPct/100)),0);
-  document.getElementById('advTurnoutValue').textContent = `${advTurnoutPct.toFixed(1)}% \u00b7 ${fmt(totalVoters)} voters`;
-}
-
-// Shared label formatter for every Advanced Build lean slider (NPA
-// share and the four demographic sliders) -- matches the exact wording
-// already used for the Live Results shift sliders.
-function advSliderLabel(sliderValue){
-  const dPct = 100 - sliderValue;
-  const margin = (dPct*2 - 100)/100;
-  return marginLabel(margin) === 'Even'
-    ? 'Even split (50% D / 50% R)'
-    : `${marginLabel(margin)} split (${dPct.toFixed(1)}% D / ${sliderValue.toFixed(1)}% R)`;
-}
-
-function renderAdv(){
-  renderAdvStats();
-  renderAdvTable();
-  renderAdvMap();
-}
-
-function resetAdvSliders(){
-  advTurnoutPct = 75; advDemLoyalty = 95; advRepLoyalty = 95; advNpaSplit = 50;
-  advWhiteSplit = 50; advBlackSplit = 50; advHispanicSplit = 50; advAsianSplit = 50;
-  document.getElementById('advTurnoutSlider').value = advTurnoutPct;
-  document.getElementById('advNpaSlider').value = 100-advNpaSplit;
-  document.getElementById('advDemLoyaltySlider').value = advDemLoyalty;
-  document.getElementById('advRepLoyaltySlider').value = advRepLoyalty;
-  document.getElementById('advWhiteSlider').value = advWhiteSplit;
-  document.getElementById('advBlackSlider').value = advBlackSplit;
-  document.getElementById('advHispanicSlider').value = advHispanicSplit;
-  document.getElementById('advAsianSlider').value = advAsianSplit;
-  updateAdvTurnoutLabel();
-  document.getElementById('advNpaSliderValue').textContent = 'Even split (50% D / 50% R)';
-  document.getElementById('advDemLoyaltyValue').textContent = '95.0% D (5.0% cross to R)';
-  document.getElementById('advRepLoyaltyValue').textContent = '95.0% R (5.0% cross to D)';
-  document.getElementById('advWhiteValue').textContent = 'Even split (50% D / 50% R)';
-  document.getElementById('advBlackValue').textContent = 'Even split (50% D / 50% R)';
-  document.getElementById('advHispanicValue').textContent = 'Even split (50% D / 50% R)';
-  document.getElementById('advAsianValue').textContent = 'Even split (50% D / 50% R)';
-  renderAdv();
-}
-
-function initAdv(){
-  updateAdvTurnoutLabel();
-  renderAdv();
-}
-
-document.getElementById('advTurnoutSlider').addEventListener('input', e => {
-  advTurnoutPct = parseFloat(e.target.value);
-  updateAdvTurnoutLabel();
-  renderAdv();
-});
-document.getElementById('advNpaSlider').addEventListener('input', e => {
-  advNpaSplit = 100 - parseFloat(e.target.value);
-  document.getElementById('advNpaSliderValue').textContent = advSliderLabel(parseFloat(e.target.value));
-  renderAdv();
-});
-document.getElementById('advDemLoyaltySlider').addEventListener('input', e => {
-  advDemLoyalty = parseFloat(e.target.value);
-  document.getElementById('advDemLoyaltyValue').textContent = `${advDemLoyalty.toFixed(1)}% D (${(100-advDemLoyalty).toFixed(1)}% cross to R)`;
-  renderAdv();
-});
-document.getElementById('advRepLoyaltySlider').addEventListener('input', e => {
-  advRepLoyalty = parseFloat(e.target.value);
-  document.getElementById('advRepLoyaltyValue').textContent = `${advRepLoyalty.toFixed(1)}% R (${(100-advRepLoyalty).toFixed(1)}% cross to D)`;
-  renderAdv();
-});
-document.getElementById('advWhiteSlider').addEventListener('input', e => {
-  advWhiteSplit = parseFloat(e.target.value);
-  document.getElementById('advWhiteValue').textContent = advSliderLabel(advWhiteSplit);
-  renderAdv();
-});
-document.getElementById('advBlackSlider').addEventListener('input', e => {
-  advBlackSplit = parseFloat(e.target.value);
-  document.getElementById('advBlackValue').textContent = advSliderLabel(advBlackSplit);
-  renderAdv();
-});
-document.getElementById('advHispanicSlider').addEventListener('input', e => {
-  advHispanicSplit = parseFloat(e.target.value);
-  document.getElementById('advHispanicValue').textContent = advSliderLabel(advHispanicSplit);
-  renderAdv();
-});
-document.getElementById('advAsianSlider').addEventListener('input', e => {
-  advAsianSplit = parseFloat(e.target.value);
-  document.getElementById('advAsianValue').textContent = advSliderLabel(advAsianSplit);
-  renderAdv();
-});
-document.getElementById('advResetAllBtn').addEventListener('click', resetAdvSliders);
-
-document.querySelectorAll('#simBuildModeSelect button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    advBuildMode = btn.dataset.build;
-    document.querySelectorAll('#simBuildModeSelect button').forEach(b=>b.classList.toggle('active', b===btn));
-    document.getElementById('simEasyBuild').style.display = advBuildMode==='easy' ? '' : 'none';
-    document.getElementById('simAdvancedBuild').style.display = advBuildMode==='advanced' ? '' : 'none';
-    if(advBuildMode === 'advanced' && !advInitialized){
-      advInitialized = true;
-      initAdv();
-    }
-  });
-});
 
 async function renderSimMap(){
   await ensureGeojson();
@@ -3951,29 +3433,23 @@ function switchMode(mode){
   currentMode = mode;
   document.getElementById('modeLiveBtn').classList.toggle('active', mode==='live');
   document.getElementById('modeSimBtn').classList.toggle('active', mode==='sim');
-  document.getElementById('modeOutlookBtn').classList.toggle('active', mode==='outlook');
-
-  document.getElementById('dashboard').classList.toggle('active', mode==='live');
-  document.getElementById('simDashboard').classList.toggle('active', mode==='sim');
-  document.getElementById('outlookDashboard').classList.toggle('active', mode==='outlook');
-
-  if(mode === 'live'){
+  if(mode === 'sim'){
+    document.getElementById('dashboard').classList.remove('active');
     document.getElementById('emptyState').style.display = 'none';
     document.getElementById('errorMsg').style.display = 'none';
+    document.getElementById('simDashboard').classList.add('active');
+    if(!simInitialized){ simInitialized = true; initSim(); }
+  }else{
+    document.getElementById('simDashboard').classList.remove('active');
+    document.getElementById('dashboard').classList.add('active');
     // Catch up on any data auto-refresh fetched in the background while
-    // a different tab was open (COUNTIES itself was kept current the
+    // Build Your Own Map was open (COUNTIES itself was kept current the
     // whole time -- only the visual render was held off).
     render();
-  }else if(mode === 'sim'){
-    document.getElementById('emptyState').style.display = 'none';
-    document.getElementById('errorMsg').style.display = 'none';
-    if(!simInitialized){ simInitialized = true; initSim(); }
   }
-  // 'outlook' is a static panel -- nothing to initialize or refresh.
 }
 document.getElementById('modeLiveBtn').addEventListener('click', () => switchMode('live'));
 document.getElementById('modeSimBtn').addEventListener('click', () => switchMode('sim'));
-document.getElementById('modeOutlookBtn').addEventListener('click', () => switchMode('outlook'));
 
 document.getElementById('simTurnoutSlider').addEventListener('input', e => {
   simTurnoutPct = parseFloat(e.target.value);

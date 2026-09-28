@@ -1680,8 +1680,8 @@ function renderStats(){
   // actually changed) -- this box is meant to answer "did it just
   // check," not "when did the data last move." Using lastUpdated here
   // was why a completely quiet run still made this look stale.
-  const checkTimes = activeCounties.map(c=>c.runTimestamp).filter(Boolean).sort();
-  document.getElementById('statUpdated').textContent = checkTimes.length ? checkTimes[checkTimes.length-1] : '—';
+  const latestCheck = latestTimestampString(activeCounties.map(c=>c.runTimestamp));
+  document.getElementById('statUpdated').textContent = latestCheck || '—';
 
   const totalNewVotes = activeCounties.reduce((s,c)=>s+(c.totalNew||0),0);
   document.getElementById('statTotalSub').textContent = totalNewVotes > 0
@@ -2146,7 +2146,7 @@ function buildTweetSections(){
   // "Most Recent Update" stat box, so the two now always agree. The
   // vote counts/percentages below are always accurate regardless of
   // which clock labels them; this only changes what the timestamp says.
-  const lastCheckedRaw = list.map(c=>c.runTimestamp).filter(Boolean).sort().pop() || '';
+  const lastCheckedRaw = latestTimestampString(list.map(c=>c.runTimestamp));
 
   // Header date format is deliberately different from formatAsOf
   // elsewhere in the app: "September 24, 2026, 7:01pm" -- no ordinal
@@ -2506,6 +2506,29 @@ function filenameSafeTimestamp(asOfStr){
     .toLowerCase();
 }
 
+// Picks the genuinely LATEST timestamp string from a list of the
+// Python script's "Updated at Month Dth, YYYY at H:MMam" strings, by
+// comparing real dates. A plain .sort() compares them as TEXT, which
+// gets it wrong any time two times differ in digit count -- "11:02am"
+// sorts before "8:43am" because '1' < '8' -- so the older time won.
+// Used by the Most Recent Update box, the PNG header/filename, and the
+// summary card so all three always agree on the same time.
+function latestTimestampString(strings){
+  let best = '', bestTime = -Infinity;
+  (strings || []).forEach(s => {
+    if(!s) return;
+    const d = parseHistoryTimestamp(s);
+    const t = d ? d.getTime() : NaN;
+    if(!isNaN(t)){
+      if(t > bestTime){ bestTime = t; best = s; }
+    }else if(bestTime === -Infinity && s > best){
+      // Unparseable format: only used if nothing parseable turns up.
+      best = s;
+    }
+  });
+  return best;
+}
+
 // reporting), how many counties had a rating change ("margin move"), how
 // many counties got new votes this update, and the top 3 counties by
 // votes added this update. All pulled from whichever dataset the map/
@@ -2552,8 +2575,15 @@ function liveResultsSummary(){
     }
   }
 
-  const updateTimes = list.map(c=>c.lastUpdated).filter(Boolean).sort();
-  const rawLastUpdated = updateTimes.length ? updateTimes[updateTimes.length-1] : '';
+  // Uses the same clock as the "Most Recent Update" box (runTimestamp,
+  // written fresh on every run) rather than lastUpdated, which
+  // deliberately freezes when no votes change -- that's why the PNG used
+  // to keep showing an older time (and put it in the filename) after a
+  // run that checked later but found nothing new. Falls back to
+  // lastUpdated only if no county has a check time at all.
+  const rawLastUpdated =
+    latestTimestampString(list.map(c=>c.runTimestamp)) ||
+    latestTimestampString(list.map(c=>c.lastUpdated));
   const asOfText = rawLastUpdated ? formatAsOf(rawLastUpdated) : formatAsOfFromDate(new Date());
 
   const npaPct = barDenom ? (totalNpaOther/barDenom)*100 : 0;
@@ -4242,7 +4272,8 @@ async function downloadCountyZoomPng(){
     ctx.fillText(`${zoomedCounty} County \u2014 ${metricTitle}`, pad, y + 26*scale);
     ctx.fillStyle = '#7c879c';
     ctx.font = `${12*scale}px IBM Plex Mono, monospace`;
-    const asOfRaw = c.runTimestamp ? formatAsOf(c.runTimestamp) : '';
+    const latestCheckRaw = latestTimestampString(activeCountiesFor(currentMetric).map(x=>x.runTimestamp)) || c.runTimestamp || '';
+    const asOfRaw = latestCheckRaw ? formatAsOf(latestCheckRaw) : '';
     ctx.fillText(`Florida Vote Tracker 2026${asOfRaw ? '  \u00b7  ' + asOfRaw : ''}`, pad, y + 50*scale);
     y += headerH;
 
@@ -4290,7 +4321,7 @@ async function downloadCountyZoomPng(){
     drawSourceCredit(ctx, pad, canvas.height - (14*scale), scale);
 
     const pngUrl = canvas.toDataURL('image/png');
-    const asOfForFilename = c.runTimestamp ? formatAsOf(c.runTimestamp) : formatAsOfFromDate(new Date());
+    const asOfForFilename = latestCheckRaw ? formatAsOf(latestCheckRaw) : formatAsOfFromDate(new Date());
     const countySlug = zoomedCounty.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const metricSlug = currentMetric.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     const a = document.createElement('a');

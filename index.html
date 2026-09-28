@@ -959,8 +959,8 @@ const DROP_WINNER_CATS = [
 ];
 // Finds this hour's actual leader(s) among DEM/REP/NPA-Other new votes:
 // takes the highest of the three values first, THEN checks which of the
-// three actually reached it -- a tie only means two (or three) of them
-// are tied for the LEAD, not merely equal to each other while a third
+// three actually reached it -- a tie only means two (or three) are
+// tied for the LEAD, not merely equal to each other while a third
 // value is clearly ahead. (Checking pairwise equality directly, without
 // first finding the max, was the earlier bug: DEM +4 / REP +1 / NPA +1
 // would wrongly read as an R-NPA tie just because 1 === 1, even though
@@ -4090,6 +4090,61 @@ function buildDropWinnerPngSummary(countyName, totals){
   return `${countyName} County has logged ${totalDrops} vote drop${totalDrops===1?'':'s'} since tracking began. ${entries[0].label} have won the most (${entries[0].count}), followed by ${entries[1].label.toLowerCase()} (${entries[1].count}).`;
 }
 
+// Rasterizes the LIVE zoomed-county map SVG -- not a fresh Plotly
+// re-render -- so the tie stripes (D-R, D-NPA, R-NPA) that
+// applyTieStripes() paints directly onto the on-screen SVG actually
+// make it into the exported image. Plotly.toImage() rebuilds the map
+// from its trace data alone and has no idea those stripes exist, which
+// is why a tied county exported as a plain solid color. Reuses the same
+// liveMapSvgToCanvas() + computeChoroplethBBox() pair the statewide PNG
+// export already relies on for exactly this reason, then crops tightly
+// to the county and fits it into the requested box (shape always fully
+// preserved, never cropped). Returns null if anything's missing so the
+// caller can fall back to the old Plotly.toImage path.
+async function captureZoomedMapCanvas(targetCssW, targetCssH, scale){
+  const svg = document.querySelector('#map svg');
+  if(!svg) return null;
+  const rect = svg.getBoundingClientRect();
+  // Use the SVG's own width/height attributes (the same units its path
+  // coordinates and any measured bounding box are in), falling back to
+  // its rendered size, so the crop math below lines up exactly.
+  const w = parseFloat(svg.getAttribute('width')) || Math.round(rect.width);
+  const h = parseFloat(svg.getAttribute('height')) || Math.round(rect.height);
+  if(!w || !h) return null;
+
+  const full = await liveMapSvgToCanvas(svg, w, h, scale);
+  const bbox = computeChoroplethBBox(svg);
+
+  let sx = 0, sy = 0, sw = full.width, sh = full.height;
+  if(bbox && bbox.width > 0 && bbox.height > 0){
+    const padX = bbox.width * 0.06, padY = bbox.height * 0.06;
+    sx = Math.max(0, (bbox.x - padX) * scale);
+    sy = Math.max(0, (bbox.y - padY) * scale);
+    sw = Math.min(full.width - sx, (bbox.width + 2*padX) * scale);
+    sh = Math.min(full.height - sy, (bbox.height + 2*padY) * scale);
+  }
+
+  const targetW = targetCssW * scale, targetH = targetCssH * scale;
+  const srcAspect = sw / sh, targetAspect = targetW / targetH;
+  let drawW, drawH, drawX, drawY;
+  if(srcAspect > targetAspect){
+    drawW = targetW; drawH = targetW / srcAspect;
+    drawX = 0; drawY = (targetH - drawH) / 2;
+  }else{
+    drawH = targetH; drawW = targetH * srcAspect;
+    drawY = 0; drawX = (targetW - drawW) / 2;
+  }
+
+  const out = document.createElement('canvas');
+  out.width = targetW;
+  out.height = targetH;
+  const ctx = out.getContext('2d');
+  ctx.fillStyle = '#0a0e17';
+  ctx.fillRect(0, 0, targetW, targetH);
+  ctx.drawImage(full, sx, sy, sw, sh, drawX, drawY, drawW, drawH);
+  return out;
+}
+
 async function downloadCountyZoomPng(){
   if(!zoomedCounty) return;
   const btn = document.getElementById('countyZoomPngBtn');
@@ -4107,8 +4162,21 @@ async function downloadCountyZoomPng(){
     const chartCssW = cssW - 48;
     const chartCssH = 320;
 
-    const mapDataUrl = await Plotly.toImage('map', { format:'png', width:mapCssW, height:mapCssH, scale });
-    const mapImg = await loadImageFromDataUrl(mapDataUrl);
+    // General Election (with the shift sliders untouched) and Drop
+    // Winners are the two views that show tie stripes, so they capture
+    // the live SVG to keep those stripes; every other view is
+    // unchanged. Falls back to the original Plotly.toImage capture if
+    // the SVG route fails for any reason, so the export never breaks.
+    const showsTieStripes = (currentMetric === 'demrepnpa' && !shiftSliderActive) || currentMetric === 'dropwinner';
+    let mapImg = null;
+    if(showsTieStripes){
+      try{ mapImg = await captureZoomedMapCanvas(mapCssW, mapCssH, scale); }
+      catch(e){ mapImg = null; }
+    }
+    if(!mapImg){
+      const mapDataUrl = await Plotly.toImage('map', { format:'png', width:mapCssW, height:mapCssH, scale });
+      mapImg = await loadImageFromDataUrl(mapDataUrl);
+    }
 
     // Only present at all for Drop Winners (empty div otherwise, which
     // captureChartImage already skips gracefully) -- a moderate width

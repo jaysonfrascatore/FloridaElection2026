@@ -513,24 +513,6 @@
     font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted);
     margin:0 0 10px;
   }
-  .chart-header-row{
-    display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;
-  }
-  .chart-header-row h3{ margin:0; }
-  /* Total-line toggle: deliberately loud when active (solid green, not
-     just an outline) since the whole point is that a total line is easy
-     to miss among three party-colored lines otherwise. */
-  .total-toggle-btn{
-    font-family:var(--mono); font-size:10.5px; font-weight:600; letter-spacing:.02em;
-    color:var(--total-green); background:rgba(128,237,153,0.12);
-    border:1px solid rgba(128,237,153,0.5); border-radius:20px;
-    padding:5px 12px; cursor:pointer; white-space:nowrap;
-    transition:background .2s, color .2s, border-color .2s;
-  }
-  .total-toggle-btn:hover{ border-color:var(--total-green); }
-  .total-toggle-btn.active{
-    background:var(--total-green); color:#0a0e17; border-color:var(--total-green);
-  }
   .county-detail-chart{ min-height:420px; }
   .county-detail-note{
     font-family:var(--mono); font-size:11px; color:var(--muted-2);
@@ -739,15 +721,16 @@
       <div id="countyChartsView">
         <h2 id="countyChartsTitle">County Trend</h2>
         <div class="county-detail-chart-wrap">
-          <div class="chart-header-row">
-            <h3 id="countyDetailCumulativeLabel">Cumulative Votes</h3>
-            <button class="total-toggle-btn" id="countyTotalToggleBtn" title="Show the combined total (all parties added together) as its own line">+ Show Total</button>
-          </div>
+          <h3 id="countyDetailCumulativeLabel">Cumulative Votes</h3>
           <div class="county-detail-chart" id="countyDetailCumulativeChart"></div>
         </div>
         <div class="county-detail-chart-wrap">
           <h3 id="countyDetailShareLabel">Vote Share Over Time</h3>
           <div class="county-detail-chart" id="countyDetailShareChart"></div>
+        </div>
+        <div class="county-detail-chart-wrap" id="countyDetailTotalWrap">
+          <h3>Cumulative Total Votes</h3>
+          <div class="county-detail-chart" id="countyDetailTotalChart"></div>
         </div>
       </div>
 
@@ -788,15 +771,16 @@
   <div class="panel" id="statewideHistoryPanel" style="margin-top:18px;">
     <h2>Statewide Historical Trend</h2>
     <div class="county-detail-chart-wrap">
-      <div class="chart-header-row">
-        <h3>Cumulative Votes</h3>
-        <button class="total-toggle-btn" id="statewideTotalToggleBtn" title="Show the combined total (all parties added together) as its own line">+ Show Total</button>
-      </div>
+      <h3>Cumulative Votes</h3>
       <div class="county-detail-chart" id="statewideCumulativeChart"></div>
     </div>
     <div class="county-detail-chart-wrap">
       <h3>Vote Share Over Time</h3>
       <div class="county-detail-chart" id="statewideShareChart"></div>
+    </div>
+    <div class="county-detail-chart-wrap">
+      <h3>Cumulative Total Votes</h3>
+      <div class="county-detail-chart" id="statewideTotalChart"></div>
     </div>
   </div>
 
@@ -4001,6 +3985,11 @@ async function loadAndRenderCountyCharts(countyName){
     const history = computeDropWinnerHistory(countyRows);
     renderDropWinnerLineCharts(history);
     renderDropWinnerBarChart(history.totals);
+    // "Total votes" doesn't apply to Drop Winners (it tracks who won
+    // each drop, not vote counts), so this panel is cleared here --
+    // renderCountyDetailCharts (which fills it) never runs on this branch.
+    const totalEl = document.getElementById('countyDetailTotalChart');
+    if(totalEl) totalEl.innerHTML = '';
   }else{
     document.getElementById('countyDetailCumulativeLabel').textContent = 'Cumulative Votes';
     document.getElementById('countyDetailShareLabel').textContent = 'Vote Share Over Time';
@@ -4199,40 +4188,6 @@ async function captureZoomedMapCanvas(targetCssW, targetCssH, scale){
   return out;
 }
 
-// Off-screen "Cumulative Total Votes" chart (green line, all parties
-// combined) built purely for the county PNG export -- replaces the
-// on-screen % share chart in that export specifically, per the request
-// to swap the percentage chart out for a total-votes one there. Not
-// tied to the on-screen Total toggle at all; this always renders,
-// regardless of whether that toggle happens to be on.
-async function renderCountyTotalChartImage(times, dem, rep, npaOther, width, height, scale){
-  const tempDiv = document.createElement('div');
-  tempDiv.style.position = 'fixed';
-  tempDiv.style.left = '-9999px';
-  tempDiv.style.top = '0';
-  tempDiv.style.width = width + 'px';
-  tempDiv.style.height = height + 'px';
-  document.body.appendChild(tempDiv);
-  try{
-    const total = times.map((_,i) => dem[i]+rep[i]+npaOther[i]);
-    const trace = {
-      mode:'lines+markers', x:times, y:total, name:'TOTAL',
-      marker:{size:6, color:'#80ed99'}, line:{color:'#80ed99', width:3}
-    };
-    const layout = {
-      ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
-      yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'Votes', font:{size:10}}},
-      showlegend:false
-    };
-    await Plotly.newPlot(tempDiv, [trace], layout, { displayModeBar:false, responsive:false });
-    const dataUrl = await Plotly.toImage(tempDiv, { format:'png', width, height, scale });
-    return await loadImageFromDataUrl(dataUrl);
-  }finally{
-    Plotly.purge(tempDiv);
-    document.body.removeChild(tempDiv);
-  }
-}
-
 async function downloadCountyZoomPng(){
   if(!zoomedCounty) return;
   const btn = document.getElementById('countyZoomPngBtn');
@@ -4273,18 +4228,11 @@ async function downloadCountyZoomPng(){
     const barChartImg = await captureChartImage('countyZoomBarChart', 560, 250, scale);
 
     const chart1Img = await captureChartImage('countyDetailCumulativeChart', chartCssW, chartCssH, scale);
-    // Chart 2 in this export is always "Cumulative Total Votes" (green,
-    // combined), replacing the on-screen % share chart, EXCEPT on Drop
-    // Winners, whose second chart is "Drop Win Share Over Time" -- a
-    // different concept entirely, so that one keeps its normal capture.
-    let chart2Img, chart2LabelOverride = null;
-    if(currentMetric !== 'dropwinner' && lastCountyChartData){
-      const d = lastCountyChartData;
-      chart2Img = await renderCountyTotalChartImage(d.times, d.dem, d.rep, d.npaOther, chartCssW, chartCssH, scale);
-      chart2LabelOverride = 'CUMULATIVE TOTAL VOTES';
-    }else{
-      chart2Img = await captureChartImage('countyDetailShareChart', chartCssW, chartCssH, scale);
-    }
+    const chart2Img = await captureChartImage('countyDetailShareChart', chartCssW, chartCssH, scale);
+    // Only present for non-Drop-Winners metrics (the dedicated chart
+    // div is cleared/empty on Drop Winners, so this gracefully returns
+    // null there via captureChartImage's own empty-div check).
+    const chart3Img = await captureChartImage('countyDetailTotalChart', chartCssW, chartCssH, scale);
 
     const infoLines = parseTooltipHtmlToLines(tooltipText([c])[0]);
 
@@ -4321,9 +4269,10 @@ async function downloadCountyZoomPng(){
     const barChartH = barChartImg ? barChartImg.height + 34*scale : 0;
     const chart1H = chart1Img ? chart1Img.height + 34*scale : 0;
     const chart2H = chart2Img ? chart2Img.height + 34*scale : 0;
+    const chart3H = chart3Img ? chart3Img.height + 34*scale : 0;
     const footerH = 40 * scale;
 
-    const canvasH = pad + headerH + mapInfoRowH + barChartH + chart1H + chart2H + summaryBlockH + footerH + pad;
+    const canvasH = pad + headerH + mapInfoRowH + barChartH + chart1H + chart2H + chart3H + summaryBlockH + footerH + pad;
 
     const canvas = document.createElement('canvas');
     canvas.width = canvasW;
@@ -4375,9 +4324,17 @@ async function downloadCountyZoomPng(){
     if(chart2Img){
       ctx.fillStyle = '#7c879c';
       ctx.font = `600 ${13*scale}px IBM Plex Mono, monospace`;
-      ctx.fillText(chart2LabelOverride || (document.getElementById('countyDetailShareLabel').textContent || '').toUpperCase(), pad, y + 16*scale);
+      ctx.fillText((document.getElementById('countyDetailShareLabel').textContent || '').toUpperCase(), pad, y + 16*scale);
       ctx.drawImage(chart2Img, pad, y + 24*scale, chart2Img.width, chart2Img.height);
       y += chart2H;
+    }
+
+    if(chart3Img){
+      ctx.fillStyle = '#7c879c';
+      ctx.font = `600 ${13*scale}px IBM Plex Mono, monospace`;
+      ctx.fillText('CUMULATIVE TOTAL VOTES', pad, y + 16*scale);
+      ctx.drawImage(chart3Img, pad, y + 24*scale, chart3Img.width, chart3Img.height);
+      y += chart3H;
     }
 
     ctx.fillStyle = '#e9edf5';
@@ -4541,6 +4498,18 @@ function buildNetGainLookup(dem, rep, npaOther){
   };
 }
 
+// Same idea, for the dedicated single-line Total chart: the size of
+// each drop, all parties combined -- this is what answers "how many
+// votes came in and how large was that drop", shown on hover rather
+// than needing a second chart just for drop size.
+function buildTotalNetGainLookup(total){
+  return function(pointIndex){
+    if(pointIndex == null || pointIndex < 0 || pointIndex >= total.length) return null;
+    const prevTotal = pointIndex > 0 ? total[pointIndex-1] : 0;
+    return { 'TOTAL': total[pointIndex] - prevTotal };
+  };
+}
+
 function formatSortedHoverDate(x){
   const d = (x instanceof Date) ? x : new Date(x);
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -4615,7 +4584,7 @@ function attachSortedHoverTooltip(chartEl, valueFormatter, ratingLookup, netGain
     if(netGainLookup){
       const gains = netGainLookup(anchorPt.pointIndex);
       if(gains){
-        const gainEntries = sorted
+        const gainEntries = pts
           .map(p => ({ name:p.data.name, color:TREND_TRACE_COLORS[p.data.name], gain:gains[p.data.name] }))
           .filter(g => g.gain !== undefined && g.gain !== null);
         const sortedGains = gainEntries.slice().sort((a,b) => b.gain - a.gain);
@@ -4652,24 +4621,15 @@ function attachSortedHoverTooltip(chartEl, valueFormatter, ratingLookup, netGain
   });
 }
 
-// Toggle state for the "+ Show Total" button on each cumulative chart --
-// independent per chart, since a user might want it on one but not the
-// other. lastCountyChartData/lastStatewideChartData cache what's needed
-// to redraw instantly on toggle, without re-fetching or recomputing
-// anything.
-let showCountyTotalLine = false;
-let showStatewideTotalLine = false;
-let lastCountyChartData = null;
-let lastStatewideChartData = null;
-
 function renderCountyDetailCharts(countyRows){
   const cumulativeEl = document.getElementById('countyDetailCumulativeChart');
   const shareEl = document.getElementById('countyDetailShareChart');
+  const totalEl = document.getElementById('countyDetailTotalChart');
 
   if(!countyRows.length){
     cumulativeEl.innerHTML = '<div class="county-detail-note">No historical data logged for this county yet. Once the tracker has run a few times, its trend will build here.</div>';
     shareEl.innerHTML = '';
-    lastCountyChartData = null;
+    if(totalEl) totalEl.innerHTML = '';
     return;
   }
 
@@ -4691,8 +4651,6 @@ function renderCountyDetailCharts(countyRows){
     .map((r,i) => pick(r,['Note']) ? i : -1)
     .filter(i => i >= 0);
 
-  lastCountyChartData = { times, dem, rep, npaOther, demPct, repPct, npaOtherPct, ratingLookup, netGainLookup, restartIdx };
-
   // mode:'lines+markers' is what puts a visible dot at every logged
   // update, not just a smooth line between them.
   const lineBase = { mode:'lines+markers', marker:{size:6}, line:{width:2.5} };
@@ -4702,12 +4660,6 @@ function renderCountyDetailCharts(countyRows){
     { ...lineBase, x:times, y:rep, name:'REP', line:{color:'#d4675a', width:2.5} },
     { ...lineBase, x:times, y:npaOther, name:'NPA/Other', line:{color:'#c77dff', width:2.5} }
   ];
-  if(showCountyTotalLine){
-    const total = times.map((_,i) => dem[i]+rep[i]+npaOther[i]);
-    // Thicker and drawn last (on top) so it's unmistakable next to the
-    // three party lines, matching "make sure it's a noticeable thing".
-    cumulativeTraces.push({ ...lineBase, x:times, y:total, name:'TOTAL', marker:{size:7}, line:{color:'#80ed99', width:3.5} });
-  }
   if(restartIdx.length){
     cumulativeTraces.push({
       mode:'markers', x:restartIdx.map(i=>times[i]), y:restartIdx.map(i=>dem[i]+rep[i]+npaOther[i]),
@@ -4733,6 +4685,22 @@ function renderCountyDetailCharts(countyRows){
     yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:[0,100]}
   }, {displayModeBar:false, responsive:true});
   attachSortedHoverTooltip(shareEl, fmtShareHoverValue, ratingLookup);
+
+  // Dedicated Total chart -- its own clean single-line panel rather than
+  // a 4th line crammed onto the by-party chart, per the request that a
+  // "Show Total" overlay made that chart too cluttered. Hovering shows
+  // both the running total AND the size of that specific drop (via
+  // buildTotalNetGainLookup), which is the "how large was this drop"
+  // question this chart exists to answer.
+  if(totalEl){
+    const total = times.map((_,i) => dem[i]+rep[i]+npaOther[i]);
+    const totalTrace = { ...lineBase, x:times, y:total, name:'TOTAL', marker:{size:6, color:'#80ed99'}, line:{color:'#80ed99', width:2.5} };
+    Plotly.newPlot(totalEl, [totalTrace], {
+      ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
+      yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'Votes', font:{size:10}}}
+    }, {displayModeBar:false, responsive:true});
+    attachSortedHoverTooltip(totalEl, fmtCumulativeHoverValue, null, buildTotalNetGainLookup(total));
+  }
 }
 
 // ============================================================
@@ -4754,6 +4722,7 @@ let statewideHistoryEverLoaded = false;
 async function renderStatewideHistoryCharts(){
   const cumulativeEl = document.getElementById('statewideCumulativeChart');
   const shareEl = document.getElementById('statewideShareChart');
+  const totalEl = document.getElementById('statewideTotalChart');
   if(!cumulativeEl || !shareEl) return;
 
   // render() (and therefore this) can fire again before a previous
@@ -4787,6 +4756,7 @@ async function renderStatewideHistoryCharts(){
     if(!statewideHistoryEverLoaded){
       cumulativeEl.innerHTML = '<div class="county-detail-note">No statewide history logged yet. Once the tracker has run a few times, the statewide trend will build here.</div>';
       shareEl.innerHTML = '';
+      if(totalEl) totalEl.innerHTML = '';
     }
     return;
   }
@@ -4806,17 +4776,11 @@ async function renderStatewideHistoryCharts(){
   const lineBase = { mode:'lines+markers', marker:{size:6}, line:{width:2.5} };
   const netGainLookup = buildNetGainLookup(dem, rep, npaOther);
 
-  lastStatewideChartData = { times, dem, rep, npaOther, demPct, repPct, npaOtherPct, netGainLookup };
-
   const cumulativeTraces = [
     { ...lineBase, x:times, y:dem, name:'DEM', line:{color:'#5b9bd9', width:2.5} },
     { ...lineBase, x:times, y:rep, name:'REP', line:{color:'#d4675a', width:2.5} },
     { ...lineBase, x:times, y:npaOther, name:'NPA/Other', line:{color:'#c77dff', width:2.5} }
   ];
-  if(showStatewideTotalLine){
-    const total = times.map((_,i) => dem[i]+rep[i]+npaOther[i]);
-    cumulativeTraces.push({ ...lineBase, x:times, y:total, name:'TOTAL', marker:{size:7}, line:{color:'#80ed99', width:3.5} });
-  }
 
   Plotly.newPlot(cumulativeEl, cumulativeTraces, {
     ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
@@ -4835,76 +4799,21 @@ async function renderStatewideHistoryCharts(){
     yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:[0,100]}
   }, {displayModeBar:false, responsive:true});
   attachSortedHoverTooltip(shareEl, fmtShareHoverValue);
-}
 
-// Redraws just the cumulative chart from cached data when the Total
-// toggle is flipped -- no re-fetch, no touching the share chart next to
-// it. Mirrors the trace-building logic inside renderCountyDetailCharts/
-// renderStatewideHistoryCharts exactly, just without re-deriving the
-// underlying arrays each time.
-function redrawCountyCumulativeFromCache(){
-  if(!lastCountyChartData) return;
-  const { times, dem, rep, npaOther, ratingLookup, netGainLookup, restartIdx } = lastCountyChartData;
-  const cumulativeEl = document.getElementById('countyDetailCumulativeChart');
-  const lineBase = { mode:'lines+markers', marker:{size:6}, line:{width:2.5} };
-  const cumulativeTraces = [
-    { ...lineBase, x:times, y:dem, name:'DEM', line:{color:'#5b9bd9', width:2.5} },
-    { ...lineBase, x:times, y:rep, name:'REP', line:{color:'#d4675a', width:2.5} },
-    { ...lineBase, x:times, y:npaOther, name:'NPA/Other', line:{color:'#c77dff', width:2.5} }
-  ];
-  if(showCountyTotalLine){
+  // Dedicated statewide Total chart -- same idea as the county-level
+  // one: a clean single line rather than a 4th line on the by-party
+  // chart, with hover showing both the running total and the size of
+  // that specific update.
+  if(totalEl){
     const total = times.map((_,i) => dem[i]+rep[i]+npaOther[i]);
-    cumulativeTraces.push({ ...lineBase, x:times, y:total, name:'TOTAL', marker:{size:7}, line:{color:'#80ed99', width:3.5} });
+    const totalTrace = { ...lineBase, x:times, y:total, name:'TOTAL', marker:{size:6, color:'#80ed99'}, line:{color:'#80ed99', width:2.5} };
+    Plotly.newPlot(totalEl, [totalTrace], {
+      ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
+      yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'Votes', font:{size:10}}}
+    }, {displayModeBar:false, responsive:true});
+    attachSortedHoverTooltip(totalEl, fmtCumulativeHoverValue, null, buildTotalNetGainLookup(total));
   }
-  if(restartIdx.length){
-    cumulativeTraces.push({
-      mode:'markers', x:restartIdx.map(i=>times[i]), y:restartIdx.map(i=>dem[i]+rep[i]+npaOther[i]),
-      marker:{size:11, symbol:'star', color:'#F5B942', line:{width:1, color:'#0d1119'}},
-      name:'Restarted tracking', hoverinfo:'skip'
-    });
-  }
-  Plotly.newPlot(cumulativeEl, cumulativeTraces, {
-    ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
-    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'Votes', font:{size:10}}}
-  }, {displayModeBar:false, responsive:true});
-  attachSortedHoverTooltip(cumulativeEl, fmtCumulativeHoverValue, ratingLookup, netGainLookup);
 }
-
-function redrawStatewideCumulativeFromCache(){
-  if(!lastStatewideChartData) return;
-  const { times, dem, rep, npaOther, netGainLookup } = lastStatewideChartData;
-  const cumulativeEl = document.getElementById('statewideCumulativeChart');
-  const lineBase = { mode:'lines+markers', marker:{size:6}, line:{width:2.5} };
-  const cumulativeTraces = [
-    { ...lineBase, x:times, y:dem, name:'DEM', line:{color:'#5b9bd9', width:2.5} },
-    { ...lineBase, x:times, y:rep, name:'REP', line:{color:'#d4675a', width:2.5} },
-    { ...lineBase, x:times, y:npaOther, name:'NPA/Other', line:{color:'#c77dff', width:2.5} }
-  ];
-  if(showStatewideTotalLine){
-    const total = times.map((_,i) => dem[i]+rep[i]+npaOther[i]);
-    cumulativeTraces.push({ ...lineBase, x:times, y:total, name:'TOTAL', marker:{size:7}, line:{color:'#80ed99', width:3.5} });
-  }
-  Plotly.newPlot(cumulativeEl, cumulativeTraces, {
-    ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
-    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'Votes', font:{size:10}}}
-  }, {displayModeBar:false, responsive:true});
-  attachSortedHoverTooltip(cumulativeEl, fmtCumulativeHoverValue, null, netGainLookup);
-}
-
-function setTotalToggleBtnState(btn, on){
-  btn.classList.toggle('active', on);
-  btn.textContent = on ? '\u2713 Total Shown' : '+ Show Total';
-}
-document.getElementById('countyTotalToggleBtn').addEventListener('click', () => {
-  showCountyTotalLine = !showCountyTotalLine;
-  setTotalToggleBtnState(document.getElementById('countyTotalToggleBtn'), showCountyTotalLine);
-  redrawCountyCumulativeFromCache();
-});
-document.getElementById('statewideTotalToggleBtn').addEventListener('click', () => {
-  showStatewideTotalLine = !showStatewideTotalLine;
-  setTotalToggleBtnState(document.getElementById('statewideTotalToggleBtn'), showStatewideTotalLine);
-  redrawStatewideCumulativeFromCache();
-});
 
 // Second click listener on the live map, alongside the existing one in
 // renderMap() -- Plotly supports multiple listeners per event, and this

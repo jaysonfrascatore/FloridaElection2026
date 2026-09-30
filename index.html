@@ -136,6 +136,9 @@
   .stat-card-clickable:hover{ border-color:var(--gold); background:#171d2c; }
   .net-gain-row{ display:flex; flex-direction:column; gap:4px; margin-top:7px; font-family:var(--mono); font-size:12px; }
   .net-gain-row b{ font-weight:700; }
+  .net-gain-total{
+    color:var(--total-green); margin-top:3px; padding-top:6px; border-top:1px dashed var(--border);
+  }
   .stat-card .v{ font-family:var(--mono); font-size:19px; font-weight:600; }
   #statTotal{ color:var(--total-green); }
   .stat-card .k{ font-size:11px; color:var(--muted); margin-top:2px; }
@@ -535,6 +538,9 @@
   }
   .sorted-hover-date{ font-weight:600; margin-bottom:6px; color:#e9edf5; }
   .sorted-hover-row{ display:flex; align-items:center; gap:7px; padding:2px 0; }
+  .sorted-hover-total{
+    margin-top:4px; padding-top:5px; border-top:1px dashed #212a3b; color:#80ed99;
+  }
   .sorted-hover-dot{ width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
   .sorted-hover-gap{ color:#7c879c; margin-left:2px; }
   .sorted-hover-gain-header{
@@ -615,6 +621,7 @@
           <span style="color:#5b9bd9;">DEM <b id="statGainDem">&mdash;</b></span>
           <span style="color:#d4675a;">REP <b id="statGainRep">&mdash;</b></span>
           <span style="color:#c77dff;">NPA/Other <b id="statGainOther">&mdash;</b></span>
+          <span class="net-gain-total">TOTAL <b id="statGainTotal">&mdash;</b></span>
         </div>
       </div>
     </div>
@@ -728,10 +735,6 @@
           <h3 id="countyDetailShareLabel">Vote Share Over Time</h3>
           <div class="county-detail-chart" id="countyDetailShareChart"></div>
         </div>
-        <div class="county-detail-chart-wrap" id="countyDetailTotalWrap">
-          <h3>Cumulative Total Votes</h3>
-          <div class="county-detail-chart" id="countyDetailTotalChart"></div>
-        </div>
       </div>
 
       <div class="tweet-carousel">
@@ -777,10 +780,6 @@
     <div class="county-detail-chart-wrap">
       <h3>Vote Share Over Time</h3>
       <div class="county-detail-chart" id="statewideShareChart"></div>
-    </div>
-    <div class="county-detail-chart-wrap">
-      <h3>Cumulative Total Votes</h3>
-      <div class="county-detail-chart" id="statewideTotalChart"></div>
     </div>
   </div>
 
@@ -1702,9 +1701,13 @@ function renderStats(){
   // actual tracker's last real update rather than whichever metric
   // happens to be on screen.
   const signedGain = n => (n>=0?'+':'') + fmt(n);
-  document.getElementById('statGainDem').textContent = signedGain(COUNTIES.reduce((s,c)=>s+(c.demNew||0),0));
-  document.getElementById('statGainRep').textContent = signedGain(COUNTIES.reduce((s,c)=>s+(c.repNew||0),0));
-  document.getElementById('statGainOther').textContent = signedGain(COUNTIES.reduce((s,c)=>s+(c.otherNew||0),0));
+  const gainDem = COUNTIES.reduce((s,c)=>s+(c.demNew||0),0);
+  const gainRep = COUNTIES.reduce((s,c)=>s+(c.repNew||0),0);
+  const gainOther = COUNTIES.reduce((s,c)=>s+(c.otherNew||0),0);
+  document.getElementById('statGainDem').textContent = signedGain(gainDem);
+  document.getElementById('statGainRep').textContent = signedGain(gainRep);
+  document.getElementById('statGainOther').textContent = signedGain(gainOther);
+  document.getElementById('statGainTotal').textContent = signedGain(gainDem + gainRep + gainOther);
 }
 
 const METRICS = {
@@ -3923,54 +3926,6 @@ function renderDropWinnerBarChart(totals){
   Plotly.newPlot(el, [trace], layout, {displayModeBar:false, responsive:true});
 }
 
-// The two step-line charts (raw cumulative win count, and cumulative
-// win share %) -- reuses the SAME chart slots the vote-trend view uses
-// for other metrics, relabeled, so General Election keeps its own
-// vote-trend charts completely untouched while Drop Winners gets this
-// instead when a county is zoomed there.
-function renderDropWinnerLineCharts(history){
-  const cumulativeEl = document.getElementById('countyDetailCumulativeChart');
-  const shareEl = document.getElementById('countyDetailShareChart');
-
-  if(!history.times.length){
-    cumulativeEl.innerHTML = '<div class="county-detail-note">No drop history logged for this county yet.</div>';
-    shareEl.innerHTML = '';
-    return;
-  }
-
-  // shape:'hv' draws a proper step/staircase line (horizontal then
-  // vertical) between points -- correct for a running integer tally,
-  // where a smooth diagonal line between points would misleadingly
-  // imply fractional wins in between.
-  const stepBase = { mode:'lines+markers', marker:{size:6} };
-
-  const cumulativeTraces = [
-    { ...stepBase, x:history.times, y:history.cumDem, name:'DEM', line:{color:'#5b9bd9', width:2.5, shape:'hv'} },
-    { ...stepBase, x:history.times, y:history.cumRep, name:'REP', line:{color:'#d4675a', width:2.5, shape:'hv'} },
-    { ...stepBase, x:history.times, y:history.cumOther, name:'NPA/Other', line:{color:'#c77dff', width:2.5, shape:'hv'} },
-    { ...stepBase, x:history.times, y:history.cumTie, name:'Tie', line:{color:'#e9c46a', width:2.5, shape:'hv'} }
-  ];
-
-  Plotly.newPlot(cumulativeEl, cumulativeTraces, {
-    ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
-    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'Drops Won', font:{size:10}}}
-  }, {displayModeBar:false, responsive:true});
-  attachSortedHoverTooltip(cumulativeEl, fmtCumulativeHoverValue);
-
-  const shareTraces = [
-    { ...stepBase, x:history.times, y:history.shareDem, name:'DEM %', line:{color:'#5b9bd9', width:2.5, shape:'hv'} },
-    { ...stepBase, x:history.times, y:history.shareRep, name:'REP %', line:{color:'#d4675a', width:2.5, shape:'hv'} },
-    { ...stepBase, x:history.times, y:history.shareOther, name:'NPA/Other %', line:{color:'#c77dff', width:2.5, shape:'hv'} },
-    { ...stepBase, x:history.times, y:history.shareTie, name:'Tie %', line:{color:'#e9c46a', width:2.5, shape:'hv'} }
-  ];
-
-  Plotly.newPlot(shareEl, shareTraces, {
-    ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
-    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:[0,100]}
-  }, {displayModeBar:false, responsive:true});
-  attachSortedHoverTooltip(shareEl, fmtShareHoverValue);
-}
-
 async function loadAndRenderCountyCharts(countyName){
   const rows = await ensureCountyHistoryLoaded();
   const countyRows = rows
@@ -3979,20 +3934,18 @@ async function loadAndRenderCountyCharts(countyName){
     .filter(r => r._time)
     .sort((a,b) => a._time - b._time);
 
+  document.getElementById('countyDetailCumulativeLabel').textContent = 'Cumulative Votes';
+  document.getElementById('countyDetailShareLabel').textContent = 'Vote Share Over Time';
   if(currentMetric === 'dropwinner'){
-    document.getElementById('countyDetailCumulativeLabel').textContent = 'Cumulative Drop Wins';
-    document.getElementById('countyDetailShareLabel').textContent = 'Drop Win Share Over Time';
+    // The bar chart (who won each drop) is still specific to Drop
+    // Winners, but the two line charts now show the same vote-count/
+    // vote-share trend as every other metric -- "Cumulative Drop Wins"
+    // read as a different, unclear thing, and the actual vote totals
+    // are more useful here anyway.
     const history = computeDropWinnerHistory(countyRows);
-    renderDropWinnerLineCharts(history);
     renderDropWinnerBarChart(history.totals);
-    // "Total votes" doesn't apply to Drop Winners (it tracks who won
-    // each drop, not vote counts), so this panel is cleared here --
-    // renderCountyDetailCharts (which fills it) never runs on this branch.
-    const totalEl = document.getElementById('countyDetailTotalChart');
-    if(totalEl) totalEl.innerHTML = '';
+    renderCountyDetailCharts(countyRows);
   }else{
-    document.getElementById('countyDetailCumulativeLabel').textContent = 'Cumulative Votes';
-    document.getElementById('countyDetailShareLabel').textContent = 'Vote Share Over Time';
     // Clears out any bar chart left over from a previous Drop Winners
     // zoom -- every other metric's info panel has no bar chart at all.
     document.getElementById('countyZoomBarChart').innerHTML = '';
@@ -4103,9 +4056,13 @@ function colorForEmojiPrefix(text){
 }
 function parseTooltipHtmlToLines(html){
   return html.split('<br>')
-    .map(line => line.replace(/<\/?b>/g, '').trim())
+    .map(line => line.trim())
     .filter(Boolean)
-    .map(text => ({ text, color: colorForEmojiPrefix(text) }));
+    .map(line => {
+      const bold = /<b>/.test(line);
+      const text = line.replace(/<\/?b>/g, '').trim();
+      return { text, color: colorForEmojiPrefix(text), bold };
+    });
 }
 
 function buildDemrepnpaPngSummary(c, countyName){
@@ -4229,10 +4186,6 @@ async function downloadCountyZoomPng(){
 
     const chart1Img = await captureChartImage('countyDetailCumulativeChart', chartCssW, chartCssH, scale);
     const chart2Img = await captureChartImage('countyDetailShareChart', chartCssW, chartCssH, scale);
-    // Only present for non-Drop-Winners metrics (the dedicated chart
-    // div is cleared/empty on Drop Winners, so this gracefully returns
-    // null there via captureChartImage's own empty-div check).
-    const chart3Img = await captureChartImage('countyDetailTotalChart', chartCssW, chartCssH, scale);
 
     const infoLines = parseTooltipHtmlToLines(tooltipText([c])[0]);
 
@@ -4255,8 +4208,12 @@ async function downloadCountyZoomPng(){
     const canvasW = cssW * scale;
 
     const scratch = document.createElement('canvas').getContext('2d');
-    const infoLineH = 24 * scale;
-    const infoBlockH = infoLines.length * infoLineH + 16*scale;
+    // Sized to actually fill the blank space next to the map rather
+    // than needing to zoom in to read it -- roughly 50% bigger than
+    // before, with the county name (the one bold line) bigger still.
+    const infoLineH = 34 * scale;
+    const infoNameLineH = 44 * scale;
+    const infoBlockH = infoLines.reduce((s,l) => s + (l.bold ? infoNameLineH : infoLineH), 0) + 16*scale;
 
     scratch.font = `${14*scale}px IBM Plex Mono, monospace`;
     const summaryMaxW = canvasW - pad*2;
@@ -4269,10 +4226,9 @@ async function downloadCountyZoomPng(){
     const barChartH = barChartImg ? barChartImg.height + 34*scale : 0;
     const chart1H = chart1Img ? chart1Img.height + 34*scale : 0;
     const chart2H = chart2Img ? chart2Img.height + 34*scale : 0;
-    const chart3H = chart3Img ? chart3Img.height + 34*scale : 0;
     const footerH = 40 * scale;
 
-    const canvasH = pad + headerH + mapInfoRowH + barChartH + chart1H + chart2H + chart3H + summaryBlockH + footerH + pad;
+    const canvasH = pad + headerH + mapInfoRowH + barChartH + chart1H + chart2H + summaryBlockH + footerH + pad;
 
     const canvas = document.createElement('canvas');
     canvas.width = canvasW;
@@ -4298,12 +4254,14 @@ async function downloadCountyZoomPng(){
     ctx.drawImage(mapImg, pad, y, mapImg.width, mapImg.height);
 
     let infoX = pad + mapImg.width + 30*scale;
-    let infoY = y + 22*scale;
-    ctx.font = `${13*scale}px IBM Plex Mono, monospace`;
+    let infoY = y + 30*scale;
     infoLines.forEach(line => {
       ctx.fillStyle = line.color;
+      ctx.font = line.bold
+        ? `700 ${26*scale}px IBM Plex Mono, monospace`
+        : `${19*scale}px IBM Plex Mono, monospace`;
       ctx.fillText(line.text, infoX, infoY);
-      infoY += infoLineH;
+      infoY += line.bold ? infoNameLineH : infoLineH;
     });
 
     y += mapInfoRowH;
@@ -4327,14 +4285,6 @@ async function downloadCountyZoomPng(){
       ctx.fillText((document.getElementById('countyDetailShareLabel').textContent || '').toUpperCase(), pad, y + 16*scale);
       ctx.drawImage(chart2Img, pad, y + 24*scale, chart2Img.width, chart2Img.height);
       y += chart2H;
-    }
-
-    if(chart3Img){
-      ctx.fillStyle = '#7c879c';
-      ctx.font = `600 ${13*scale}px IBM Plex Mono, monospace`;
-      ctx.fillText('CUMULATIVE TOTAL VOTES', pad, y + 16*scale);
-      ctx.drawImage(chart3Img, pad, y + 24*scale, chart3Img.width, chart3Img.height);
-      y += chart3H;
     }
 
     ctx.fillStyle = '#e9edf5';
@@ -4498,18 +4448,6 @@ function buildNetGainLookup(dem, rep, npaOther){
   };
 }
 
-// Same idea, for the dedicated single-line Total chart: the size of
-// each drop, all parties combined -- this is what answers "how many
-// votes came in and how large was that drop", shown on hover rather
-// than needing a second chart just for drop size.
-function buildTotalNetGainLookup(total){
-  return function(pointIndex){
-    if(pointIndex == null || pointIndex < 0 || pointIndex >= total.length) return null;
-    const prevTotal = pointIndex > 0 ? total[pointIndex-1] : 0;
-    return { 'TOTAL': total[pointIndex] - prevTotal };
-  };
-}
-
 function formatSortedHoverDate(x){
   const d = (x instanceof Date) ? x : new Date(x);
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -4541,27 +4479,21 @@ function positionSortedHoverTooltip(el, evt){
 // netGainLookup(pointIndex) -> {traceName: deltaSincePrevPoint, ...} |
 // null; omit it (share/% charts do) to leave the net-gain section out
 // entirely -- it's only meaningful for the cumulative (raw vote) charts.
-function attachSortedHoverTooltip(chartEl, valueFormatter, ratingLookup, netGainLookup){
+// showTotalRow: true adds a TOTAL line under the party breakdown (and
+// under the net-gain breakdown, when that section is shown) -- summed
+// from the parties already being displayed, not a separate trace.
+// Wired to BOTH plotly_hover (desktop mouse) and plotly_click (mobile
+// tap, which doesn't fire hover events) so the tooltip works on touch.
+function attachSortedHoverTooltip(chartEl, valueFormatter, ratingLookup, netGainLookup, showTotalRow){
   const tooltipEl = ensureSortedHoverTooltipEl();
 
-  chartEl.on('plotly_hover', function(data){
+  function showTooltip(data){
     const pts = (data.points || []).filter(p => p.data && p.data.name && TREND_TRACE_COLORS[p.data.name]);
     if(!pts.length) return;
 
-    // TOTAL (when the toggle's on) is pulled out of the sort/gap math
-    // below -- it's the sum of the other three, so it would always
-    // rank first and make "+X over 2nd" compare it against whichever
-    // party is second, which isn't a meaningful gap. It's shown as its
-    // own headline line instead.
-    const totalPt = pts.find(p => p.data.name === 'TOTAL');
-    const partyPts = pts.filter(p => p.data.name !== 'TOTAL');
-    const sorted = partyPts.slice().sort((a,b) => b.y - a.y);
-    const anchorPt = totalPt || sorted[0];
+    const sorted = pts.slice().sort((a,b) => b.y - a.y);
+    const anchorPt = sorted[0];
     const dateLabel = formatSortedHoverDate(anchorPt.x);
-
-    const totalRow = totalPt
-      ? `<div class="sorted-hover-row"><span class="sorted-hover-dot" style="background:${TREND_TRACE_COLORS['TOTAL']}"></span><b>TOTAL</b>&nbsp;${valueFormatter('TOTAL', totalPt.y)}</div>`
-      : '';
 
     const rows = sorted.map((p, i) => {
       const name = p.data.name;
@@ -4574,6 +4506,13 @@ function attachSortedHoverTooltip(chartEl, valueFormatter, ratingLookup, netGain
       }
       return `<div class="sorted-hover-row"><span class="sorted-hover-dot" style="background:${color}"></span><b>${name}</b>&nbsp;${valueStr}${gapNote}</div>`;
     }).join('');
+
+    // Appended at the very bottom of the party breakdown, not the top --
+    // just the sum of what's already listed above it, not a separate
+    // trace or its own color.
+    const totalValueRow = showTotalRow
+      ? `<div class="sorted-hover-row sorted-hover-total"><span class="sorted-hover-dot" style="background:#80ed99"></span><b>TOTAL</b>&nbsp;${valueFormatter('TOTAL', sorted.reduce((s,p)=>s+p.y,0))}</div>`
+      : '';
 
     // Net gain since the previous logged point -- sorted the same way
     // (greatest gain first), with its OWN leader-over-2nd gap. This is
@@ -4597,7 +4536,14 @@ function attachSortedHoverTooltip(chartEl, valueFormatter, ratingLookup, netGain
           }
           return `<div class="sorted-hover-row"><span class="sorted-hover-dot" style="background:${g.color}"></span><b>${g.name}</b>&nbsp;${signedVal}${gapNote}</div>`;
         }).join('');
-        gainHtml = `<div class="sorted-hover-gain-header">Net gain this update:</div>${gainRows}`;
+        // Same idea, appended at the bottom of the gain breakdown too.
+        const totalGainRow = showTotalRow
+          ? `<div class="sorted-hover-row sorted-hover-total"><span class="sorted-hover-dot" style="background:#80ed99"></span><b>TOTAL</b>&nbsp;${(() => {
+              const g = sortedGains.reduce((s,x)=>s+x.gain,0);
+              return (g>=0?'+':'') + valueFormatter('TOTAL', g);
+            })()}</div>`
+          : '';
+        gainHtml = `<div class="sorted-hover-gain-header">Net gain this update:</div>${gainRows}${totalGainRow}`;
       }
     }
 
@@ -4611,10 +4557,15 @@ function attachSortedHoverTooltip(chartEl, valueFormatter, ratingLookup, netGain
       }
     }
 
-    tooltipEl.innerHTML = `<div class="sorted-hover-date">${dateLabel}</div>${totalRow}${rows}${gainHtml}${ratingHtml}`;
+    tooltipEl.innerHTML = `<div class="sorted-hover-date">${dateLabel}</div>${rows}${totalValueRow}${gainHtml}${ratingHtml}`;
     tooltipEl.style.display = 'block';
     positionSortedHoverTooltip(tooltipEl, data.event);
-  });
+  }
+
+  chartEl.on('plotly_hover', showTooltip);
+  // Mobile has no hover concept -- a tap fires plotly_click, not
+  // plotly_hover, which is why the tooltip never appeared on phones.
+  chartEl.on('plotly_click', showTooltip);
 
   chartEl.on('plotly_unhover', function(){
     tooltipEl.style.display = 'none';
@@ -4624,12 +4575,10 @@ function attachSortedHoverTooltip(chartEl, valueFormatter, ratingLookup, netGain
 function renderCountyDetailCharts(countyRows){
   const cumulativeEl = document.getElementById('countyDetailCumulativeChart');
   const shareEl = document.getElementById('countyDetailShareChart');
-  const totalEl = document.getElementById('countyDetailTotalChart');
 
   if(!countyRows.length){
     cumulativeEl.innerHTML = '<div class="county-detail-note">No historical data logged for this county yet. Once the tracker has run a few times, its trend will build here.</div>';
     shareEl.innerHTML = '';
-    if(totalEl) totalEl.innerHTML = '';
     return;
   }
 
@@ -4672,7 +4621,11 @@ function renderCountyDetailCharts(countyRows){
     ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
     yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'Votes', font:{size:10}}}
   }, {displayModeBar:false, responsive:true});
-  attachSortedHoverTooltip(cumulativeEl, fmtCumulativeHoverValue, ratingLookup, netGainLookup);
+  // showTotalRow=true: the hover box for THIS chart (cumulative votes)
+  // adds a TOTAL line under the DEM/REP/NPA-Other breakdown -- not a
+  // separate chart or trace, just a summed row in the tooltip itself,
+  // per the request to drop the standalone green line entirely.
+  attachSortedHoverTooltip(cumulativeEl, fmtCumulativeHoverValue, ratingLookup, netGainLookup, true);
 
   const shareTraces = [
     { ...lineBase, x:times, y:demPct, name:'DEM %', line:{color:'#5b9bd9', width:2.5} },
@@ -4685,22 +4638,6 @@ function renderCountyDetailCharts(countyRows){
     yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:[0,100]}
   }, {displayModeBar:false, responsive:true});
   attachSortedHoverTooltip(shareEl, fmtShareHoverValue, ratingLookup);
-
-  // Dedicated Total chart -- its own clean single-line panel rather than
-  // a 4th line crammed onto the by-party chart, per the request that a
-  // "Show Total" overlay made that chart too cluttered. Hovering shows
-  // both the running total AND the size of that specific drop (via
-  // buildTotalNetGainLookup), which is the "how large was this drop"
-  // question this chart exists to answer.
-  if(totalEl){
-    const total = times.map((_,i) => dem[i]+rep[i]+npaOther[i]);
-    const totalTrace = { ...lineBase, x:times, y:total, name:'TOTAL', marker:{size:6, color:'#80ed99'}, line:{color:'#80ed99', width:2.5} };
-    Plotly.newPlot(totalEl, [totalTrace], {
-      ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
-      yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'Votes', font:{size:10}}}
-    }, {displayModeBar:false, responsive:true});
-    attachSortedHoverTooltip(totalEl, fmtCumulativeHoverValue, null, buildTotalNetGainLookup(total));
-  }
 }
 
 // ============================================================
@@ -4722,7 +4659,6 @@ let statewideHistoryEverLoaded = false;
 async function renderStatewideHistoryCharts(){
   const cumulativeEl = document.getElementById('statewideCumulativeChart');
   const shareEl = document.getElementById('statewideShareChart');
-  const totalEl = document.getElementById('statewideTotalChart');
   if(!cumulativeEl || !shareEl) return;
 
   // render() (and therefore this) can fire again before a previous
@@ -4756,7 +4692,6 @@ async function renderStatewideHistoryCharts(){
     if(!statewideHistoryEverLoaded){
       cumulativeEl.innerHTML = '<div class="county-detail-note">No statewide history logged yet. Once the tracker has run a few times, the statewide trend will build here.</div>';
       shareEl.innerHTML = '';
-      if(totalEl) totalEl.innerHTML = '';
     }
     return;
   }
@@ -4786,7 +4721,9 @@ async function renderStatewideHistoryCharts(){
     ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
     yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'Votes', font:{size:10}}}
   }, {displayModeBar:false, responsive:true});
-  attachSortedHoverTooltip(cumulativeEl, fmtCumulativeHoverValue, null, netGainLookup);
+  // showTotalRow=true, same as the county cumulative chart: adds a
+  // TOTAL line under the DEM/REP/NPA-Other breakdown in the hover box.
+  attachSortedHoverTooltip(cumulativeEl, fmtCumulativeHoverValue, null, netGainLookup, true);
 
   const shareTraces = [
     { ...lineBase, x:times, y:demPct, name:'DEM %', line:{color:'#5b9bd9', width:2.5} },
@@ -4799,20 +4736,6 @@ async function renderStatewideHistoryCharts(){
     yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:[0,100]}
   }, {displayModeBar:false, responsive:true});
   attachSortedHoverTooltip(shareEl, fmtShareHoverValue);
-
-  // Dedicated statewide Total chart -- same idea as the county-level
-  // one: a clean single line rather than a 4th line on the by-party
-  // chart, with hover showing both the running total and the size of
-  // that specific update.
-  if(totalEl){
-    const total = times.map((_,i) => dem[i]+rep[i]+npaOther[i]);
-    const totalTrace = { ...lineBase, x:times, y:total, name:'TOTAL', marker:{size:6, color:'#80ed99'}, line:{color:'#80ed99', width:2.5} };
-    Plotly.newPlot(totalEl, [totalTrace], {
-      ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
-      yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'Votes', font:{size:10}}}
-    }, {displayModeBar:false, responsive:true});
-    attachSortedHoverTooltip(totalEl, fmtCumulativeHoverValue, null, buildTotalNetGainLookup(total));
-  }
 }
 
 // Second click listener on the live map, alongside the existing one in

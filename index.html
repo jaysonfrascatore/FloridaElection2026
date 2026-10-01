@@ -661,9 +661,9 @@
       <div class="npa-slider-wrap" id="npaSliderWrap" style="display:none;">
         <div class="npa-slider-label">
           <span>Historical trend &mdash; drag to replay any past update on the map</span>
-          <span class="val" id="historySliderValue">Loading history&hellip;</span>
+          <span class="val" id="historySliderValue">Live Results</span>
         </div>
-        <input type="range" id="historySlider" class="adj-slider" min="0" max="0" step="1" value="0" disabled>
+        <input type="range" id="historySlider" class="adj-slider" min="0" max="1" step="1" value="1">
         <div class="npa-slider-ends"><span id="historySliderStartLabel">Earliest</span><span>Live</span></div>
 
         <div class="shift-slider-row" style="margin-top:16px;">
@@ -2505,36 +2505,47 @@ if(AUTO_REFRESH_MS > 0){
   setInterval(() => loadLatestCSV(true), AUTO_REFRESH_MS);
 }
 
-// Builds the historical snapshots (reusing county_history_full.csv,
-// same fetch the per-county trend charts use) and enables the slider
-// once ready -- started eagerly at page load since General Election is
-// the default tab, so the slider is likely visible immediately.
-async function initHistorySlider(){
-  await ensureHistoricalSnapshotsBuilt();
-  const slider = document.getElementById('historySlider');
+// The history slider's data (county_history_full.csv, reusing the same
+// fetch the per-county trend charts use) is NOT loaded at page load --
+// there's no reason to make every visitor wait on a fetch for a feature
+// most won't touch. It loads quietly in the background the first time
+// someone actually touches the slider, and the slider's range silently
+// expands from its 2-position placeholder (Earliest / Live Results) to
+// the real tick count once that finishes -- normally well under a
+// couple seconds. No "Loading..." text is ever shown; until real data
+// is in, every position just reads as Live Results.
+let historySliderLoadStarted = false;
+function triggerHistorySliderLoad(){
+  if(historySliderLoadStarted) return;
+  historySliderLoadStarted = true;
+  ensureHistoricalSnapshotsBuilt().then(() => {
+    const slider = document.getElementById('historySlider');
+    if(!slider || !historicalTicks.length) return;
+    // Positions 0..N-1 are historical ticks; position N (the max, and
+    // the default/reset position) is "Live Results".
+    slider.max = historicalTicks.length;
+    slider.value = historicalTicks.length;
+    document.getElementById('historySliderStartLabel').textContent = formatSortedHoverDate(historicalTicks[0]);
+  });
+}
+const historySliderEl = document.getElementById('historySlider');
+historySliderEl.addEventListener('pointerdown', triggerHistorySliderLoad);
+historySliderEl.addEventListener('touchstart', triggerHistorySliderLoad, { passive:true });
+
+historySliderEl.addEventListener('input', e => {
   const valueEl = document.getElementById('historySliderValue');
-  if(!slider) return;
   if(!historicalTicks.length){
-    valueEl.textContent = 'No history logged yet';
+    // Nothing real loaded yet (or genuinely no history logged at all)
+    // -- stays on Live Results rather than reacting to a placeholder
+    // range; the moment real data lands this starts working normally.
+    historicalSliderIndex = null;
+    valueEl.textContent = 'Live Results';
     return;
   }
-  // Positions 0..N-1 are historical ticks; position N (the max, and the
-  // default) is "Live" -- dragging all the way right always means the
-  // normal live map, same as before this slider existed.
-  slider.max = historicalTicks.length;
-  slider.value = historicalTicks.length;
-  slider.disabled = false;
-  valueEl.textContent = 'Live';
-  document.getElementById('historySliderStartLabel').textContent = formatSortedHoverDate(historicalTicks[0]);
-}
-initHistorySlider();
-
-document.getElementById('historySlider').addEventListener('input', e => {
   const val = parseInt(e.target.value, 10);
-  const valueEl = document.getElementById('historySliderValue');
-  if(!historicalTicks.length || val >= historicalTicks.length){
+  if(val >= historicalTicks.length){
     historicalSliderIndex = null;
-    valueEl.textContent = 'Live';
+    valueEl.textContent = 'Live Results';
   }else{
     historicalSliderIndex = val;
     valueEl.textContent = formatSortedHoverDate(historicalTicks[val]);

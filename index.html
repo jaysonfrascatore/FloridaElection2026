@@ -3794,18 +3794,17 @@ function parseHistoryTimestamp(str){
 // Draws a fresh single-county choropleth into #map, auto-fit to fill
 // the box. Reused whenever the zoomed county's colors need to reflect
 // a shift-slider change.
-function renderZoomedCountyMap(c){
+async function renderZoomedCountyMap(c){
   const { trace } = buildMapTrace(currentMetric, [c]);
   const layout = {
     geo:{ scope:'usa', fitbounds:'locations', visible:false, bgcolor:'rgba(0,0,0,0)' },
     paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
     margin:{t:10,b:10,l:10,r:10}, font:{family:'Inter, sans-serif'}
   };
-  Plotly.newPlot('map', [trace], layout, {displayModeBar:false, responsive:true, scrollZoom:true}).then(() => {
-    if((currentMetric === 'demrepnpa' && !shiftSliderActive) || currentMetric === 'dropwinner'){
-      applyTieStripes(document.querySelector('#map svg'), [c]);
-    }
-  });
+  await Plotly.newPlot('map', [trace], layout, {displayModeBar:false, responsive:true, scrollZoom:true});
+  if((currentMetric === 'demrepnpa' && !shiftSliderActive) || currentMetric === 'dropwinner'){
+    applyTieStripes(document.querySelector('#map svg'), [c]);
+  }
 }
 
 // Fills the info panel with exactly the same content the map's own
@@ -3896,7 +3895,7 @@ function computeDropWinnerHistory(countyRows){
 // Compact bar chart of final drop-win tallies, filling the space below
 // the county data in the info panel -- only populated for Drop
 // Winners; cleared (and takes up no space) for every other metric.
-function renderDropWinnerBarChart(totals){
+async function renderDropWinnerBarChart(totals){
   const el = document.getElementById('countyZoomBarChart');
   if(!el) return;
   const totalDrops = totals.dem + totals.rep + totals.other + totals.tie;
@@ -3923,7 +3922,7 @@ function renderDropWinnerBarChart(totals){
     yaxis:{gridcolor:'#212a3b', tickfont:{size:9}, rangemode:'tozero'},
     showlegend:false
   };
-  Plotly.newPlot(el, [trace], layout, {displayModeBar:false, responsive:true});
+  await Plotly.newPlot(el, [trace], layout, {displayModeBar:false, responsive:true});
 }
 
 async function loadAndRenderCountyCharts(countyName){
@@ -3943,32 +3942,57 @@ async function loadAndRenderCountyCharts(countyName){
     // read as a different, unclear thing, and the actual vote totals
     // are more useful here anyway.
     const history = computeDropWinnerHistory(countyRows);
-    renderDropWinnerBarChart(history.totals);
-    renderCountyDetailCharts(countyRows);
+    // Awaited (not fire-and-forget) so openCountyZoom can wait for both
+    // to actually finish rendering before treating the county as ready
+    // -- see the PNG-button comment there for why that matters.
+    await Promise.all([
+      renderDropWinnerBarChart(history.totals),
+      renderCountyDetailCharts(countyRows)
+    ]);
   }else{
     // Clears out any bar chart left over from a previous Drop Winners
     // zoom -- every other metric's info panel has no bar chart at all.
     document.getElementById('countyZoomBarChart').innerHTML = '';
-    renderCountyDetailCharts(countyRows);
+    await renderCountyDetailCharts(countyRows);
   }
 }
 
-function openCountyZoom(countyName){
+async function openCountyZoom(countyName){
   const c = activeCountiesFor(currentMetric).find(c => c.county === countyName);
   if(!c) return;
   zoomedCounty = countyName;
 
   document.getElementById('mapZoomRow').classList.add('zoomed');
-  renderZoomedCountyMap(c);
   renderCountyZoomInfoPanel(c);
   setZoomResetButtonActive(true);
-  document.getElementById('countyZoomPngBtn').classList.add('visible');
 
   document.getElementById('tableWrap').style.display = 'none';
   document.getElementById('countyChartsView').classList.add('active');
   document.getElementById('countyChartsTitle').textContent = countyName + ' County \u2014 Historical Trend';
 
-  loadAndRenderCountyCharts(countyName);
+  // The map render and the chart/bar-chart loading are both genuinely
+  // async (a Plotly render, and a fetch of county_history_full.csv
+  // filtered down to this county) -- a bigger county with more logged
+  // history, or whichever one happens to trigger the very first fetch
+  // of that file this session, can take a real moment. The PNG button
+  // used to appear immediately regardless, so clicking Download before
+  // this finished meant captureChartImage found empty, not-yet-rendered
+  // chart divs and silently skipped them -- the export would still
+  // generate, just missing the graphs. Now it only appears once both
+  // are actually done.
+  await Promise.all([
+    renderZoomedCountyMap(c),
+    loadAndRenderCountyCharts(countyName)
+  ]);
+
+  // zoomedCounty can change (or the zoom can be closed) while the
+  // awaits above are still in flight, e.g. someone taps a different
+  // county or hits Reset Zoom before this county's data finished
+  // loading -- showing the button at that point would offer a download
+  // for a county that's no longer the one on screen.
+  if(zoomedCounty === countyName){
+    document.getElementById('countyZoomPngBtn').classList.add('visible');
+  }
 }
 
 // Un-zooms everything at once: the map (a plain full re-render, safe
@@ -4572,7 +4596,7 @@ function attachSortedHoverTooltip(chartEl, valueFormatter, ratingLookup, netGain
   });
 }
 
-function renderCountyDetailCharts(countyRows){
+async function renderCountyDetailCharts(countyRows){
   const cumulativeEl = document.getElementById('countyDetailCumulativeChart');
   const shareEl = document.getElementById('countyDetailShareChart');
 
@@ -4617,7 +4641,7 @@ function renderCountyDetailCharts(countyRows){
     });
   }
 
-  Plotly.newPlot(cumulativeEl, cumulativeTraces, {
+  await Plotly.newPlot(cumulativeEl, cumulativeTraces, {
     ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
     yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'Votes', font:{size:10}}}
   }, {displayModeBar:false, responsive:true});
@@ -4633,7 +4657,7 @@ function renderCountyDetailCharts(countyRows){
     { ...lineBase, x:times, y:npaOtherPct, name:'NPA/Other %', line:{color:'#c77dff', width:2.5} }
   ];
 
-  Plotly.newPlot(shareEl, shareTraces, {
+  await Plotly.newPlot(shareEl, shareTraces, {
     ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
     yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:[0,100]}
   }, {displayModeBar:false, responsive:true});

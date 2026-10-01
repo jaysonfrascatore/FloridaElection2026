@@ -283,6 +283,8 @@
   #npaSlider{ background:linear-gradient(90deg, var(--dem) 0%, var(--safe) 50%, var(--rep) 100%); }
   #demLoyaltySlider{ background:linear-gradient(90deg, var(--dem-dim), var(--dem)); }
   #repLoyaltySlider{ background:linear-gradient(90deg, var(--rep-dim), var(--rep)); }
+  #historySlider{ background:linear-gradient(90deg, #4a3f1f, var(--gold)); }
+  #historySlider:disabled{ opacity:.4; cursor:not-allowed; }
   .npa-slider-ends{
     display:flex; justify-content:space-between; font-family:var(--mono); font-size:9.5px;
     color:var(--muted-2); margin-top:6px; letter-spacing:.03em; text-transform:uppercase;
@@ -657,7 +659,14 @@
         </div>
       </div>
       <div class="npa-slider-wrap" id="npaSliderWrap" style="display:none;">
-        <div class="shift-slider-row">
+        <div class="npa-slider-label">
+          <span>Historical trend &mdash; drag to replay any past update on the map</span>
+          <span class="val" id="historySliderValue">Loading history&hellip;</span>
+        </div>
+        <input type="range" id="historySlider" class="adj-slider" min="0" max="0" step="1" value="0" disabled>
+        <div class="npa-slider-ends"><span id="historySliderStartLabel">Earliest</span><span>Live</span></div>
+
+        <div class="shift-slider-row" style="margin-top:16px;">
           <div class="shift-slider-badge" id="shiftSliderBadge">Shift Slider Not Yet In Use</div>
           <button id="shiftSliderResetBtn" title="Reset the shift sliders back to their defaults">Reset Shift Sliders</button>
         </div>
@@ -1247,13 +1256,127 @@ let barShares = { d:50, r:50, npa:0 };
 // are in are treated as the current turnout.
 let statewideTotals = { dem:0, rep:0, npa:0 };
 
+// ------------------------------------------------------------
+// HISTORICAL TIME-TRAVEL SLIDER (General Election map only)
+// ------------------------------------------------------------
+// historicalTicks: every distinct moment, across all 67 counties, that
+// ANY county's logged totals actually changed (sourced from the same
+// county_history_full.csv the per-county trend charts already use),
+// sorted chronologically. historicalSnapshots[i] is the full 67-county
+// "as of historicalTicks[i]" reconstruction -- for each county, its
+// most recent known totals at or before that moment (forward-filled;
+// a county with no entry yet at an early tick shows as not-yet-
+// reporting, same zero/gray state the live map already shows for a
+// county that genuinely hasn't reported). Built once per session, up
+// front, so dragging the slider is just an array lookup, not a
+// recomputation. historicalSliderIndex is null for "Live" (the normal,
+// default state, showing the live COUNTIES array same as always); a
+// number means "showing historicalSnapshots at this index instead".
+let historicalTicks = [];
+let historicalSnapshots = [];
+let historicalSliderIndex = null;
+let historicalDataReady = false;
+let historicalDataBuildPromise = null;
+
+// Same shape buildCountyRecords() produces from a live CSV row, built
+// instead from one historical "last known as of this tick" entry (or
+// zeroCountyRecord's placeholder if this county has no entry yet at
+// this tick). demNew/repNew/otherNew/totalNew (this-run's delta) don't
+// have a clean meaning for a historical snapshot and are left at 0 --
+// nothing in the General Election map/table/tooltip this slider drives
+// reads them.
+function buildHistoricalCountyRecord(name, known){
+  if(!known) return zeroCountyRecord(name);
+  const dem = known.dem, rep = known.rep, npa = known.npa, other = known.other, ind = known.ind;
+  const total = dem + rep + npa + other + ind;
+  const demShare = total ? dem/total : 0;
+  const repShare = total ? rep/total : 0;
+  const npaShare = total ? npa/total : 0;
+  const indShare = total ? (ind+npa+other)/total : 0;
+  const signedMargin = demShare - repShare;
+  const marginNpaAdj = (dem+rep+npa) ? (dem-rep)/(dem+rep+npa) : 0;
+  const rec = {
+    county:name, fips:FL_FIPS[name], code:'',
+    dem,rep,ind,npa,other,total,demShare,repShare,npaShare,indShare,
+    diff: Math.abs(dem-rep),
+    marginPct: signedMargin, marginNpaAdj, leader: signedMargin>=0?'D':'R', rating:'\u2014',
+    marginMove:0, ratingChanged:false, ratingMove:'',
+    demNew:0, repNew:0, otherNew:0, totalNew:0,
+    lastUpdated:'', runTimestamp:''
+  };
+  rec.category = categoryFor(rec);
+  return rec;
+}
+
+// Builds historicalTicks/historicalSnapshots once, reusing whatever
+// ensureCountyHistoryLoaded() already fetched (the exact same file the
+// per-county trend charts use, so this never issues a second fetch).
+// Safe to call repeatedly -- only does real work once per session.
+async function ensureHistoricalSnapshotsBuilt(){
+  if(historicalDataReady) return;
+  if(historicalDataBuildPromise) return historicalDataBuildPromise;
+
+  historicalDataBuildPromise = (async () => {
+    const rows = await ensureCountyHistoryLoaded();
+
+    const byCounty = {};
+    rows.forEach(r => {
+      const name = normName(pick(r,['County']));
+      if(!name || !FL_FIPS[name]) return;
+      const t = parseHistoryTimestamp(pick(r,['Timestamp']));
+      if(!t) return;
+      if(!byCounty[name]) byCounty[name] = [];
+      byCounty[name].push({
+        t,
+        dem: num(pick(r,['DEM'])), rep: num(pick(r,['REP'])),
+        npa: num(pick(r,['NPA'])), other: num(pick(r,['OTHER'])), ind: num(pick(r,['IND']))
+      });
+    });
+    Object.keys(byCounty).forEach(name => byCounty[name].sort((a,b) => a.t - b.t));
+
+    const tickSet = new Set();
+    Object.values(byCounty).forEach(list => list.forEach(r => tickSet.add(r.t.getTime())));
+    historicalTicks = Array.from(tickSet).sort((a,b) => a-b).map(ms => new Date(ms));
+
+    // Single forward sweep per county (each county's own rows are
+    // already sorted, and the ticks are sorted too), rather than
+    // re-scanning from the start for every tick.
+    const pointers = {};
+    const lastKnown = {};
+    Object.keys(byCounty).forEach(name => { pointers[name] = 0; });
+
+    historicalSnapshots = historicalTicks.map(tickTime => {
+      const tickMs = tickTime.getTime();
+      Object.keys(byCounty).forEach(name => {
+        const list = byCounty[name];
+        while(pointers[name] < list.length && list[pointers[name]].t.getTime() <= tickMs){
+          lastKnown[name] = list[pointers[name]];
+          pointers[name]++;
+        }
+      });
+      return Object.keys(FL_FIPS).map(name => buildHistoricalCountyRecord(name, lastKnown[name]));
+    });
+
+    historicalDataReady = true;
+  })();
+
+  return historicalDataBuildPromise;
+}
+
 // Returns whichever county list should drive the map/table/tooltip for a
 // given metric. "D vs R" is pinned to the frozen snapshot above; every
 // other metric (including "D vs R vs NPA") reads the live, auto-refreshing
 // COUNTIES array, which starts at zero votes for every county until the
 // live feed (data/previous_turnout.csv, refreshed from each county's
-// reporting link) brings in real numbers.
+// reporting link) brings in real numbers. The historical slider (General
+// Election only) overrides this with one reconstructed past snapshot
+// when it's been moved off "Live" -- everything that already reads
+// through this function (map, table, tooltip, stats, zoom, PNG export)
+// automatically reflects it with no further changes needed.
 function activeCountiesFor(metric){
+  if(metric === 'demrepnpa' && historicalSliderIndex !== null && historicalSnapshots[historicalSliderIndex]){
+    return historicalSnapshots[historicalSliderIndex];
+  }
   return metric === 'rating' ? STATIC_DVR_COUNTIES : COUNTIES;
 }
 
@@ -2381,6 +2504,49 @@ loadLatestCSV(false);
 if(AUTO_REFRESH_MS > 0){
   setInterval(() => loadLatestCSV(true), AUTO_REFRESH_MS);
 }
+
+// Builds the historical snapshots (reusing county_history_full.csv,
+// same fetch the per-county trend charts use) and enables the slider
+// once ready -- started eagerly at page load since General Election is
+// the default tab, so the slider is likely visible immediately.
+async function initHistorySlider(){
+  await ensureHistoricalSnapshotsBuilt();
+  const slider = document.getElementById('historySlider');
+  const valueEl = document.getElementById('historySliderValue');
+  if(!slider) return;
+  if(!historicalTicks.length){
+    valueEl.textContent = 'No history logged yet';
+    return;
+  }
+  // Positions 0..N-1 are historical ticks; position N (the max, and the
+  // default) is "Live" -- dragging all the way right always means the
+  // normal live map, same as before this slider existed.
+  slider.max = historicalTicks.length;
+  slider.value = historicalTicks.length;
+  slider.disabled = false;
+  valueEl.textContent = 'Live';
+  document.getElementById('historySliderStartLabel').textContent = formatSortedHoverDate(historicalTicks[0]);
+}
+initHistorySlider();
+
+document.getElementById('historySlider').addEventListener('input', e => {
+  const val = parseInt(e.target.value, 10);
+  const valueEl = document.getElementById('historySliderValue');
+  if(!historicalTicks.length || val >= historicalTicks.length){
+    historicalSliderIndex = null;
+    valueEl.textContent = 'Live';
+  }else{
+    historicalSliderIndex = val;
+    valueEl.textContent = formatSortedHoverDate(historicalTicks[val]);
+  }
+  // Everything that reads activeCountiesFor() -- map, table, stats,
+  // tooltip, a zoomed county -- picks up the historical snapshot
+  // automatically; this just has to trigger those same re-renders.
+  if(currentMetric === 'demrepnpa'){
+    renderStats();
+    if(zoomedCounty){ refreshZoomedCountyView(); } else { renderMap(); renderTable(); }
+  }
+});
 
 document.getElementById('barD').addEventListener('click', () => toggleBarParty('dem'));
 document.getElementById('barR').addEventListener('click', () => toggleBarParty('rep'));

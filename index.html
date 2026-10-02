@@ -1719,10 +1719,15 @@ function applyBarWidths(){
       rep:{ label:'Republican', color:'var(--rep)' },
       npa:{ label:'NPA', color:'var(--npa-text)' }
     }[selectedParty];
-    note.innerHTML = `Showing <span style="color:${info.color}">${info.label}</span> vote share by county &middot; click the bar again to reset`;
+    note.innerHTML = `Showing <span style="color:${info.color}">${info.label}</span> votes by county &middot; click the bar again to reset`;
   }else{
     labels.style.visibility = 'visible';
-    note.style.display = 'none';
+    // Same note element, just a different message -- a small, always-
+    // present hint that the bar above is clickable, rather than relying
+    // on the hover-only affordance alone (easy to miss on first visit,
+    // and not discoverable at all on mobile, where nothing is hovered).
+    note.style.display = 'block';
+    note.textContent = 'Tip: click a bar segment above to see that party\u2019s votes by county';
   }
 }
 
@@ -1848,13 +1853,16 @@ const METRICS = {
   // Which party won each county's latest hourly vote drop specifically —
   // not the county's overall standing, just this run's incremental batch.
   dropwinner: { title:'Who won this update, by county', categorical:true, cats:DROP_WINNER_CATS, catFn:dropWinnerCategoryFor },
-  // Bar-click maps. D/R share scales are capped at 80% (rather than 100%)
-  // since raw county shares rarely approach 100% — capping increases color
-  // contrast across the range that actually gets used. NPA keeps its own
-  // dynamic range since its shares run much smaller.
-  'party-dem': { title:'Democratic vote share by county', get:c=>c.demShare, scale:[[0,'#90e0ef'],[0.5,'#00b4d8'],[1,'#03045e']], range:()=>0.8 },
-  'party-rep': { title:'Republican vote share by county', get:c=>c.repShare, scale:[[0,'#f49cbb'],[0.5,'#dd2d4a'],[1,'#880d1e']], range:()=>0.8 },
-  'party-npa': { title:'NPA vote share by county', get:c=>c.npaShare, scale:[[0,'#e0c3fc'],[0.5,'#9d4edd'],[1,'#3a0ca3']], range:cs=>Math.max(0.01, ...cs.map(c=>c.npaShare)) }
+  // Bar-click maps: raw vote COUNTS, not each county's internal
+  // percentage share -- a county with very few total votes but a lopsided
+  // split (e.g. 90% to one party out of just 500 votes) would otherwise
+  // color as heavily as a huge county with a much bigger real count,
+  // which is misleading when the point is finding where a party's
+  // actual votes are concentrated. Range is dynamic per party (like
+  // "Total turnout"), since DEM/REP/NPA each have very different scales.
+  'party-dem': { title:'Democratic votes by county', get:c=>c.dem, scale:[[0,'#90e0ef'],[0.5,'#00b4d8'],[1,'#03045e']], range:cs=>Math.max(1, ...cs.map(c=>c.dem)), isCount:true },
+  'party-rep': { title:'Republican votes by county', get:c=>c.rep, scale:[[0,'#f49cbb'],[0.5,'#dd2d4a'],[1,'#880d1e']], range:cs=>Math.max(1, ...cs.map(c=>c.rep)), isCount:true },
+  'party-npa': { title:'NPA votes by county', get:c=>c.npa, scale:[[0,'#e0c3fc'],[0.5,'#9d4edd'],[1,'#3a0ca3']], range:cs=>Math.max(1, ...cs.map(c=>c.npa)), isCount:true }
 };
 
 // Builds the "PARTY count (pct%)" lines for a tooltip, ordered by vote

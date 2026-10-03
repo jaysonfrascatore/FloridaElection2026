@@ -518,6 +518,27 @@
     font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted);
     margin:0 0 10px;
   }
+  .chart-header-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:10px;
+  }
+  .chart-header-row h3{ margin:0; }
+  .show-all-toggle{
+    display:flex; align-items:center; gap:6px; cursor:pointer;
+    font-family:var(--mono); font-size:10.5px; color:var(--muted); user-select:none;
+  }
+  .show-all-toggle input{
+    appearance:none; -webkit-appearance:none; width:14px; height:14px; border-radius:4px;
+    border:1px solid var(--border); background:var(--panel-2); cursor:pointer; flex:0 0 auto;
+    transition:background .15s, border-color .15s;
+  }
+  .show-all-toggle input:checked{
+    background:var(--total-green); border-color:var(--total-green);
+  }
+  .show-all-toggle:hover input{ border-color:var(--gold); }
+  .chart-window-note{
+    font-family:var(--mono); font-size:10.5px; color:var(--muted-2); font-style:italic;
+    margin:-4px 0 10px;
+  }
   .county-detail-chart{ min-height:420px; }
   .county-detail-note{
     font-family:var(--mono); font-size:11px; color:var(--muted-2);
@@ -737,7 +758,14 @@
       <div id="countyChartsView">
         <h2 id="countyChartsTitle">County Trend</h2>
         <div class="county-detail-chart-wrap">
-          <h3 id="countyDetailCumulativeLabel">Cumulative Votes</h3>
+          <div class="chart-header-row">
+            <h3 id="countyDetailCumulativeLabel">Cumulative Votes</h3>
+            <label class="show-all-toggle">
+              <input type="checkbox" id="countyShowAllToggle">
+              <span>Show all datapoints</span>
+            </label>
+          </div>
+          <div class="chart-window-note" id="countyWindowNote">For clarity, showing the 10 most recent updates.</div>
           <div class="county-detail-chart" id="countyDetailCumulativeChart"></div>
         </div>
         <div class="county-detail-chart-wrap">
@@ -783,7 +811,14 @@
   <div class="panel" id="statewideHistoryPanel" style="margin-top:18px;">
     <h2>Statewide Historical Trend</h2>
     <div class="county-detail-chart-wrap">
-      <h3>Cumulative Votes</h3>
+      <div class="chart-header-row">
+        <h3>Cumulative Votes</h3>
+        <label class="show-all-toggle">
+          <input type="checkbox" id="statewideShowAllToggle">
+          <span>Show all datapoints</span>
+        </label>
+      </div>
+      <div class="chart-window-note" id="statewideWindowNote">For clarity, showing the 10 most recent updates.</div>
       <div class="county-detail-chart" id="statewideCumulativeChart"></div>
     </div>
     <div class="county-detail-chart-wrap">
@@ -2320,10 +2355,18 @@ function buildTweetSections(){
   const totalOther = list.reduce((s,c)=>s+c.ind+c.npa+c.other,0);
   const totalVotes = totalD + totalR + totalOther;
   const leaderFull = totalD >= totalR ? 'Democrats' : 'Republicans';
+  const leaderEmoji = totalD >= totalR ? '\u{1F535}' : '\u{1F534}';
   const voteLead = Math.abs(totalD - totalR);
   const dPct = totalVotes ? totalD/totalVotes : 0;
   const rPct = totalVotes ? totalR/totalVotes : 0;
   const oPct = totalVotes ? totalOther/totalVotes : 0;
+
+  // Same idea as the statewide totals' percentages, but scoped to just
+  // THIS drop's own composition (what share of the new votes just
+  // counted went to each party), not the cumulative statewide share.
+  const dropDPct = totalNewTotal ? demNewTotal/totalNewTotal : 0;
+  const dropRPct = totalNewTotal ? repNewTotal/totalNewTotal : 0;
+  const dropOPct = totalNewTotal ? otherNewTotal/totalNewTotal : 0;
 
   // Card 1: ballot-emoji header with the date/time, statewide totals
   // right up top, then this drop's DEM/REP/OTHER/TOTAL, the statewide
@@ -2341,13 +2384,13 @@ Statewide Total Votes:
 ${fmt(totalNewTotal)} new VBM ballots across ${countiesUpdatedCount} counties have been counted, with the largest update coming from ${topCountyName} County.
 
 Latest Drop:
-\u{1F535} DEM: ${sign(demNewTotal)}
-\u{1F534} REP: ${sign(repNewTotal)}
-\u{1F7E3} OTHER: ${sign(otherNewTotal)}
+\u{1F535} DEM: ${sign(demNewTotal)} (${formatPctTweet(dropDPct)})
+\u{1F534} REP: ${sign(repNewTotal)} (${formatPctTweet(dropRPct)})
+\u{1F7E3} OTHER: ${sign(otherNewTotal)} (${formatPctTweet(dropOPct)})
 \u{1F7E2} TOTAL: ${sign(totalNewTotal)}
 
- Total Votes Statewide: ${fmt(totalVotes)}
-${leaderFull} lead statewide by ${fmt(voteLead)} votes.
+\u{1F7E2} Total Votes Statewide: ${fmt(totalVotes)}
+${leaderEmoji} ${leaderFull} lead statewide by ${fmt(voteLead)} votes.
 
 ${countiesReporting} of 67 counties have votes.`;
 
@@ -4354,6 +4397,56 @@ async function captureZoomedMapCanvas(targetCssW, targetCssH, scale){
   return out;
 }
 
+// Builds a fresh, off-screen "10 most recent" cumulative chart image
+// for the PNG export -- used only when the dashboard's own chart is
+// CURRENTLY showing "Show all datapoints", since the PNG should always
+// default to the windowed view regardless of whatever the live
+// dashboard happens to be set to at export time. Doesn't touch (or
+// flicker) the real on-screen chart at all.
+async function renderCountyCumulativeWindowedImage(data, width, height, scale){
+  const tempDiv = document.createElement('div');
+  tempDiv.style.position = 'fixed';
+  tempDiv.style.left = '-9999px';
+  tempDiv.style.top = '0';
+  tempDiv.style.width = width + 'px';
+  tempDiv.style.height = height + 'px';
+  document.body.appendChild(tempDiv);
+  try{
+    const { times, dem, rep, npaOther } = data;
+    const restartIdx = data.restartIdx || [];
+    const sliceStart = Math.max(0, times.length - CUMULATIVE_WINDOW_SIZE);
+    const cTimes = times.slice(sliceStart);
+    const cDem = dem.slice(sliceStart);
+    const cRep = rep.slice(sliceStart);
+    const cNpaOther = npaOther.slice(sliceStart);
+    const cRestartIdx = restartIdx.filter(i => i >= sliceStart).map(i => i - sliceStart);
+
+    const lineBase = { mode:'lines+markers', marker:{size:6}, line:{width:2.5} };
+    const traces = [
+      { ...lineBase, x:cTimes, y:cDem, name:'DEM', line:{color:'#5b9bd9', width:2.5} },
+      { ...lineBase, x:cTimes, y:cRep, name:'REP', line:{color:'#d4675a', width:2.5} },
+      { ...lineBase, x:cTimes, y:cNpaOther, name:'NPA/Other', line:{color:'#c77dff', width:2.5} }
+    ];
+    if(cRestartIdx.length){
+      traces.push({
+        mode:'markers', x:cRestartIdx.map(i=>cTimes[i]), y:cRestartIdx.map(i=>cDem[i]+cRep[i]+cNpaOther[i]),
+        marker:{size:11, symbol:'star', color:'#F5B942', line:{width:1, color:'#0d1119'}},
+        name:'Restarted tracking', hoverinfo:'skip'
+      });
+    }
+    const layout = {
+      ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
+      yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'Votes', font:{size:10}}}
+    };
+    await Plotly.newPlot(tempDiv, traces, layout, { displayModeBar:false, responsive:false });
+    const dataUrl = await Plotly.toImage(tempDiv, { format:'png', width, height, scale });
+    return await loadImageFromDataUrl(dataUrl);
+  }finally{
+    Plotly.purge(tempDiv);
+    document.body.removeChild(tempDiv);
+  }
+}
+
 async function downloadCountyZoomPng(){
   if(!zoomedCounty) return;
   const btn = document.getElementById('countyZoomPngBtn');
@@ -4393,7 +4486,24 @@ async function downloadCountyZoomPng(){
     // the full row would look thin and sparse.
     const barChartImg = await captureChartImage('countyZoomBarChart', 560, 250, scale);
 
-    const chart1Img = await captureChartImage('countyDetailCumulativeChart', chartCssW, chartCssH, scale);
+    // The PNG always defaults to the 10-most-recent window for the
+    // cumulative chart, independent of whatever the dashboard's own
+    // "Show all datapoints" checkbox currently happens to be set to --
+    // if the dashboard is already windowed, that on-screen capture is
+    // already correct; if it's showing everything, a fresh windowed
+    // version is built off-screen instead, without touching the
+    // dashboard's own current view.
+    let chart1Img;
+    let chart1Windowed = false;
+    if(!countyShowAllCumulative){
+      chart1Img = await captureChartImage('countyDetailCumulativeChart', chartCssW, chartCssH, scale);
+      chart1Windowed = !!(lastCountyCumulativeData && lastCountyCumulativeData.times.length > CUMULATIVE_WINDOW_SIZE);
+    }else if(lastCountyCumulativeData){
+      chart1Img = await renderCountyCumulativeWindowedImage(lastCountyCumulativeData, chartCssW, chartCssH, scale);
+      chart1Windowed = lastCountyCumulativeData.times.length > CUMULATIVE_WINDOW_SIZE;
+    }else{
+      chart1Img = await captureChartImage('countyDetailCumulativeChart', chartCssW, chartCssH, scale);
+    }
     const chart2Img = await captureChartImage('countyDetailShareChart', chartCssW, chartCssH, scale);
 
     const infoLines = parseTooltipHtmlToLines(tooltipText([c])[0]);
@@ -4433,7 +4543,8 @@ async function downloadCountyZoomPng(){
     const headerH = 74 * scale;
     const mapInfoRowH = Math.max(mapImg.height, infoBlockH) + 20*scale;
     const barChartH = barChartImg ? barChartImg.height + 34*scale : 0;
-    const chart1H = chart1Img ? chart1Img.height + 34*scale : 0;
+    const chart1DisclaimerH = chart1Windowed ? 16*scale : 0;
+    const chart1H = chart1Img ? chart1Img.height + 34*scale + chart1DisclaimerH : 0;
     const chart2H = chart2Img ? chart2Img.height + 34*scale : 0;
     const footerH = 40 * scale;
 
@@ -4484,7 +4595,14 @@ async function downloadCountyZoomPng(){
       ctx.fillStyle = '#7c879c';
       ctx.font = `600 ${13*scale}px IBM Plex Mono, monospace`;
       ctx.fillText((document.getElementById('countyDetailCumulativeLabel').textContent || '').toUpperCase(), pad, y + 16*scale);
-      ctx.drawImage(chart1Img, pad, y + 24*scale, chart1Img.width, chart1Img.height);
+      let chart1ImgY = y + 24*scale;
+      if(chart1Windowed){
+        ctx.fillStyle = '#556076';
+        ctx.font = `italic ${10*scale}px IBM Plex Mono, monospace`;
+        ctx.fillText('For clarity, showing the 10 most recent updates.', pad, y + 30*scale);
+        chart1ImgY += chart1DisclaimerH;
+      }
+      ctx.drawImage(chart1Img, pad, chart1ImgY, chart1Img.width, chart1Img.height);
       y += chart1H;
     }
 
@@ -4530,6 +4648,19 @@ document.getElementById('countyZoomPngBtn').addEventListener('click', downloadCo
 document.getElementById('statNetGainCard').addEventListener('click', () => {
   const panel = document.getElementById('statewideHistoryPanel');
   if(panel) panel.scrollIntoView({ behavior:'smooth', block:'start' });
+});
+
+document.getElementById('countyShowAllToggle').addEventListener('change', e => {
+  countyShowAllCumulative = e.target.checked;
+  if(lastCountyCumulativeData){
+    renderCumulativeChartWindowed('countyDetailCumulativeChart', 'countyWindowNote', lastCountyCumulativeData, countyShowAllCumulative);
+  }
+});
+document.getElementById('statewideShowAllToggle').addEventListener('change', e => {
+  statewideShowAllCumulative = e.target.checked;
+  if(lastStatewideCumulativeData){
+    renderCumulativeChartWindowed('statewideCumulativeChart', 'statewideWindowNote', lastStatewideCumulativeData, statewideShowAllCumulative);
+  }
 });
 
 const COUNTY_DETAIL_CHART_LAYOUT_BASE = {
@@ -4626,33 +4757,48 @@ function historicalRatingFor(dem, rep, npaOnly, npaOtherFull){
 
 // Builds a pointIndex -> {rating, prevRating, changed} lookup closure
 // over one chart's parallel data arrays, for showing rating + rating
-// change history right in the hover tooltip.
-function buildRatingLookup(dem, rep, npaOnly, npaOtherFull){
+// change history right in the hover tooltip. dem/rep/npaOnly/
+// npaOtherFull should always be the FULL, unwindowed history; offset
+// is how many points have been trimmed off the front when the chart is
+// only displaying a recent slice of it (0 when showing everything) --
+// Plotly reports pointIndex relative to whatever's actually plotted,
+// so this converts that back to the true index in the full arrays,
+// including correctly looking one point further back than what's
+// visible for the "previous" comparison on the first visible point.
+function buildRatingLookup(dem, rep, npaOnly, npaOtherFull, offset){
+  const off = offset || 0;
   return function(pointIndex){
-    if(pointIndex == null || pointIndex < 0 || pointIndex >= dem.length) return null;
-    const rating = historicalRatingFor(dem[pointIndex], rep[pointIndex], npaOnly[pointIndex], npaOtherFull[pointIndex]);
-    if(pointIndex === 0) return { rating, prevRating:null, changed:false };
-    const prevRating = historicalRatingFor(dem[pointIndex-1], rep[pointIndex-1], npaOnly[pointIndex-1], npaOtherFull[pointIndex-1]);
+    const i = (pointIndex == null) ? null : pointIndex + off;
+    if(i == null || i < 0 || i >= dem.length) return null;
+    const rating = historicalRatingFor(dem[i], rep[i], npaOnly[i], npaOtherFull[i]);
+    if(i === 0) return { rating, prevRating:null, changed:false };
+    const prevRating = historicalRatingFor(dem[i-1], rep[i-1], npaOnly[i-1], npaOtherFull[i-1]);
     return { rating, prevRating, changed: rating !== prevRating };
   };
 }
 
 // Net gain since the previous logged point, per party -- pointIndex 0
-// is treated as a gain from zero, matching how the history log itself
-// treats a county's very first entry. Used only on the cumulative
-// (raw vote) charts, county and statewide alike -- a "net gain" in
-// percentage points isn't the same useful question, so the share/%
-// charts don't get this.
-function buildNetGainLookup(dem, rep, npaOther){
+// (in the FULL history, i.e. i===0 below) is treated as a gain from
+// zero, matching how the history log itself treats a county's very
+// first entry. Used only on the cumulative (raw vote) charts, county
+// and statewide alike -- a "net gain" in percentage points isn't the
+// same useful question, so the share/% charts don't get this. Same
+// offset convention as buildRatingLookup above -- the FIRST point of a
+// windowed/sliced view still correctly shows its real gain from
+// whatever precedes it just outside the visible window, rather than a
+// misleading "gain from zero".
+function buildNetGainLookup(dem, rep, npaOther, offset){
+  const off = offset || 0;
   return function(pointIndex){
-    if(pointIndex == null || pointIndex < 0 || pointIndex >= dem.length) return null;
-    const prevDem = pointIndex > 0 ? dem[pointIndex-1] : 0;
-    const prevRep = pointIndex > 0 ? rep[pointIndex-1] : 0;
-    const prevNpaOther = pointIndex > 0 ? npaOther[pointIndex-1] : 0;
+    const i = (pointIndex == null) ? null : pointIndex + off;
+    if(i == null || i < 0 || i >= dem.length) return null;
+    const prevDem = i > 0 ? dem[i-1] : 0;
+    const prevRep = i > 0 ? rep[i-1] : 0;
+    const prevNpaOther = i > 0 ? npaOther[i-1] : 0;
     return {
-      'DEM': dem[pointIndex] - prevDem,
-      'REP': rep[pointIndex] - prevRep,
-      'NPA/Other': npaOther[pointIndex] - prevNpaOther
+      'DEM': dem[i] - prevDem,
+      'REP': rep[i] - prevRep,
+      'NPA/Other': npaOther[i] - prevNpaOther
     };
   };
 }
@@ -4781,6 +4927,81 @@ function attachSortedHoverTooltip(chartEl, valueFormatter, ratingLookup, netGain
   });
 }
 
+// ------------------------------------------------------------
+// CUMULATIVE CHART WINDOWING (10 most recent, by default)
+// ------------------------------------------------------------
+// As a county or the statewide total racks up more and more logged
+// updates over the course of the night, a cumulative chart showing the
+// ENTIRE history compresses the most recent (most interesting) part
+// into a sliver at the right edge. Rather than ever truncating the
+// underlying data, the chart defaults to showing just the most recent
+// CUMULATIVE_WINDOW_SIZE points -- the % share chart is untouched and
+// always shows the full history, since that's a different question
+// (long-run trend, not "how big was each recent update"). A "Show all
+// datapoints" checkbox reveals the full history on demand.
+const CUMULATIVE_WINDOW_SIZE = 10;
+let countyShowAllCumulative = false;
+let statewideShowAllCumulative = false;
+// Cached FULL (unwindowed) data for each chart, so toggling "Show all"
+// is an instant redraw (no re-fetch), and the county PNG export can
+// always build its own 10-most-recent view regardless of whatever the
+// on-screen dashboard toggle currently happens to be set to.
+let lastCountyCumulativeData = null;
+let lastStatewideCumulativeData = null;
+
+// Shared by both the county and statewide cumulative charts. data is
+// the FULL (never pre-sliced) {times, dem, rep, npaOnly, npaOther,
+// restartIdx}; npaOnly/restartIdx may be omitted (statewide has
+// neither a rating lookup nor restart markers). showAll comes from the
+// relevant toggle's current state; noteElId is the "For clarity..."
+// disclaimer shown only while windowed.
+async function renderCumulativeChartWindowed(elId, noteElId, data, showAll){
+  const el = document.getElementById(elId);
+  if(!el) return;
+  const { times, dem, rep, npaOther } = data;
+  const npaOnly = data.npaOnly || null;
+  const restartIdx = data.restartIdx || [];
+
+  const sliceStart = showAll ? 0 : Math.max(0, times.length - CUMULATIVE_WINDOW_SIZE);
+  const cTimes = showAll ? times : times.slice(sliceStart);
+  const cDem = showAll ? dem : dem.slice(sliceStart);
+  const cRep = showAll ? rep : rep.slice(sliceStart);
+  const cNpaOther = showAll ? npaOther : npaOther.slice(sliceStart);
+
+  // Lookups always read the FULL arrays plus the slice's start offset,
+  // not the sliced arrays themselves -- so the first visible point
+  // still correctly shows its real gain/rating-change from whatever
+  // precedes it just outside the window, instead of a misleading
+  // "this is the beginning" reading.
+  const ratingLookup = npaOnly ? buildRatingLookup(dem, rep, npaOnly, npaOther, sliceStart) : null;
+  const netGainLookup = buildNetGainLookup(dem, rep, npaOther, sliceStart);
+
+  const cRestartIdx = restartIdx.filter(i => i >= sliceStart).map(i => i - sliceStart);
+
+  const lineBase = { mode:'lines+markers', marker:{size:6}, line:{width:2.5} };
+  const cumulativeTraces = [
+    { ...lineBase, x:cTimes, y:cDem, name:'DEM', line:{color:'#5b9bd9', width:2.5} },
+    { ...lineBase, x:cTimes, y:cRep, name:'REP', line:{color:'#d4675a', width:2.5} },
+    { ...lineBase, x:cTimes, y:cNpaOther, name:'NPA/Other', line:{color:'#c77dff', width:2.5} }
+  ];
+  if(cRestartIdx.length){
+    cumulativeTraces.push({
+      mode:'markers', x:cRestartIdx.map(i=>cTimes[i]), y:cRestartIdx.map(i=>cDem[i]+cRep[i]+cNpaOther[i]),
+      marker:{size:11, symbol:'star', color:'#F5B942', line:{width:1, color:'#0d1119'}},
+      name:'Restarted tracking', hoverinfo:'skip'
+    });
+  }
+
+  await Plotly.newPlot(el, cumulativeTraces, {
+    ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
+    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'Votes', font:{size:10}}}
+  }, {displayModeBar:false, responsive:true});
+  attachSortedHoverTooltip(el, fmtCumulativeHoverValue, ratingLookup, netGainLookup, true);
+
+  const noteEl = document.getElementById(noteElId);
+  if(noteEl) noteEl.style.display = (showAll || times.length <= CUMULATIVE_WINDOW_SIZE) ? 'none' : 'block';
+}
+
 async function renderCountyDetailCharts(countyRows){
   const cumulativeEl = document.getElementById('countyDetailCumulativeChart');
   const shareEl = document.getElementById('countyDetailShareChart');
@@ -4788,6 +5009,7 @@ async function renderCountyDetailCharts(countyRows){
   if(!countyRows.length){
     cumulativeEl.innerHTML = '<div class="county-detail-note">No historical data logged for this county yet. Once the tracker has run a few times, its trend will build here.</div>';
     shareEl.innerHTML = '';
+    lastCountyCumulativeData = null;
     return;
   }
 
@@ -4800,42 +5022,17 @@ async function renderCountyDetailCharts(countyRows){
   const repPct = countyRows.map(r => num(pick(r,['REP %'])) * 100);
   const npaOtherPct = countyRows.map(r => num(pick(r,['NPA/Other %'])) * 100);
 
-  const ratingLookup = buildRatingLookup(dem, rep, npaOnly, npaOther);
-  const netGainLookup = buildNetGainLookup(dem, rep, npaOther);
-
   // Points tagged as a restart (first entry / reopened) get their own
   // marker layer so a jump from 0 doesn't read as organic growth.
   const restartIdx = countyRows
     .map((r,i) => pick(r,['Note']) ? i : -1)
     .filter(i => i >= 0);
 
-  // mode:'lines+markers' is what puts a visible dot at every logged
-  // update, not just a smooth line between them.
+  lastCountyCumulativeData = { times, dem, rep, npaOnly, npaOther, restartIdx };
+  await renderCumulativeChartWindowed('countyDetailCumulativeChart', 'countyWindowNote', lastCountyCumulativeData, countyShowAllCumulative);
+
+  const ratingLookup = buildRatingLookup(dem, rep, npaOnly, npaOther);
   const lineBase = { mode:'lines+markers', marker:{size:6}, line:{width:2.5} };
-
-  const cumulativeTraces = [
-    { ...lineBase, x:times, y:dem, name:'DEM', line:{color:'#5b9bd9', width:2.5} },
-    { ...lineBase, x:times, y:rep, name:'REP', line:{color:'#d4675a', width:2.5} },
-    { ...lineBase, x:times, y:npaOther, name:'NPA/Other', line:{color:'#c77dff', width:2.5} }
-  ];
-  if(restartIdx.length){
-    cumulativeTraces.push({
-      mode:'markers', x:restartIdx.map(i=>times[i]), y:restartIdx.map(i=>dem[i]+rep[i]+npaOther[i]),
-      marker:{size:11, symbol:'star', color:'#F5B942', line:{width:1, color:'#0d1119'}},
-      name:'Restarted tracking', hoverinfo:'skip'
-    });
-  }
-
-  await Plotly.newPlot(cumulativeEl, cumulativeTraces, {
-    ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
-    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'Votes', font:{size:10}}}
-  }, {displayModeBar:false, responsive:true});
-  // showTotalRow=true: the hover box for THIS chart (cumulative votes)
-  // adds a TOTAL line under the DEM/REP/NPA-Other breakdown -- not a
-  // separate chart or trace, just a summed row in the tooltip itself,
-  // per the request to drop the standalone green line entirely.
-  attachSortedHoverTooltip(cumulativeEl, fmtCumulativeHoverValue, ratingLookup, netGainLookup, true);
-
   const shareTraces = [
     { ...lineBase, x:times, y:demPct, name:'DEM %', line:{color:'#5b9bd9', width:2.5} },
     { ...lineBase, x:times, y:repPct, name:'REP %', line:{color:'#d4675a', width:2.5} },
@@ -4918,21 +5115,9 @@ async function renderStatewideHistoryCharts(){
   const npaOtherPct = parsed.map(r => num(pick(r,['NPA/Other %'])) * 100);
 
   const lineBase = { mode:'lines+markers', marker:{size:6}, line:{width:2.5} };
-  const netGainLookup = buildNetGainLookup(dem, rep, npaOther);
 
-  const cumulativeTraces = [
-    { ...lineBase, x:times, y:dem, name:'DEM', line:{color:'#5b9bd9', width:2.5} },
-    { ...lineBase, x:times, y:rep, name:'REP', line:{color:'#d4675a', width:2.5} },
-    { ...lineBase, x:times, y:npaOther, name:'NPA/Other', line:{color:'#c77dff', width:2.5} }
-  ];
-
-  Plotly.newPlot(cumulativeEl, cumulativeTraces, {
-    ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
-    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'Votes', font:{size:10}}}
-  }, {displayModeBar:false, responsive:true});
-  // showTotalRow=true, same as the county cumulative chart: adds a
-  // TOTAL line under the DEM/REP/NPA-Other breakdown in the hover box.
-  attachSortedHoverTooltip(cumulativeEl, fmtCumulativeHoverValue, null, netGainLookup, true);
+  lastStatewideCumulativeData = { times, dem, rep, npaOther };
+  await renderCumulativeChartWindowed('statewideCumulativeChart', 'statewideWindowNote', lastStatewideCumulativeData, statewideShowAllCumulative);
 
   const shareTraces = [
     { ...lineBase, x:times, y:demPct, name:'DEM %', line:{color:'#5b9bd9', width:2.5} },

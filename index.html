@@ -26,6 +26,7 @@
     --npa-text:#c77dff;
     --total-green:#80ed99;
     --gold:#d8b466;
+    --move-gold:#ffca3a;
     --safe:#3a4356;
     --serif:'Fraunces', Georgia, serif;
     --mono:'IBM Plex Mono', 'SF Mono', Consolas, monospace;
@@ -153,6 +154,10 @@
   .margin-tracker-wrap h3{
     font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); margin:0 0 12px;
   }
+  .margin-tracker-note{
+    font-family:var(--mono); font-size:10.5px; color:var(--muted-2); line-height:1.5;
+    margin:-6px 0 14px; font-style:italic;
+  }
   .margin-tracker-split{ display:flex; justify-content:space-between; margin-bottom:8px; }
   .margin-tracker-side{ font-family:var(--mono); }
   .margin-tracker-side .lbl{ font-size:11px; color:var(--muted); margin-right:7px; }
@@ -163,11 +168,36 @@
   }
   .margin-tracker-bar-d{ background:var(--dem); transition:width .3s ease; }
   .margin-tracker-bar-r{ background:var(--rep); transition:width .3s ease; }
-  .margin-tracker-explain, .margin-tracker-next{
+  .margin-tracker-explain{
     font-family:var(--mono); font-size:12px; color:var(--muted); line-height:1.6; margin-top:12px;
   }
-  .margin-tracker-next{ color:var(--muted-2); font-style:italic; }
-  .margin-tracker-explain b, .margin-tracker-next b{ font-style:normal; }
+  .margin-tracker-explain b{ font-style:normal; }
+
+  /* Drop Goals: the shift amount itself uses the SAME gold the Margin
+     move map's "Changed" category uses (--move-gold), not DEM/REP
+     colors -- it's describing movement itself, not a party. The two
+     threshold rows below it ARE party-specific, so those keep DEM/REP
+     coloring. */
+  .drop-goals{
+    margin-top:16px; padding-top:14px; border-top:1px dashed var(--border);
+  }
+  .drop-goals-label{
+    font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.04em;
+    color:var(--move-gold); margin-bottom:10px;
+  }
+  .drop-goal-row{
+    display:flex; align-items:flex-start; gap:8px; font-family:var(--mono); font-size:12px;
+    color:var(--muted); line-height:1.5; margin-bottom:7px;
+  }
+  .drop-goal-row .dot{
+    width:8px; height:8px; border-radius:50%; margin-top:4px; flex:0 0 auto;
+  }
+  .drop-goal-row.d .dot{ background:var(--dem); } .drop-goal-row.d b{ color:var(--dem); }
+  .drop-goal-row.r .dot{ background:var(--rep); } .drop-goal-row.r b{ color:var(--rep); }
+  .drop-goals-note{
+    font-family:var(--mono); font-size:10.5px; color:var(--muted-2); font-style:italic;
+    line-height:1.5; margin-top:8px;
+  }
 
   .stat-cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-top:14px; }
   .stat-card{ background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:10px 14px; }
@@ -787,6 +817,7 @@
       <div class="legend" id="mapLegend"></div>
       <div class="margin-tracker-wrap" id="marginTrackerWrap" style="display:none;">
         <h3>Statewide Two-Party Margin</h3>
+        <div class="margin-tracker-note">DEM vs REP only &mdash; a "margin" is a two-candidate idea, so NPA/Other isn't part of it here. The full DEM/REP/NPA breakdown is on the General Election tab.</div>
         <div class="margin-tracker-split">
           <div class="margin-tracker-side d"><span class="lbl">DEM</span><span class="pct" id="marginTrackD">&mdash;</span></div>
           <div class="margin-tracker-side r"><span class="lbl">REP</span><span class="pct" id="marginTrackR">&mdash;</span></div>
@@ -796,7 +827,25 @@
           <div class="margin-tracker-bar-r" id="marginTrackBarR" style="width:50%;"></div>
         </div>
         <div class="margin-tracker-explain" id="marginTrackExplain"></div>
-        <div class="margin-tracker-next" id="marginTrackNext"></div>
+
+        <div class="drop-goals" id="marginDropGoals" style="display:none;">
+          <div class="drop-goals-label">DROP GOALS &mdash; what's needed to gain ground on the next update</div>
+          <div class="drop-goal-row d"><span class="dot"></span><span>Democrats need more than <b id="dropGoalD">&mdash;</b> of the next drop's two-party vote</span></div>
+          <div class="drop-goal-row r"><span class="dot"></span><span>Republicans need more than <b id="dropGoalR">&mdash;</b> of the next drop's two-party vote</span></div>
+          <div class="drop-goals-note">This doesn't depend on how big the next drop is or how long it takes to arrive &mdash; only on its party makeup. A tiny drop and a huge drop are judged the exact same way.</div>
+        </div>
+
+        <div class="county-detail-chart-wrap" style="margin-top:20px;">
+          <div class="chart-header-row">
+            <h3>Margin Shift Per Update</h3>
+            <label class="show-all-toggle">
+              <input type="checkbox" id="marginShiftShowAllToggle">
+              <span>Show all datapoints</span>
+            </label>
+          </div>
+          <div class="chart-window-note" id="marginShiftWindowNote">For clarity, showing the 10 most recent updates.</div>
+          <div class="county-detail-chart" id="marginShiftChart" style="min-height:280px;"></div>
+        </div>
       </div>
     </div>
     <div class="panel">
@@ -2246,7 +2295,10 @@ async function renderMap(){
   document.getElementById('mapTitle').textContent = m.title;
   document.getElementById('npaSliderWrap').style.display = (currentMetric === 'demrepnpa') ? 'block' : 'none';
   document.getElementById('marginTrackerWrap').style.display = (currentMetric === 'move') ? 'block' : 'none';
-  if(currentMetric === 'move') renderMarginTracker();
+  if(currentMetric === 'move'){
+    renderMarginTracker();
+    renderMarginShiftChart();
+  }
 
   const { trace, legendHtml, legendVisible } = buildMapTrace(currentMetric, activeCounties);
   const legendEl = document.getElementById('mapLegend');
@@ -2421,14 +2473,16 @@ function renderMarginTracker(){
   const barD = document.getElementById('marginTrackBarD');
   const barR = document.getElementById('marginTrackBarR');
   const explainEl = document.getElementById('marginTrackExplain');
-  const nextEl = document.getElementById('marginTrackNext');
+  const goalsWrap = document.getElementById('marginDropGoals');
+  const goalD = document.getElementById('dropGoalD');
+  const goalR = document.getElementById('dropGoalR');
   if(!dEl) return;
 
   if(!info.hasCurrent){
     dEl.textContent = '\u2014'; rEl.textContent = '\u2014';
     barD.style.width = '50%'; barR.style.width = '50%';
-    explainEl.textContent = 'No votes counted yet -- the margin will appear here once the first results come in.';
-    nextEl.textContent = '';
+    explainEl.textContent = 'No votes counted yet \u2014 the margin will appear here once the first results come in.';
+    goalsWrap.style.display = 'none';
     return;
   }
 
@@ -2445,8 +2499,11 @@ function renderMarginTracker(){
   }else if(!info.towardParty){
     explainHtml = 'The margin held essentially steady on the last update.';
   }else{
+    // The shift amount itself is colored in the Margin move map's own
+    // gold (--move-gold) rather than DEM/REP blue/red -- it's
+    // describing the MOVEMENT, not which party it favors (the party
+    // name right next to it already carries that).
     const shiftPct = formatPctTweet(Math.abs(info.shareChange));
-    const towardColor = info.towardParty === 'Democrats' ? 'var(--dem)' : 'var(--rep)';
     let whyHtml = '';
     if(info.hasDrop){
       const dropPct = (info.dropShareD*100).toFixed(2);
@@ -2454,13 +2511,105 @@ function renderMarginTracker(){
       const wasMoreDem = info.dropShareD > info.oldShareD;
       whyHtml = ` The new votes in that update ran about <b>${dropPct}%</b> Democratic (of just DEM+REP, ignoring NPA/Other) \u2014 ${wasMoreDem ? 'more' : 'less'} Democratic than the race's running average of <b>${oldPct}%</b>, which is what pulled the margin ${wasMoreDem ? 'toward Democrats' : 'toward Republicans'} even if the other party also gained votes in raw numbers.`;
     }
-    explainHtml = `Last update: <b style="color:${towardColor}">${shiftPct} move toward ${info.towardParty}</b>.${whyHtml}`;
+    explainHtml = `Last update: <b style="color:var(--move-gold)">${shiftPct} move</b> toward ${info.towardParty}.${whyHtml}`;
   }
   explainEl.innerHTML = explainHtml;
 
-  const dNeed = dPct.toFixed(2);
-  const rNeed = rPct.toFixed(2);
-  nextEl.innerHTML = `For the <b>next</b> update: Democrats need more than <b style="color:var(--dem)">${dNeed}%</b> of that update's two-party vote to gain further ground; Republicans need more than <b style="color:var(--rep)">${rNeed}%</b> to gain ground instead. A split close to this keeps the margin about where it is.`;
+  goalsWrap.style.display = 'block';
+  goalD.textContent = dPct.toFixed(2) + '%';
+  goalR.textContent = rPct.toFixed(2) + '%';
+}
+
+// ------------------------------------------------------------
+// MARGIN SHIFT CHART (Margin move tab)
+// ------------------------------------------------------------
+// One bar per historical statewide update: how far (in two-party
+// percentage points) that single update moved the race, with position
+// above/below zero carrying the direction (up = toward DEM, down =
+// toward REP) so every bar can stay the Margin move map's own gold
+// rather than needing DEM/REP color to also do that job. Same
+// 10-most-recent default + "Show all datapoints" toggle as the
+// cumulative vote charts, reusing CUMULATIVE_WINDOW_SIZE.
+let marginShiftShowAll = false;
+let lastMarginShiftData = null;
+
+async function renderMarginShiftChart(){
+  const el = document.getElementById('marginShiftChart');
+  const noteEl = document.getElementById('marginShiftWindowNote');
+  if(!el) return;
+
+  let rows = null;
+  try{ rows = await fetchCSV(STATEWIDE_HISTORY_PATH); }catch(e){ rows = null; }
+
+  const parsed = (rows || [])
+    .map(r => ({ ...r, _time: parseHistoryTimestamp(pick(r,['Timestamp'])) }))
+    .filter(r => r._time)
+    .sort((a,b) => a._time - b._time);
+
+  const dem = parsed.map(r => num(pick(r,['DEM'])));
+  const rep = parsed.map(r => num(pick(r,['REP'])));
+  const times = parsed.map(r => r._time);
+
+  const shiftTimes = [], shiftValues = [], shiftFromPct = [], shiftToPct = [];
+  for(let i=1;i<times.length;i++){
+    const oldTwoParty = dem[i-1]+rep[i-1];
+    const newTwoParty = dem[i]+rep[i];
+    if(oldTwoParty <= 0 || newTwoParty <= 0) continue; // can't compute a two-party share with no D+R votes yet
+    const oldShare = dem[i-1]/oldTwoParty;
+    const newShare = dem[i]/newTwoParty;
+    shiftTimes.push(times[i]);
+    shiftValues.push((newShare-oldShare)*100);
+    shiftFromPct.push(oldShare*100);
+    shiftToPct.push(newShare*100);
+  }
+
+  if(!shiftTimes.length){
+    el.innerHTML = '<div class="county-detail-note">Not enough historical updates logged yet to chart margin shifts \u2014 this needs at least two updates with DEM/REP votes.</div>';
+    if(noteEl) noteEl.style.display = 'none';
+    lastMarginShiftData = null;
+    return;
+  }
+
+  lastMarginShiftData = { times: shiftTimes, values: shiftValues, fromPct: shiftFromPct, toPct: shiftToPct };
+  drawMarginShiftChart(lastMarginShiftData, marginShiftShowAll);
+}
+
+function drawMarginShiftChart(data, showAll){
+  const el = document.getElementById('marginShiftChart');
+  const noteEl = document.getElementById('marginShiftWindowNote');
+  const sliceStart = showAll ? 0 : Math.max(0, data.times.length - CUMULATIVE_WINDOW_SIZE);
+  const times = data.times.slice(sliceStart);
+  const values = data.values.slice(sliceStart);
+  const fromPct = data.fromPct.slice(sliceStart);
+  const toPct = data.toPct.slice(sliceStart);
+
+  // Hover text built as plain strings (not Plotly's hovertemplate
+  // mini-language) so there's no percent-sign escaping ambiguity to
+  // get wrong without being able to render it to check.
+  const hoverTexts = times.map((t,i) => {
+    const dateLabel = formatSortedHoverDate(t);
+    const shiftStr = (values[i]>=0?'+':'') + values[i].toFixed(2) + ' pts';
+    return `${dateLabel}<br>Shift: ${shiftStr}<br>DEM share: ${fromPct[i].toFixed(2)}% \u2192 ${toPct[i].toFixed(2)}%`;
+  });
+  const trace = {
+    type:'bar', x:times, y:values,
+    marker:{ color:'#ffca3a' },
+    text: hoverTexts, hoverinfo:'text'
+  };
+  const layout = {
+    ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
+    yaxis:{
+      ...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis,
+      title:{text:'pts (+ toward DEM, \u2212 toward REP)', font:{size:9}},
+      zeroline:true, zerolinecolor:'#556076', zerolinewidth:1.5
+    },
+    hovermode:'closest',
+    hoverlabel:{ bgcolor:'#151b28', bordercolor:'#ffca3a', font:{family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5'} },
+    showlegend:false
+  };
+  Plotly.newPlot(el, [trace], layout, {displayModeBar:false, responsive:true});
+
+  if(noteEl) noteEl.style.display = (showAll || data.times.length <= CUMULATIVE_WINDOW_SIZE) ? 'none' : 'block';
 }
 
 function buildTweetSections(){
@@ -4987,6 +5136,12 @@ document.getElementById('statewideShowAllToggle').addEventListener('change', e =
   statewideShowAllCumulative = e.target.checked;
   if(lastStatewideCumulativeData){
     renderCumulativeChartWindowed('statewideCumulativeChart', 'statewideWindowNote', lastStatewideCumulativeData, statewideShowAllCumulative);
+  }
+});
+document.getElementById('marginShiftShowAllToggle').addEventListener('change', e => {
+  marginShiftShowAll = e.target.checked;
+  if(lastMarginShiftData){
+    drawMarginShiftChart(lastMarginShiftData, marginShiftShowAll);
   }
 });
 

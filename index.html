@@ -2605,7 +2605,11 @@ function drawMarginShiftChart(data, showAll){
   const trace = {
     type:'bar', x:times, y:values,
     marker:{ color:barColors },
-    text: hoverTexts, hoverinfo:'text'
+    // hovertext (not text) -- "text" on a bar trace can get rendered
+    // AS A LABEL inside/on the bar itself, which is exactly the tiny
+    // sideways text that showed up. hovertext is hover-only, never
+    // drawn on the chart.
+    hovertext: hoverTexts, hoverinfo:'text'
   };
   const layout = {
     ...COUNTY_DETAIL_CHART_LAYOUT_BASE,

@@ -2449,8 +2449,8 @@ function renderMarginTracker(){
     const towardColor = info.towardParty === 'Democrats' ? 'var(--dem)' : 'var(--rep)';
     let whyHtml = '';
     if(info.hasDrop){
-      const dropPct = (info.dropShareD*100).toFixed(1);
-      const oldPct = (info.oldShareD*100).toFixed(1);
+      const dropPct = (info.dropShareD*100).toFixed(2);
+      const oldPct = (info.oldShareD*100).toFixed(2);
       const wasMoreDem = info.dropShareD > info.oldShareD;
       whyHtml = ` The new votes in that update ran about <b>${dropPct}%</b> Democratic (of just DEM+REP, ignoring NPA/Other) \u2014 ${wasMoreDem ? 'more' : 'less'} Democratic than the race's running average of <b>${oldPct}%</b>, which is what pulled the margin ${wasMoreDem ? 'toward Democrats' : 'toward Republicans'} even if the other party also gained votes in raw numbers.`;
     }
@@ -2798,9 +2798,13 @@ function turnoutFraction(totalVotes, registered){
 }
 function formatTurnoutPct(fraction){
   const pct = fraction * 100;
-  if(pct <= 0) return '0%';
+  if(pct <= 0) return '0.00%';
   if(pct < 1) return '<1%';
-  return Math.round(Math.min(95, pct)) + '%';
+  // turnoutFraction() already clamps the underlying value at 0.95, so
+  // Math.min here is just a defensive backstop, not where the real
+  // clamping happens -- the number shown is the real, unrounded figure
+  // to two decimal places, down to the hundredth of a percent.
+  return Math.min(95, pct).toFixed(2) + '%';
 }
 // Total registered voters across all 67 counties, for the statewide bar.
 function statewideRegisteredTotal(){
@@ -3449,7 +3453,7 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
       ctx.fillStyle = '#c77dff';
       ctx.font = `600 ${Math.round(19*scale)}px Inter, Arial, sans-serif`;
       ctx.fillText(
-        `NPA takes the lead statewide \u2014 ${fmt(summary.npaLead.votes)} votes, +${fmt(Math.round(summary.npaLead.voteLead))} ahead (+${summary.npaLead.marginPct.toFixed(1)}%)`,
+        `NPA takes the lead statewide \u2014 ${fmt(summary.npaLead.votes)} votes, +${fmt(Math.round(summary.npaLead.voteLead))} ahead (+${summary.npaLead.marginPct.toFixed(2)}%)`,
         24*scale, 74*scale
       );
     }else{
@@ -3457,7 +3461,7 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
       ctx.fillStyle = summary.leader === 'DEM' ? '#5b9bd9' : '#d4675a';
       ctx.font = `600 ${Math.round(19*scale)}px Inter, Arial, sans-serif`;
       ctx.fillText(
-        `${leaderFull} lead by ${fmt(Math.round(summary.voteLead))} votes (+${summary.marginPct.toFixed(1)}%)`,
+        `${leaderFull} lead by ${fmt(Math.round(summary.voteLead))} votes (+${summary.marginPct.toFixed(2)}%)`,
         24*scale, 74*scale
       );
     }

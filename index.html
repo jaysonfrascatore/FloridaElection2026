@@ -830,8 +830,8 @@
 
         <div class="drop-goals" id="marginDropGoals" style="display:none;">
           <div class="drop-goals-label">DROP GOALS &mdash; what's needed to gain ground on the next update</div>
-          <div class="drop-goal-row d"><span class="dot"></span><span>Democrats need more than <b id="dropGoalD">&mdash;</b> of the next drop's two-party vote</span></div>
-          <div class="drop-goal-row r"><span class="dot"></span><span>Republicans need more than <b id="dropGoalR">&mdash;</b> of the next drop's two-party vote</span></div>
+          <div class="drop-goal-row d"><span class="dot"></span><span><b>Democrats</b> need more than <b id="dropGoalD">&mdash;</b> of the next drop's two-party vote</span></div>
+          <div class="drop-goal-row r"><span class="dot"></span><span><b>Republicans</b> need more than <b id="dropGoalR">&mdash;</b> of the next drop's two-party vote</span></div>
           <div class="drop-goals-note">This doesn't depend on how big the next drop is or how long it takes to arrive &mdash; only on its party makeup. A tiny drop and a huge drop are judged the exact same way.</div>
         </div>
 
@@ -2499,19 +2499,24 @@ function renderMarginTracker(){
   }else if(!info.towardParty){
     explainHtml = 'The margin held essentially steady on the last update.';
   }else{
-    // The shift amount itself is colored in the Margin move map's own
-    // gold (--move-gold) rather than DEM/REP blue/red -- it's
-    // describing the MOVEMENT, not which party it favors (the party
-    // name right next to it already carries that).
+    // Simple blue/red throughout, not gold -- the whole "X% move
+    // toward Party" phrase is one consistently-colored unit (blue for
+    // Democrats, red for Republicans), and every other mention of
+    // either party's name in the explanation below gets the same
+    // treatment for consistency within this tab.
+    const towardColor = info.towardParty === 'Democrats' ? 'var(--dem)' : 'var(--rep)';
     const shiftPct = formatPctTweet(Math.abs(info.shareChange));
     let whyHtml = '';
     if(info.hasDrop){
       const dropPct = (info.dropShareD*100).toFixed(2);
       const oldPct = (info.oldShareD*100).toFixed(2);
       const wasMoreDem = info.dropShareD > info.oldShareD;
-      whyHtml = ` The new votes in that update ran about <b>${dropPct}%</b> Democratic (of just DEM+REP, ignoring NPA/Other) \u2014 ${wasMoreDem ? 'more' : 'less'} Democratic than the race's running average of <b>${oldPct}%</b>, which is what pulled the margin ${wasMoreDem ? 'toward Democrats' : 'toward Republicans'} even if the other party also gained votes in raw numbers.`;
+      const towardLabel = wasMoreDem
+        ? '<b style="color:var(--dem)">toward Democrats</b>'
+        : '<b style="color:var(--rep)">toward Republicans</b>';
+      whyHtml = ` The new votes in that update ran about <b>${dropPct}%</b> <span style="color:var(--dem)">Democratic</span> (of just DEM+REP, ignoring NPA/Other) \u2014 ${wasMoreDem ? 'more' : 'less'} <span style="color:var(--dem)">Democratic</span> than the race's running average of <b>${oldPct}%</b>, which is what pulled the margin ${towardLabel} even if the other party also gained votes in raw numbers.`;
     }
-    explainHtml = `Last update: <b style="color:var(--move-gold)">${shiftPct} move</b> toward ${info.towardParty}.${whyHtml}`;
+    explainHtml = `Last update: <b style="color:${towardColor}">${shiftPct} move toward ${info.towardParty}</b>.${whyHtml}`;
   }
   explainEl.innerHTML = explainHtml;
 
@@ -2588,23 +2593,32 @@ function drawMarginShiftChart(data, showAll){
   // get wrong without being able to render it to check.
   const hoverTexts = times.map((t,i) => {
     const dateLabel = formatSortedHoverDate(t);
-    const shiftStr = (values[i]>=0?'+':'') + values[i].toFixed(2) + ' pts';
+    const towardParty = values[i] >= 0 ? 'Democrats' : 'Republicans';
+    const shiftStr = Math.abs(values[i]).toFixed(2) + ' pts toward ' + towardParty;
     return `${dateLabel}<br>Shift: ${shiftStr}<br>DEM share: ${fromPct[i].toFixed(2)}% \u2192 ${toPct[i].toFixed(2)}%`;
   });
+  // Color carries direction now (blue toward DEM, red toward REP) --
+  // no gold, no axis label explaining the direction; the bar color and
+  // the hover text do that job, so nothing else needs to be on the
+  // chart itself.
+  const barColors = values.map(v => v >= 0 ? '#5b9bd9' : '#d4675a');
   const trace = {
     type:'bar', x:times, y:values,
-    marker:{ color:'#ffca3a' },
+    marker:{ color:barColors },
     text: hoverTexts, hoverinfo:'text'
   };
   const layout = {
     ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
     yaxis:{
       ...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis,
-      title:{text:'pts (+ toward DEM, \u2212 toward REP)', font:{size:9}},
       zeroline:true, zerolinecolor:'#556076', zerolinewidth:1.5
     },
-    hovermode:'closest',
-    hoverlabel:{ bgcolor:'#151b28', bordercolor:'#ffca3a', font:{family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5'} },
+    // 'x' (not 'closest') triggers hover from anywhere in a bar's full
+    // column, not just the rendered bar itself -- a near-zero shift
+    // renders as a sliver only a pixel or two tall, which 'closest'
+    // mode makes nearly impossible to actually land a cursor on.
+    hovermode:'x',
+    hoverlabel:{ bgcolor:'#151b28', bordercolor:'#7c879c', font:{family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5'} },
     showlegend:false
   };
   Plotly.newPlot(el, [trace], layout, {displayModeBar:false, responsive:true});

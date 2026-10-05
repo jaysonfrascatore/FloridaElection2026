@@ -274,6 +274,61 @@
     border:1px solid var(--border); border-radius:7px; padding:7px 12px; cursor:pointer;
   }
   .sim-btn:hover{ border-color:var(--gold); }
+  .table-hint{
+    font-family:var(--mono); font-size:10.5px; color:var(--muted-2); margin:-4px 0 10px; line-height:1.5;
+  }
+
+  /* Largest statewide drops (top of the Statewide Historical Trend panel) */
+  .drop-board{
+    margin:2px 0 24px; padding:14px 16px; background:var(--panel-2);
+    border:1px solid var(--border); border-radius:10px;
+  }
+  .drop-board-head{
+    display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:10px;
+  }
+  .drop-board-title{ font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:600; }
+  .drop-board-sub, .drop-board-empty{ font-family:var(--mono); font-size:10.5px; color:var(--muted-2); line-height:1.5; }
+  .drop-record-banner{
+    margin:0 0 12px; padding:9px 12px; border-radius:8px; font-family:var(--mono); font-size:12px; line-height:1.5;
+    color:var(--text); background:rgba(255,202,58,.10); border:1px solid rgba(255,202,58,.55);
+  }
+  .drop-record-banner b{ color:var(--move-gold); }
+  .drop-row{ display:flex; gap:12px; padding:11px 0; }
+  .drop-row + .drop-row{ border-top:1px dashed var(--border); }
+  .drop-rank{ flex:0 0 30px; text-align:center; font-size:19px; line-height:1.2; font-family:var(--mono); color:var(--muted); }
+  .drop-main{ min-width:0; flex:1; }
+  .drop-head{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+  .drop-votes{ font-family:var(--mono); font-size:18px; font-weight:700; color:var(--total-green); }
+  .drop-votes-label{ font-family:var(--mono); font-size:11px; color:var(--muted); }
+  .drop-badge{
+    font-family:var(--mono); font-size:9.5px; font-weight:700; letter-spacing:.05em; padding:2px 7px; border-radius:20px;
+    color:#0a0e17; background:var(--move-gold);
+  }
+  .drop-when{ font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:2px; }
+  .drop-counties{ font-family:var(--mono); font-size:11.5px; color:var(--muted); line-height:1.65; margin-top:7px; }
+  .drop-counties b{ color:var(--text); font-weight:600; }
+  .drop-counties .v{ color:var(--total-green); }
+  .drop-more{ display:inline; }
+  .drop-more summary{ display:inline; cursor:pointer; color:var(--gold); }
+  .drop-more summary:hover{ text-decoration:underline; }
+  .drop-more[open] summary{ display:block; margin-top:2px; }
+  .drop-note{ font-family:var(--mono); font-size:10.5px; font-style:italic; color:var(--muted-2); margin-top:5px; line-height:1.5; }
+
+  .record-toast{
+    position:fixed; top:16px; right:16px; z-index:3500; max-width:340px; display:none;
+    padding:12px 34px 12px 14px; border-radius:10px; font-family:var(--mono); font-size:12px; line-height:1.55; color:var(--text);
+    background:var(--panel); border:1px solid var(--move-gold); box-shadow:0 8px 28px rgba(0,0,0,.5);
+  }
+  .record-toast b{ color:var(--move-gold); }
+  .record-toast-x{
+    position:absolute; top:6px; right:8px; background:none; border:none; color:var(--muted); font-size:18px; line-height:1; cursor:pointer;
+  }
+  .record-toast-x:hover{ color:var(--text); }
+  .sim-link-btn{
+    background:none; border:none; padding:0; margin:2px 0 10px; text-align:left; cursor:pointer;
+    font-family:var(--mono); font-size:11px; color:var(--gold);
+  }
+  .sim-link-btn:hover{ text-decoration:underline; }
   .sim-btn.danger:hover{ border-color:var(--rep); color:var(--rep); }
   .sim-placeholder{
     font-family:var(--mono); font-size:12px; color:var(--muted); text-align:center; padding:28px 12px;
@@ -886,6 +941,7 @@
     </div>
     <div class="panel">
       <h2>County table</h2>
+      <div class="table-hint" id="tableHint">Not sure where a county is? Click any row to open its General Election results page.</div>
       <div class="table-wrap" id="tableWrap">
         <table id="voteTable">
           <thead>
@@ -963,6 +1019,9 @@
        per-county trend view for consistency. -->
   <div class="panel" id="statewideHistoryPanel" style="margin-top:18px;">
     <h2>Statewide Historical Trend</h2>
+    <div class="drop-board" id="largestDropsBoard">
+      <div class="drop-board-empty">The largest statewide drops will be listed here once at least two updates have been logged.</div>
+    </div>
     <div class="county-detail-chart-wrap">
       <div class="chart-header-row">
         <h3>Cumulative Votes</h3>
@@ -982,6 +1041,8 @@
 
   <footer id="footerNote"></footer>
 </div>
+
+<div class="record-toast" id="recordToast" role="status" aria-live="polite"></div>
 
 <div id="simDashboard">
 
@@ -1067,6 +1128,7 @@
       <div id="simEditor" class="sim-editor" style="display:none;">
         <div class="sim-editor-title" id="simEditorCounty">&mdash;</div>
         <div class="sim-editor-sub" id="simEditorVoters">&mdash;</div>
+        <button class="sim-link-btn" id="simViewLiveBtn" title="Leave the hypothetical map and see this county's real, live General Election results">See this county's live General Election results &rarr;</button>
 
         <div id="simEditableBlock">
           <div class="npa-slider-label" style="margin-top:6px; margin-bottom:8px;">
@@ -2370,6 +2432,13 @@ async function renderMap(){
   legendEl.style.display = legendVisible ? 'flex' : 'none';
   legendEl.innerHTML = legendHtml;
 
+  // This function waits on the county shapes above, so a county page can
+  // be opened in the meantime (e.g. clicking a table row right after
+  // switching tabs). If so, the zoomed county owns #map now -- drawing
+  // the statewide map here would silently replace it underneath the
+  // still-open zoom UI.
+  if(zoomedCounty) return;
+
   const layout = {
     geo:{ scope:'usa', fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' },
     paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
@@ -2427,10 +2496,9 @@ function renderTable(){
   `;
   }).join('');
   body.querySelectorAll('tr').forEach(tr => {
-    tr.addEventListener('click', () => {
-      highlightedCounty = tr.dataset.county;
-      renderTable();
-    });
+    // Used to just highlight the row. Now it opens that county's General
+    // Election page (openCountyGeneralElectionPage also sets the highlight).
+    tr.addEventListener('click', () => openCountyGeneralElectionPage(tr.dataset.county));
   });
 }
 
@@ -2448,7 +2516,7 @@ function renderUpdatesTable(){
   body.innerHTML = updated.length ? updated.map(c => {
     const cat = dropWinnerCategoryFor(c);
     return `
-    <tr>
+    <tr data-county="${c.county}" title="Open ${c.county} County's results page">
       <td class="county-name">${c.county}</td>
       <td class="num-d">${c.demNew>=0?'+':''}${fmt(c.demNew)}</td>
       <td class="num-r">${c.repNew>=0?'+':''}${fmt(c.repNew)}</td>
@@ -2458,6 +2526,9 @@ function renderUpdatesTable(){
     </tr>
   `;
   }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">No additional votes at this time.</td></tr>';
+  body.querySelectorAll('tr[data-county]').forEach(tr => {
+    tr.addEventListener('click', () => openCountyGeneralElectionPage(tr.dataset.county));
+  });
 
   const top3 = updated.slice(0,3);
   const medals = ['🥇','🥈','🥉'];
@@ -2803,6 +2874,28 @@ function buildTweetSections(){
   const dropRPct = totalNewTotal ? repNewTotal/totalNewTotal : 0;
   const dropOPct = totalNewTotal ? otherNewTotal/totalNewTotal : 0;
 
+  // Every DEM / REP / OTHER block in this text -- the statewide totals,
+  // the latest drop, and each county in "Top 3 Largest Updates" -- is
+  // listed from the greatest number to the least, judged on the numbers
+  // actually shown on THAT block's lines. So a block where Republicans
+  // lead leads with Republicans, instead of always opening with
+  // Democrats. A tie keeps the usual DEM, REP, OTHER order (sort is
+  // stable). TOTAL lines are written separately after the party lines,
+  // so they always stay last: a total isn't a party to rank.
+  const orderedPartyLines = rows =>
+    rows.slice().sort((a, b) => b.v - a.v).map(r => r.line).join('\n');
+
+  const statewideLines = orderedPartyLines([
+    { v: totalD,     line: `\u{1F535} DEM: ${fmt(totalD)} (${formatPctTweet(dPct)})` },
+    { v: totalR,     line: `\u{1F534} REP: ${fmt(totalR)} (${formatPctTweet(rPct)})` },
+    { v: totalOther, line: `\u{1F7E3} OTHER: ${fmt(totalOther)} (${formatPctTweet(oPct)})` }
+  ]);
+  const dropLines = orderedPartyLines([
+    { v: demNewTotal,   line: `\u{1F535} DEM: ${sign(demNewTotal)} (${formatPctTweet(dropDPct)})` },
+    { v: repNewTotal,   line: `\u{1F534} REP: ${sign(repNewTotal)} (${formatPctTweet(dropRPct)})` },
+    { v: otherNewTotal, line: `\u{1F7E3} OTHER: ${sign(otherNewTotal)} (${formatPctTweet(dropOPct)})` }
+  ]);
+
   // Card 1: ballot-emoji header with the date/time, statewide totals
   // right up top, then this drop's DEM/REP/OTHER/TOTAL, the statewide
   // grand total, the leader line, and the counties-with-votes line --
@@ -2812,16 +2905,12 @@ function buildTweetSections(){
 `\u{1F5F3}\u{FE0F} Florida VBM Update, ${headerDate}
 
 Statewide Total Votes:
-\u{1F535} DEM: ${fmt(totalD)} (${formatPctTweet(dPct)})
-\u{1F534} REP: ${fmt(totalR)} (${formatPctTweet(rPct)})
-\u{1F7E3} OTHER: ${fmt(totalOther)} (${formatPctTweet(oPct)})
+${statewideLines}
 
 ${fmt(totalNewTotal)} new VBM ballots across ${countiesUpdatedCount} counties have been counted, with the largest update coming from ${topCountyName} County.
 
 Latest Drop:
-\u{1F535} DEM: ${sign(demNewTotal)} (${formatPctTweet(dropDPct)})
-\u{1F534} REP: ${sign(repNewTotal)} (${formatPctTweet(dropRPct)})
-\u{1F7E3} OTHER: ${sign(otherNewTotal)} (${formatPctTweet(dropOPct)})
+${dropLines}
 \u{1F7E2} TOTAL: ${sign(totalNewTotal)}
 
 \u{1F7E2} Total Votes Statewide: ${fmt(totalVotes)}
@@ -2854,10 +2943,15 @@ ${countiesReporting} of 67 counties have votes.`;
   };
   const topDropsText = topDrops.length
     ? topDrops.map((c, i) => {
+        // Each county's party lines are ranked on THAT county's own
+        // drop, not copied from the statewide order.
+        const countyLines = orderedPartyLines([
+          { v: c.demNew,   line: `\u{1F535} DEM: ${sign(c.demNew)}` },
+          { v: c.repNew,   line: `\u{1F534} REP: ${sign(c.repNew)}` },
+          { v: c.otherNew, line: `\u{1F7E3} OTHER: ${sign(c.otherNew)}` }
+        ]);
         return `${medals[i]} ${winnerEmojiFor(c)} ${c.county} County
-\u{1F535} DEM: ${sign(c.demNew)}
-\u{1F534} REP: ${sign(c.repNew)}
-\u{1F7E3} OTHER: ${sign(c.otherNew)}
+${countyLines}
 \u{1F7E2} TOTAL: ${sign(c.totalNew)}`;
       }).join('\n\n')
     : 'No counties updated this drop.';
@@ -3049,6 +3143,21 @@ function statewideRegisteredTotal(){
 const STATEWIDE_HISTORY_PATH = 'data/statewide_history.csv';
 let statewideHistoryCallId = 0;
 let statewideHistoryEverLoaded = false;
+
+// Largest-statewide-drops leaderboard (bottom panel). Declared here, with
+// the state above, because renderStatewideHistoryCharts() runs from the
+// very first render() at page load -- see the comment on that state.
+const LARGEST_DROPS_SHOWN = 5;             // how many drops the list shows
+const LARGEST_DROPS_WITH_COUNTIES = 3;     // how many of those also name their counties
+const LARGEST_DROPS_MAX_COUNTY_FETCHES = 4; // stop re-downloading county history for an update it never contains
+const RECORD_ALERT_MIN_DROPS = 4;          // no "new record!" alerts until there's enough history for a record to mean something
+let largestDropsCallId = 0;
+let largestDropsCountyDeltas = new Map();  // update time (ms) -> [{county, votes}] from the latest county-history download
+let largestDropsFetchTries = new Map();    // update time (ms) -> county-history downloads spent looking for it
+let largestDropsCountyFetch = null;        // the in-flight county-history download, shared by overlapping refreshes
+let largestDropsLatestKey = null;          // the most recent update seen on the previous refresh
+let largestDropsFirstRunDone = false;      // so the toast never fires just because the page loaded
+let recordToastTimer = null;
 
 // Seed the live dataset at 0 votes for every county, seed the frozen
 // D vs R snapshot with a zero placeholder too (in case its fetch hasn't
@@ -4481,6 +4590,11 @@ document.getElementById('simFillSafeBtn').addEventListener('click', () => {
 document.getElementById('simMapRetryBtn').addEventListener('click', () => {
   renderSimMap();
 });
+// Hands the county currently selected in the editor over to the Live
+// tab's General Election page (switches tabs for them).
+document.getElementById('simViewLiveBtn').addEventListener('click', () => {
+  if(selectedSimCounty) openCountyGeneralElectionPage(selectedSimCounty);
+});
 document.getElementById('simRatingBrush').addEventListener('click', e => {
   const btn = e.target.closest('button'); if(!btn) return;
   const rating = btn.dataset.rating;
@@ -4908,6 +5022,37 @@ async function loadAndRenderCountyCharts(countyName){
   }
 }
 
+// Opens a county's General Election page -- the zoomed county map with
+// its info panel and trend charts -- from anywhere a county is listed by
+// NAME (the County table, the Counties-updated table, the Build Your Own
+// Map editor). Someone who doesn't know Florida can't find "Duval" on a
+// map, but can find it in an alphabetical list.
+//
+// It deliberately reuses the existing paths rather than copying them:
+// switchMode() to leave Build Your Own Map, a click on the General
+// Election tab itself (so the normal tab logic runs -- including
+// clearing any bar-click party map), then openCountyZoom().
+function openCountyGeneralElectionPage(countyName){
+  if(!countyName) return Promise.resolve();
+  if(currentMode !== 'live') switchMode('live');
+  highlightedCounty = countyName;
+  if(currentMetric !== 'demrepnpa'){
+    const tab = document.querySelector('#metricSelect button[data-metric="demrepnpa"]');
+    if(tab) tab.click();
+  }
+  const opening = openCountyZoom(countyName);
+  // The county table can be far below the map (67 rows), so bring the
+  // zoomed map into view. Only scrolls if it isn't already fully visible.
+  const anchor = document.getElementById('mapTitle');
+  if(anchor){
+    const r = anchor.getBoundingClientRect();
+    if(r.top < 0 || r.top > window.innerHeight * 0.5){
+      anchor.scrollIntoView({ behavior:'smooth', block:'start' });
+    }
+  }
+  return opening;
+}
+
 async function openCountyZoom(countyName){
   const c = activeCountiesFor(currentMetric).find(c => c.county === countyName);
   if(!c) return;
@@ -4918,6 +5063,7 @@ async function openCountyZoom(countyName){
   setZoomResetButtonActive(true);
 
   document.getElementById('tableWrap').style.display = 'none';
+  document.getElementById('tableHint').style.display = 'none';   // the table is replaced by this county's charts, so its "click a row" hint goes too
   document.getElementById('countyChartsView').classList.add('active');
   document.getElementById('countyChartsTitle').textContent = countyName + ' County \u2014 Historical Trend';
 
@@ -4958,6 +5104,7 @@ function closeCountyZoom(){
   renderMap();
 
   document.getElementById('tableWrap').style.display = '';
+  document.getElementById('tableHint').style.display = '';
   document.getElementById('countyChartsView').classList.remove('active');
   document.getElementById('countyZoomBarChart').innerHTML = '';
 }
@@ -5821,6 +5968,216 @@ async function renderCountyDetailCharts(countyRows){
 // it has to already exist by the time render() first runs. Same reason
 // SIM_REG and the turnout helpers were relocated above.)
 
+// ------------------------------------------------------------
+// LARGEST STATEWIDE DROPS
+// ------------------------------------------------------------
+// A "drop" is how many votes one statewide update added: this update's
+// total minus the previous update's total, from the same
+// statewide_history.csv the trend charts use.
+
+// statewide_history.csv holds more than one election back to back (the
+// August primary, then the general election), and the statewide total
+// RESETS between them -- it fell from ~1.97 million to 152. Counting
+// primary rows would put a -1.97 million "drop" at the seam and mix the
+// primary's records into the general election's. A new election period
+// starts wherever the total collapses to under half of the previous
+// total (real corrections only ever shave a tiny sliver off); only the
+// latest period is ranked. The parser the charts use currently drops the
+// primary's timestamps already, so today this only matters as a safeguard
+// -- but it also covers the next election period without any change.
+function findCurrentPeriodStart(totals){
+  let start = 0;
+  for(let i = 1; i < totals.length; i++){
+    if(totals[i-1] > 0 && totals[i] < totals[i-1] * 0.5) start = i;
+  }
+  return start;
+}
+
+// rows: statewide history rows with a parsed _time, oldest first.
+function computeLargestDrops(rows){
+  const totals = rows.map(r => {
+    const t = num(pick(r,['Total']));
+    return t || (num(pick(r,['DEM'])) + num(pick(r,['REP'])) + num(pick(r,['NPA/Other'])));
+  });
+  const start = findCurrentPeriodStart(totals);
+
+  // The first row of a period is the baseline (the first count the
+  // tracker ever saw), not a drop -- if tracking began partway through
+  // counting it would otherwise crown a misleading "largest drop".
+  const drops = [];
+  for(let i = start + 1; i < rows.length; i++){
+    const total = totals[i] - totals[i-1];
+    if(total <= 0) continue; // a correction (or no change) isn't a drop
+    drops.push({
+      key: rows[i]._time.getTime(),
+      time: rows[i]._time,
+      updateNumber: i - start + 1, // the baseline row is update #1
+      total,
+      isLatest: i === rows.length - 1
+    });
+  }
+
+  const ranked = drops.slice().sort((a,b) => (b.total - a.total) || (b.key - a.key));
+  const latest = drops.find(d => d.isLatest) || null;
+  let isNewRecord = false;
+  if(latest && drops.length >= RECORD_ALERT_MIN_DROPS){
+    const priorMax = Math.max(0, ...drops.filter(d => !d.isLatest).map(d => d.total));
+    isNewRecord = latest.total > priorMax;
+  }
+  return {
+    drops, top: ranked.slice(0, LARGEST_DROPS_SHOWN), latest, isNewRecord,
+    updatesTracked: rows.length - start, periodStartTime: rows[start]._time
+  };
+}
+
+// How many votes each county added at each update of the current period,
+// from the cumulative snapshots in county_history_full.csv: a county's
+// change at an update is its total then minus its total at its previous
+// logged update (its first row in the period counts from zero). Summed
+// across counties these match the statewide drop -- checked against the
+// real data: 34 of 36 updates tie out exactly, including every large one;
+// the two that don't are tiny early-period updates (see the note shown
+// on a drop whose counties don't add up).
+function computeCountyDeltasByUpdate(countyRows, periodStartTime){
+  const byCounty = new Map();
+  countyRows.forEach(r => {
+    const t = parseHistoryTimestamp(pick(r,['Timestamp']));
+    if(!t || t < periodStartTime) return;
+    const name = normName(pick(r,['County']));
+    if(!name) return;
+    if(!byCounty.has(name)) byCounty.set(name, []);
+    byCounty.get(name).push({ t, total: num(pick(r,['Total'])) });
+  });
+  const out = new Map();
+  byCounty.forEach((list, name) => {
+    list.sort((a,b) => a.t - b.t);
+    let prev = 0;
+    list.forEach(item => {
+      const k = item.t.getTime();
+      if(!out.has(k)) out.set(k, []);
+      out.get(k).push({ county: name, votes: item.total - prev });
+      prev = item.total;
+    });
+  });
+  return out;
+}
+
+function drawLargestDropsBoard(result, fetchingCounties){
+  const el = document.getElementById('largestDropsBoard');
+  if(!el) return;
+  const medals = ['\u{1F947}', '\u{1F948}', '\u{1F949}'];
+  const since = result.periodStartTime.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+
+  const banner = result.isNewRecord
+    ? `<div class="drop-record-banner">\u{1F3C6} <b>New record:</b> the latest update (+${fmt(result.latest.total)} votes) is the largest statewide drop so far.</div>`
+    : '';
+
+  const rows = result.top.map((d, i) => {
+    const rank = i < 3 ? medals[i] : `#${i + 1}`;
+    let countiesHtml = '';
+    if(i < LARGEST_DROPS_WITH_COUNTIES){
+      const entries = largestDropsCountyDeltas.get(d.key);
+      if(!entries){
+        countiesHtml = `<div class="drop-counties">${fetchingCounties ? 'Counties: loading\u2026' : 'County detail isn\u2019t available for this update yet.'}</div>`;
+      }else{
+        const contributors = entries.filter(e => e.votes > 0).sort((a,b) => b.votes - a.votes);
+        const net = entries.reduce((s,e) => s + e.votes, 0);
+        if(!contributors.length){
+          countiesHtml = '<div class="drop-counties">County detail isn\u2019t available for this update yet.</div>';
+        }else{
+          const item = e => `<b>${escapeHtmlForCard(e.county)}</b> <span class="v">+${fmt(e.votes)}</span>`;
+          const shown = contributors.slice(0, 5), rest = contributors.slice(5);
+          let line = 'Counties: ' + shown.map(item).join(' &middot; ');
+          if(rest.length){
+            line += ` &middot; <details class="drop-more"><summary>+${rest.length} more ${rest.length === 1 ? 'county' : 'counties'}</summary>${rest.map(item).join(' &middot; ')}</details>`;
+          }
+          countiesHtml = `<div class="drop-counties">${line}</div>`;
+          if(net !== d.total){
+            countiesHtml += `<div class="drop-note">County figures add up to ${fmt(net)} of this update\u2019s ${fmt(d.total)} statewide votes \u2014 small differences like this usually come from corrections to earlier counts.</div>`;
+          }
+        }
+      }
+    }
+    return `
+      <div class="drop-row">
+        <div class="drop-rank">${rank}</div>
+        <div class="drop-main">
+          <div class="drop-head">
+            <span class="drop-votes">+${fmt(d.total)}</span><span class="drop-votes-label">votes</span>
+            ${d.isLatest ? '<span class="drop-badge">LATEST</span>' : ''}
+          </div>
+          <div class="drop-when">${formatSortedHoverDate(d.time)} &middot; Update #${d.updateNumber}</div>
+          ${countiesHtml}
+        </div>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="drop-board-head">
+      <div class="drop-board-title">Largest Statewide Drops</div>
+      <div class="drop-board-sub">${result.updatesTracked} updates tracked since ${since}</div>
+    </div>
+    ${banner}${rows}`;
+}
+
+// The alert for a new record. The banner above covers anyone opening the
+// page after it happened; this toast is for someone who has the page
+// open and isn't looking at the bottom of it when an update lands. It
+// only fires when a NEW update arrives during the session -- never just
+// because the page loaded -- and only once per update.
+function showRecordToast(drop){
+  const el = document.getElementById('recordToast');
+  if(!el) return;
+  el.innerHTML = `<button class="record-toast-x" aria-label="Dismiss" title="Dismiss">&times;</button>\u{1F3C6} <b>New largest statewide drop</b><br>+${fmt(drop.total)} votes &middot; Update #${drop.updateNumber} &middot; ${formatSortedHoverDate(drop.time)}`;
+  el.style.display = 'block';
+  el.querySelector('.record-toast-x').addEventListener('click', () => { el.style.display = 'none'; });
+  clearTimeout(recordToastTimer);
+  recordToastTimer = setTimeout(() => { el.style.display = 'none'; }, 20000);
+}
+
+// rows: the statewide history rows the trend charts already fetched and
+// parsed. Never throws and never blocks the charts: any failure here just
+// leaves the board as it was.
+async function refreshLargestDropsBoard(rows){
+  const myCall = ++largestDropsCallId;
+  const el = document.getElementById('largestDropsBoard');
+  if(!el) return;
+  try{
+    const result = computeLargestDrops(rows);
+    if(!result.top.length){
+      el.innerHTML = '<div class="drop-board-empty">The largest statewide drops will be listed here once at least two updates have been logged.</div>';
+      return;
+    }
+
+    if(largestDropsFirstRunDone && result.isNewRecord && result.latest.key !== largestDropsLatestKey){
+      showRecordToast(result.latest);
+    }
+    largestDropsLatestKey = result.latest ? result.latest.key : null;
+    largestDropsFirstRunDone = true;
+
+    // Which of the drops that name counties don't have county detail yet?
+    const missing = result.top.slice(0, LARGEST_DROPS_WITH_COUNTIES).filter(d =>
+      !largestDropsCountyDeltas.has(d.key) && (largestDropsFetchTries.get(d.key) || 0) < LARGEST_DROPS_MAX_COUNTY_FETCHES);
+
+    // Draw straight away with whatever county detail is already known;
+    // the county download (a large file) fills in the rest when it lands.
+    drawLargestDropsBoard(result, missing.length > 0);
+    if(!missing.length) return;
+
+    missing.forEach(d => largestDropsFetchTries.set(d.key, (largestDropsFetchTries.get(d.key) || 0) + 1));
+    // Overlapping refreshes (page load triggers several renders) share
+    // one download instead of each starting their own.
+    const download = largestDropsCountyFetch || (largestDropsCountyFetch = fetchCSV(COUNTY_HISTORY_FULL_PATH).catch(() => null));
+    const countyRows = await download;
+    largestDropsCountyFetch = null;
+    if(myCall !== largestDropsCallId) return; // a newer refresh owns the board now
+    if(countyRows) largestDropsCountyDeltas = computeCountyDeltasByUpdate(countyRows, result.periodStartTime);
+    drawLargestDropsBoard(result, false);
+  }catch(err){
+    console.warn('Largest statewide drops board failed to update:', err);
+  }
+}
+
 async function renderStatewideHistoryCharts(){
   const cumulativeEl = document.getElementById('statewideCumulativeChart');
   const shareEl = document.getElementById('statewideShareChart');
@@ -5862,6 +6219,11 @@ async function renderStatewideHistoryCharts(){
   }
 
   statewideHistoryEverLoaded = true;
+
+  // Largest-drops leaderboard: same rows, so it refreshes every time the
+  // charts do. Fire-and-forget on purpose -- it handles its own errors
+  // and must never be able to hold up or break the charts below.
+  refreshLargestDropsBoard(parsed);
 
   const times = parsed.map(r => r._time);
   const dem = parsed.map(r => num(pick(r,['DEM'])));

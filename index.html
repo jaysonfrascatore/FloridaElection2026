@@ -286,6 +286,42 @@
   .sim-csv-label{
     font-family:var(--mono); font-size:10.5px; color:var(--muted-2); letter-spacing:.05em; text-transform:uppercase;
   }
+
+  /* Explainer above the sim map: a short summary that's always visible,
+     with the longer "why" tucked into a collapsed <details> so it informs
+     without crowding the map. */
+  .sim-safe-note{
+    background:var(--panel-2); border:1px solid var(--border); border-radius:8px;
+    padding:10px 12px; margin-bottom:12px;
+    font-family:var(--mono); font-size:11.5px; line-height:1.55; color:var(--muted);
+  }
+  .sim-safe-note:empty{ display:none; }
+  .sim-safe-note b{ color:var(--text); font-weight:600; }
+  .sim-safe-note .r, .sim-safe-note b.r{ color:var(--rep); }
+  .sim-safe-note .d, .sim-safe-note b.d{ color:var(--dem); }
+  .sim-safe-details{ margin-top:8px; }
+  .sim-safe-details summary{ cursor:pointer; color:var(--gold); font-size:11px; user-select:none; }
+  .sim-safe-details summary:hover{ text-decoration:underline; }
+  .sim-safe-body{ margin-top:8px; }
+  .sim-safe-body p{ margin:0 0 8px; }
+  .sim-safe-body ul{ margin:0 0 8px; padding-left:18px; }
+  .sim-safe-body li{ margin-bottom:5px; }
+  .sim-safe-caveat{
+    color:var(--text); border-left:2px solid var(--gold); padding-left:9px; margin-top:10px !important;
+  }
+
+  /* Loading / error overlay on top of the sim map, so a slow or failed
+     load of the county shapes is visible instead of looking like an
+     empty panel. */
+  .sim-map-wrap{ position:relative; }
+  .sim-map-status{
+    position:absolute; top:0; right:0; bottom:0; left:0; z-index:2;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+    padding:20px; text-align:center; border-radius:8px; background:rgba(10,14,23,.6);
+    font-family:var(--mono); font-size:12px; color:var(--muted);
+  }
+  .sim-map-status-msg.loading{ animation:simMapPulse 1.2s ease-in-out infinite; }
+  @keyframes simMapPulse{ 0%,100%{ opacity:.45; } 50%{ opacity:1; } }
   .segmented{ display:flex; background:var(--panel); border:1px solid var(--border); border-radius:9px; padding:3px; gap:2px; flex-wrap:wrap; }
   .segmented button{
     font-family:var(--mono); font-size:11.5px; color:var(--muted); background:none; border:none;
@@ -995,7 +1031,8 @@
         <option value="y2024">2024 Presidential Race (actual)</option>
       </select>
     </div>
-    <button class="sim-btn" id="simResetAllBtn">Reset all counties to 50/50</button>
+    <button class="sim-btn" id="simFillSafeBtn" title="Fill in the counties that were rated Safe in the 2026 primary (leaves every other county as it is)">Fill safe counties</button>
+    <button class="sim-btn" id="simResetAllBtn" title="Clear every county back to 50/50, including the pre-filled Safe ones">Reset all counties to 50/50</button>
     <div class="sim-csv-row">
       <span class="sim-csv-label">Scenario file</span>
       <button class="sim-btn" id="simDownloadCsvBtn">Download CSV</button>
@@ -1008,6 +1045,7 @@
   <div class="grid">
     <div class="panel">
       <h2 id="simMapHeader">Click a county to set its margin</h2>
+      <div class="sim-safe-note" id="simSafeNote"></div>
       <div class="segmented" id="simRatingBrush" style="margin-bottom:12px; flex-wrap:wrap;">
         <button data-rating="Safe R" style="color:#dd2d4a;">Safe R</button>
         <button data-rating="Likely R" style="color:#ee6a86;">Likely R</button>
@@ -1017,7 +1055,13 @@
         <button data-rating="Likely D" style="color:#33c2e0;">Likely D</button>
         <button data-rating="Safe D" style="color:#3d6fd9;">Safe D</button>
       </div>
-      <div id="simMap" style="height:480px;"></div>
+      <div class="sim-map-wrap">
+        <div id="simMap" style="height:480px;"></div>
+        <div class="sim-map-status" id="simMapStatus">
+          <div class="sim-map-status-msg loading" id="simMapStatusMsg">Loading map&hellip;</div>
+          <button class="sim-btn" id="simMapRetryBtn" style="display:none;">Try again</button>
+        </div>
+      </div>
       <div class="legend" id="simMapLegend"></div>
 
       <div id="simEditor" class="sim-editor" style="display:none;">
@@ -1391,6 +1435,12 @@ let STATIC_DVR_COUNTIES = [];
 
 let COUNTIES = [];
 let geojsonFL = null;
+// The in-flight download (if any), so two callers asking for the county
+// shapes at once share ONE request instead of each downloading the large
+// file. Declared right next to geojsonFL on purpose: ensureGeojson() runs
+// on the very first synchronous render at page load, so both have to
+// already exist by then.
+let geojsonLoadPromise = null;
 let currentMetric = 'demrepnpa';
 let sortKey = 'county', sortAsc = true;
 let highlightedCounty = null;
@@ -1833,10 +1883,25 @@ function buildCounties(rows){
 
 async function ensureGeojson(){
   if(geojsonFL) return geojsonFL;
-  const resp = await fetch('https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json');
-  const full = await resp.json();
-  geojsonFL = { type:'FeatureCollection', features: full.features.filter(f => f.properties.STATE === '12') };
-  return geojsonFL;
+  // Both the Live map (at page load) and Build Your Own Map ask for this
+  // large file. Previously each caller started its OWN download if the
+  // first hadn't finished yet, doubling the wait for anyone who opened
+  // the sim tab quickly -- now they share one request. On failure the
+  // shared promise is cleared so the next call (e.g. the Retry button)
+  // can genuinely try again instead of replaying the same error.
+  if(!geojsonLoadPromise){
+    geojsonLoadPromise = (async () => {
+      const resp = await fetch('https://raw.githubusercontent.com/plotly/datasets/master/geojson-counties-fips.json');
+      if(!resp.ok) throw new Error('HTTP ' + resp.status + ' while loading the county map shapes');
+      const full = await resp.json();
+      geojsonFL = { type:'FeatureCollection', features: full.features.filter(f => f.properties.STATE === '12') };
+      return geojsonFL;
+    })().catch(err => {
+      geojsonLoadPromise = null;
+      throw err;
+    });
+  }
+  return geojsonLoadPromise;
 }
 
 // Applies either the real statewide proportions, or (if a party is
@@ -3841,6 +3906,56 @@ const RATING_BRUSH_DEMPCT = {
 };
 let selectedRatingBrush = null;
 
+// ---- Pre-filled "Safe" counties for Build Your Own Map ----
+// Someone who doesn't know Florida shouldn't have to guess which of the
+// 67 counties are foregone conclusions, so the map starts with those
+// already filled in. Source: the frozen 2026 primary snapshot
+// (archive/florida_turnout_2026-08-23_00-19-23.csv, the same data the
+// Primary Election tab shows) -- every county whose rating there was
+// "Safe D" or "Safe R". Hard-coded rather than read from
+// STATIC_DVR_COUNTIES at runtime on purpose: that snapshot loads
+// asynchronously, and opening this tab before it finished would
+// silently pre-fill nothing. The snapshot is frozen, so a fixed list is
+// equivalent. The narrowest margin among the counties filled below is
+// about 19 points (Orange for D, Lake for R).
+//
+// Six counties were ALSO Safe R in the primary but are deliberately NOT
+// filled (SIM_SAFE_R_EXCEPTIONS) -- they're left at 50/50 for the user
+// to decide. There are no Democratic exceptions.
+const SIM_SAFE_D = [
+  'Alachua', 'Broward', 'Gadsden', 'Leon', 'Orange'
+];
+const SIM_SAFE_R = [
+  'Baker', 'Bay', 'Bradford', 'Calhoun', 'Charlotte', 'Citrus', 'Clay', 'Collier', 'Columbia',
+  'DeSoto', 'Dixie', 'Flagler', 'Franklin', 'Gilchrist', 'Glades', 'Gulf', 'Hamilton', 'Hardee',
+  'Hendry', 'Hernando', 'Highlands', 'Holmes', 'Indian River', 'Jackson', 'Lafayette', 'Lake',
+  'Lee', 'Levy', 'Liberty', 'Madison', 'Marion', 'Martin', 'Nassau', 'Okaloosa', 'Okeechobee',
+  'Pasco', 'Putnam', 'Santa Rosa', 'St. Johns', 'Sumter', 'Suwannee', 'Taylor', 'Union',
+  'Wakulla', 'Walton', 'Washington'
+];
+const SIM_SAFE_R_EXCEPTIONS = [
+  'Escambia', 'Polk', 'Sarasota', 'Manatee', 'Volusia', 'Brevard'
+];
+// The remaining counties the primary rated closer than Safe (Likely/Lean/
+// Toss Up) -- also left open. Listed only so the explanation can name them.
+const SIM_SAFE_OTHERS_OPEN = [
+  'Duval', 'Hillsborough', 'Jefferson', 'Miami-Dade', 'Monroe', 'Osceola', 'Palm Beach',
+  'Pinellas', 'Seminole', 'St. Lucie'
+];
+
+// Sets ONLY the Safe counties to their bucket's representative value
+// (the same 65 / 35 the Safe D / Safe R paintbrush uses) and leaves every
+// other county exactly as it is -- so pressing "Fill safe counties"
+// never wipes out work someone already did on the competitive ones.
+function simApplySafeCounties(){
+  SIM_SAFE_D.forEach(name => {
+    if(name in simDemPct) simDemPct[name] = RATING_BRUSH_DEMPCT['Safe D'];
+  });
+  SIM_SAFE_R.forEach(name => {
+    if(name in simDemPct) simDemPct[name] = RATING_BRUSH_DEMPCT['Safe R'];
+  });
+}
+
 function simResetAll(){
   simDemPct = {};
   SIM_COUNTY_NAMES.forEach(name => { simDemPct[name] = 50; });
@@ -3930,14 +4045,98 @@ function simStatewide(){
   return { dem, rep, total, movedCount, margin, rating: simRatingFor(margin) };
 }
 
+// "A, B and C" -- for naming counties in plain English.
+function simJoinNames(names){
+  if(names.length <= 1) return names.join('');
+  return names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+}
+
+// The short explainer above the map. Built once (initSim) from the same
+// arrays that drive the fill, so the counts and names in the text can
+// never drift out of sync with what's actually filled in. The caveat at
+// the bottom is intentional and important: "Safe" is a statement about
+// past results (this year's primary), not a guarantee.
+function renderSimSafeNote(){
+  const el = document.getElementById('simSafeNote');
+  if(!el) return;
+  const nD = SIM_SAFE_D.length, nR = SIM_SAFE_R.length;
+  const pctD = RATING_BRUSH_DEMPCT['Safe D'];
+  const pctR = 100 - RATING_BRUSH_DEMPCT['Safe R'];
+  const nOpen = SIM_SAFE_R_EXCEPTIONS.length + SIM_SAFE_OTHERS_OPEN.length;
+  el.innerHTML = `
+    <div class="sim-safe-summary">
+      <b>New to Florida?</b> We've filled in the <b>${nD + nR} counties rated Safe in the 2026 primary</b>
+      (<span class="r">${nR} R</span> &middot; <span class="d">${nD} D</span>) so you only have to decide the competitive ones.
+      Use <b>Reset all counties</b> to start from a blank map, or <b>Fill safe counties</b> to bring them back.
+    </div>
+    <details class="sim-safe-details">
+      <summary>Why are these counties already filled in?</summary>
+      <div class="sim-safe-body">
+        <p>In the 2026 primary, each of these counties leaned one way by a very wide margin &mdash; even the
+        closest of them (Orange for Democrats, Lake for Republicans) was about 19 points. A gap that size is
+        rarely made up in a single election, so they start out as <b>Safe</b>.</p>
+        <ul>
+          <li><b class="d">Safe D (${nD}):</b> ${simJoinNames(SIM_SAFE_D)} &mdash; filled at ${pctD}% D.</li>
+          <li><b class="r">Safe R (${nR}):</b> every other county the primary rated Safe R, except the six below
+          &mdash; filled at ${100 - pctR}% D / ${pctR}% R.</li>
+        </ul>
+        <p><b>Left open on purpose (${nOpen}):</b></p>
+        <ul>
+          <li>${simJoinNames(SIM_SAFE_R_EXCEPTIONS)} were also Safe R in the primary, but they're large,
+          politically mixed counties that can look different in a general election than in a primary, so
+          they're yours to decide.</li>
+          <li>${simJoinNames(SIM_SAFE_OTHERS_OPEN)} were rated closer than Safe in the primary.</li>
+        </ul>
+        <p class="sim-safe-caveat"><b>Keep in mind:</b> &ldquo;Safe&rdquo; is based on past results &mdash; this
+        year's primary &mdash; not a guarantee. A strong national environment for either party, or unusual
+        turnout, can move even these counties. Change any of them on the map whenever you like.</p>
+      </div>
+    </details>`;
+}
+
 function initSim(){
   simResetAll();
+  simApplySafeCounties();
+  renderSimSafeNote();
   document.getElementById('simTurnoutSlider').value = simTurnoutPct;
   renderSim();
 }
 
+// True once the sim map has been drawn at least once. Until then the
+// status overlay (below) covers the map area; after that, re-renders
+// (every slider drag calls renderSimMap) must NOT flash it again.
+let simMapPlotted = false;
+
+// 'loading' | 'error' | 'ready' -- the overlay on top of #simMap. Without
+// it, a slow download of the county shapes (or a failed one) just left an
+// empty-looking panel with no hint of what was going on.
+function setSimMapStatus(state){
+  const el = document.getElementById('simMapStatus');
+  if(!el) return;
+  if(state === 'ready'){ el.style.display = 'none'; return; }
+  const msg = document.getElementById('simMapStatusMsg');
+  const retry = document.getElementById('simMapRetryBtn');
+  el.style.display = 'flex';
+  if(state === 'error'){
+    msg.textContent = "Couldn't load the county map. Check your connection, then try again.";
+    msg.classList.remove('loading');
+    retry.style.display = 'inline-block';
+  }else{
+    msg.textContent = 'Loading map\u2026';
+    msg.classList.add('loading');
+    retry.style.display = 'none';
+  }
+}
+
 async function renderSimMap(){
-  await ensureGeojson();
+  if(!simMapPlotted) setSimMapStatus('loading');
+  try{
+    await ensureGeojson();
+  }catch(err){
+    console.warn('Could not load the county map shapes for Build Your Own Map:', err);
+    if(!simMapPlotted) setSimMapStatus('error');
+    return;
+  }
   const locations = SIM_COUNTY_NAMES.map(name => FL_FIPS[name]);
   const n = RATING_CATS.length;
   const z = SIM_COUNTY_NAMES.map(name => RATING_CATS.findIndex(cat=>cat.key===simCountyStats(name).rating) + 0.5);
@@ -3959,7 +4158,12 @@ async function renderSimMap(){
     paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
     margin:{t:10,b:10,l:10,r:10}, font:{family:'Inter, sans-serif'}
   };
-  Plotly.newPlot('simMap', [trace], layout, {displayModeBar:false, responsive:true, scrollZoom:true});
+  Plotly.newPlot('simMap', [trace], layout, {displayModeBar:false, responsive:true, scrollZoom:true})
+    .then(() => { simMapPlotted = true; setSimMapStatus('ready'); })
+    .catch(err => {
+      console.warn('Build Your Own Map failed to draw:', err);
+      if(!simMapPlotted) setSimMapStatus('error');
+    });
   document.getElementById('simMap').on('plotly_click', ev => {
     const fips = ev.points[0].location;
     const name = SIM_COUNTY_NAMES.find(n => FL_FIPS[n] === fips);
@@ -4144,11 +4348,43 @@ function renderSim(){
   }
   document.getElementById('simMapHeader').textContent = mapHeaderText;
   document.getElementById('simRatingBrush').style.display = simCheckpointMode === 'tie' ? 'flex' : 'none';
+  // The Safe-counties explainer is about building the map by hand, so it
+  // only belongs in that mode (not on the 2018/2022/2024 actual-results views).
+  document.getElementById('simSafeNote').style.display = simCheckpointMode === 'tie' ? 'block' : 'none';
   if(simCheckpointMode !== 'tie'){
     selectedRatingBrush = null;
     document.querySelectorAll('#simRatingBrush button').forEach(b=>b.classList.remove('active'));
   }
   if(selectedSimCounty) renderSimEditor();
+}
+
+// Two things that can make the map look missing right after the tab opens:
+//  1. Plotly only resizes on window-resize events, and it deliberately
+//     ignores them while its container is display:none. So if the window
+//     changed size while this tab was hidden (or the container's final
+//     size wasn't settled yet at first draw), the chart stays stuck at a
+//     stale size when the tab is shown again. Re-measuring once the
+//     layout has settled fixes that.
+//  2. The controls above the map (stat strip, sliders, buttons) are
+//     tall enough that on many monitors the map starts below the
+//     visible area, so it looks like it didn't load. On the first open,
+//     scroll just far enough to bring it into view -- 'nearest' does
+//     nothing at all if it's already visible.
+function settleSimMap(scrollIntoView){
+  const remeasure = () => {
+    const el = document.getElementById('simMap');
+    if(el && el.data){
+      try{ Plotly.Plots.resize(el).catch(() => {}); }catch(e){}
+    }
+  };
+  requestAnimationFrame(() => {
+    remeasure();
+    if(scrollIntoView){
+      const el = document.getElementById('simMap');
+      if(el && el.scrollIntoView) el.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    }
+  });
+  setTimeout(remeasure, 300);
 }
 
 function switchMode(mode){
@@ -4160,7 +4396,9 @@ function switchMode(mode){
     document.getElementById('emptyState').style.display = 'none';
     document.getElementById('errorMsg').style.display = 'none';
     document.getElementById('simDashboard').classList.add('active');
-    if(!simInitialized){ simInitialized = true; initSim(); }
+    const firstOpen = !simInitialized;
+    if(firstOpen){ simInitialized = true; initSim(); }
+    settleSimMap(firstOpen);
   }else{
     document.getElementById('simDashboard').classList.remove('active');
     document.getElementById('dashboard').classList.add('active');
@@ -4224,6 +4462,24 @@ document.getElementById('simResetAllBtn').addEventListener('click', () => {
   document.getElementById('simEditor').style.display = 'none';
   document.getElementById('simPlaceholder').style.display = 'block';
   renderSim();
+});
+// The counterpart to "Reset all counties": puts the Safe counties back
+// (or fills them, if someone reset first). Only touches those 51 counties
+// -- the competitive ones keep whatever the user already set.
+document.getElementById('simFillSafeBtn').addEventListener('click', () => {
+  // Filling only makes sense on the hand-built map, so leave any
+  // actual-results view first (the same thing Reset does).
+  simCheckpointMode = 'tie';
+  document.getElementById('simCheckpointMode').value = 'tie';
+  sim2024Swing = 0;
+  document.getElementById('sim2024SwingSlider').value = 0;
+  document.getElementById('sim2024SwingValue').textContent = 'Even (actual results)';
+  simApplySafeCounties();
+  if(selectedSimCounty) document.getElementById('simDemSlider').value = simDemPct[selectedSimCounty];
+  renderSim();
+});
+document.getElementById('simMapRetryBtn').addEventListener('click', () => {
+  renderSimMap();
 });
 document.getElementById('simRatingBrush').addEventListener('click', e => {
   const btn = e.target.closest('button'); if(!btn) return;

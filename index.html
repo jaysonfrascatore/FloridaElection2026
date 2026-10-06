@@ -3700,6 +3700,182 @@ function drawColoredLine(ctx, segments, x, y){
 }
 
 
+// ============================================================
+// MARGIN MOVE SCREENSHOT: the "Statewide Margin Move" bottom block
+// ============================================================
+// Replaces the "Top 3 counties by votes added" list in the footer of the
+// Margin Move tab's screenshot only. Everything above it (header, map)
+// and every other tab's screenshot is drawn exactly as before.
+//
+// Numbers come from computeStatewideMarginInfo(), the same helper the
+// update text and the Statewide Margin panel use, so the screenshot,
+// the tweet and the tab always say the same thing.
+const MARGIN_MOVE_BLOCK_H = 292;   // unscaled px of vertical room the block needs
+
+// What the block says, as plain data (no canvas): the wording, the
+// numbers and the party color of every piece of text. Kept separate from
+// the drawing so it can be tested without rendering an image.
+function marginMoveBlockContent(info){
+  if(!info.hasCurrent) return { hasCurrent:false };
+  const BLUE = '#5b9bd9', RED = '#d4675a', PURPLE = '#c77dff', NEUTRAL = '#e9edf5', GRAY = '#7c879c';
+  // A margin takes the color of the party it favors; "Even" is neutral.
+  const colorFor = m => formatMarginLabel(m) === 'Even' ? NEUTRAL : (m > 0 ? BLUE : RED);
+  const signed = v => (v >= 0 ? '+' : '') + fmt(v);
+
+  let move = null;
+  if(info.hasPrior){
+    move = info.towardParty
+      ? { text: `${Math.abs(info.change).toFixed(2)}% move toward ${info.towardParty}`, color: info.towardParty === 'Democrats' ? BLUE : RED }
+      : { text: 'No change in the margin', color: GRAY };
+  }
+
+  // First place vs second place, in raw votes (Democrats vs Republicans,
+  // the same two the margin compares).
+  let lead;
+  if(!info.leader){
+    lead = { parts: [
+      { text:'Democrats', color:BLUE }, { text:' and ', color:NEUTRAL },
+      { text:'Republicans', color:RED }, { text:' are tied', color:NEUTRAL }
+    ], change: null };
+  }else{
+    const firstIsD = info.leader === 'Democrats';
+    const gap = Math.abs(info.D - info.R);
+    let change = null;
+    if(info.hasPrior){
+      const delta = (firstIsD ? 1 : -1) * (info.dD - info.dR);     // + = the leader's raw lead grew
+      change = delta > 0 ? `up ${fmt(delta)}` : (delta < 0 ? `down ${fmt(Math.abs(delta))}` : 'unchanged');
+    }
+    lead = { parts: [
+      { text: firstIsD ? 'Democrats' : 'Republicans', color: firstIsD ? BLUE : RED },
+      { text:' lead ', color:NEUTRAL },
+      { text: firstIsD ? 'Republicans' : 'Democrats', color: firstIsD ? RED : BLUE },
+      { text:` by ${fmt(gap)} votes`, color:NEUTRAL }
+    ], change };
+  }
+
+  return {
+    hasCurrent: true,
+    hasPrior: info.hasPrior,
+    prev: info.hasPrior ? { text: formatMarginLabel(info.prevMargin), color: colorFor(info.prevMargin) } : null,
+    now: { text: formatMarginLabel(info.margin), color: colorFor(info.margin) },
+    move,
+    votes: [
+      { label:'DEMOCRATS GAINED',   text: signed(info.dD), color: BLUE },
+      { label:'REPUBLICANS GAINED', text: signed(info.dR), color: RED },
+      { label:'NPA/OTHER GAINED',   text: signed(info.dO), color: PURPLE }
+    ],
+    lead
+  };
+}
+
+// Draws that content. x0/y0 is the block's top-left in canvas pixels,
+// width its available width in canvas pixels; `scale` is the export's
+// scale factor, and sizes below are the unscaled ones. Every line is
+// shrunk to fit the width if needed, so a long number can't run off the
+// image.
+function drawMarginMoveBlock(ctx, info, x0, y0, width, scale){
+  const GOLD = '#d8b466', GRAY = '#7c879c', RULE = '#2a3347', NEUTRAL = '#e9edf5';
+  const S = v => v * scale;
+  const sans = 'Inter, Arial, sans-serif';
+  const setFont = (weight, px) => { ctx.font = `${weight} ${Math.round(S(px))}px ${sans}`; };
+  // Largest size (down to minPx) at which `text` fits in maxW canvas pixels.
+  const fitPx = (weight, px, minPx, maxW, text) => {
+    let size = px;
+    setFont(weight, size);
+    while(ctx.measureText(text).width > maxW && size > minPx){ size -= 1; setFont(weight, size); }
+    return size;
+  };
+  const content = marginMoveBlockContent(info);
+  ctx.textBaseline = 'alphabetic';
+
+  ctx.fillStyle = GOLD;
+  setFont(700, 19);
+  ctx.fillText('STATEWIDE MARGIN MOVE', x0, y0 + S(18));
+
+  if(!content.hasCurrent){
+    ctx.fillStyle = GRAY; setFont(600, 26);
+    ctx.fillText('No votes counted yet', x0, y0 + S(80));
+    return;
+  }
+
+  // ---- previous margin  ->  new margin (the big line) ----
+  const gap = S(26);
+  const arrow = '\u2192';
+  let bigPx = 60;
+  const bigWidth = px => {
+    setFont(700, px);
+    let w = ctx.measureText(content.now.text).width;
+    if(content.prev){
+      w += ctx.measureText(content.prev.text).width;
+      setFont(600, px * 0.8); w += ctx.measureText(arrow).width; setFont(700, px);
+      w += gap * 2;
+    }
+    return w;
+  };
+  while(bigWidth(bigPx) > width && bigPx > 28) bigPx -= 1;
+
+  const capY = y0 + S(48), bigY = y0 + S(106);
+  let cx = x0;
+  ctx.font = `600 ${Math.round(S(13))}px ${sans}`;
+  if(content.prev){
+    ctx.fillStyle = GRAY;
+    ctx.fillText('PREVIOUS', cx, capY);
+    setFont(700, bigPx);
+    ctx.fillStyle = content.prev.color;
+    ctx.fillText(content.prev.text, cx, bigY);
+    cx += ctx.measureText(content.prev.text).width + gap;
+    setFont(600, bigPx * 0.8);
+    ctx.fillStyle = GRAY;
+    ctx.fillText(arrow, cx, bigY);
+    cx += ctx.measureText(arrow).width + gap;
+  }
+  ctx.font = `600 ${Math.round(S(13))}px ${sans}`;
+  ctx.fillStyle = GRAY;
+  ctx.fillText(content.prev ? 'NOW' : 'FIRST UPDATE LOGGED', cx, capY);
+  setFont(700, bigPx);
+  ctx.fillStyle = content.now.color;
+  ctx.fillText(content.now.text, cx, bigY);
+
+  // ---- how far it moved, in the color of the party that gained ----
+  if(content.move){
+    ctx.fillStyle = content.move.color;
+    setFont(700, fitPx(700, 28, 16, width, content.move.text) );
+    ctx.fillText(content.move.text, x0, y0 + S(152));
+  }
+
+  // ---- votes gained by each, in three columns ----
+  ctx.fillStyle = RULE;
+  ctx.fillRect(x0, y0 + S(168), width, Math.max(1, S(1)));
+  const colGap = S(18);
+  const colW = (width - colGap * 2) / 3;
+  content.votes.forEach((v, i) => {
+    const cxCol = x0 + i * (colW + colGap);
+    ctx.fillStyle = GRAY;
+    setFont(600, fitPx(600, 13, 9, colW, v.label));
+    ctx.fillText(v.label, cxCol, y0 + S(192));
+    ctx.fillStyle = v.color;
+    setFont(700, fitPx(700, 46, 20, colW, v.text));
+    ctx.fillText(v.text, cxCol, y0 + S(236));
+  });
+
+  // ---- first place vs second place ----
+  ctx.fillStyle = RULE;
+  ctx.fillRect(x0, y0 + S(254), width, Math.max(1, S(1)));
+  const leadText = content.lead.parts.map(p => p.text).join('') + (content.lead.change ? `  (${content.lead.change})` : '');
+  setFont(700, fitPx(700, 29, 16, width, leadText));
+  let lx = x0;
+  const leadY = y0 + S(288);
+  content.lead.parts.forEach(part => {
+    ctx.fillStyle = part.color;
+    ctx.fillText(part.text, lx, leadY);
+    lx += ctx.measureText(part.text).width;
+  });
+  if(content.lead.change){
+    ctx.fillStyle = GRAY;
+    ctx.fillText(`  (${content.lead.change})`, lx, leadY);
+  }
+}
+
 // Renders a small statewide DEM/REP/NPA bar chart to an image via a
 // temporary, off-screen Plotly plot (kept in the DOM but positioned off
 // canvas, since Plotly needs real layout to render into). Used only for
@@ -3951,7 +4127,14 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
     // final canvas size) is byte-for-byte what it was before this
     // feature existed.
     const turnoutExtraH = SHOW_TURNOUT ? 60 : 0;
-    const footerH = 190 + turnoutExtraH;
+    // Margin Move tab: the footer's top-3 list is replaced by the larger
+    // Statewide Margin Move block, which needs more height. Every other
+    // tab keeps exactly the footer size it always had.
+    const isMoveTab = currentMetric === 'move';
+    const moveBlockTop = 52;
+    const footerH = isMoveTab
+      ? moveBlockTop + MARGIN_MOVE_BLOCK_H + (SHOW_TURNOUT ? 42 : 0) + 40
+      : 190 + turnoutExtraH;
     const canvas = document.createElement('canvas');
     canvas.width = mapImg.width + (chartImg ? gapPx + chartImg.width : 0);
     // IMPORTANT: header/footer heights must be scaled the same way the
@@ -4035,21 +4218,25 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
       24*scale, footerY0 + 30*scale
     );
 
-    ctx.fillStyle = '#d8b466';
-    ctx.font = `600 ${Math.round(14*scale)}px Inter, Arial, sans-serif`;
-    ctx.fillText('Top 3 counties by votes added:', 24*scale, footerY0 + 58*scale);
-
-    ctx.fillStyle = '#e9edf5';
-    ctx.font = `${Math.round(14*scale)}px Inter, Arial, sans-serif`;
-    if(summary.top3.length){
-      summary.top3.forEach((c, i) => {
-        ctx.fillText(
-          `${i+1}. ${c.county}: +${fmt(c.totalNew)} total (DEM ${c.demNew>=0?'+':''}${fmt(c.demNew)} \u00b7 REP ${c.repNew>=0?'+':''}${fmt(c.repNew)} \u00b7 Other ${c.otherNew>=0?'+':''}${fmt(c.otherNew)})`,
-          24*scale, footerY0 + (82 + i*22)*scale
-        );
-      });
+    if(isMoveTab){
+      drawMarginMoveBlock(ctx, computeStatewideMarginInfo(), 24*scale, footerY0 + moveBlockTop*scale, canvas.width - 48*scale, scale);
     }else{
-      ctx.fillText('No additional votes at this time.', 24*scale, footerY0 + 82*scale);
+      ctx.fillStyle = '#d8b466';
+      ctx.font = `600 ${Math.round(14*scale)}px Inter, Arial, sans-serif`;
+      ctx.fillText('Top 3 counties by votes added:', 24*scale, footerY0 + 58*scale);
+
+      ctx.fillStyle = '#e9edf5';
+      ctx.font = `${Math.round(14*scale)}px Inter, Arial, sans-serif`;
+      if(summary.top3.length){
+        summary.top3.forEach((c, i) => {
+          ctx.fillText(
+            `${i+1}. ${c.county}: +${fmt(c.totalNew)} total (DEM ${c.demNew>=0?'+':''}${fmt(c.demNew)} \u00b7 REP ${c.repNew>=0?'+':''}${fmt(c.repNew)} \u00b7 Other ${c.otherNew>=0?'+':''}${fmt(c.otherNew)})`,
+            24*scale, footerY0 + (82 + i*22)*scale
+          );
+        });
+      }else{
+        ctx.fillText('No additional votes at this time.', 24*scale, footerY0 + 82*scale);
+      }
     }
 
     if(SHOW_TURNOUT){
@@ -4058,7 +4245,9 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
       // never collides with that block regardless of how many counties
       // had new votes this run.
       const top3LineCount = summary.top3.length ? summary.top3.length : 1;
-      const turnoutY = footerY0 + (82 + top3LineCount*22 + 18)*scale;
+      const turnoutY = isMoveTab
+        ? footerY0 + (moveBlockTop + MARGIN_MOVE_BLOCK_H + 26)*scale
+        : footerY0 + (82 + top3LineCount*22 + 18)*scale;
       const registered = statewideRegisteredTotal();
       const frac = turnoutFraction(summary.totalVotes, registered);
 

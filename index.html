@@ -2566,6 +2566,15 @@ function renderUpdatesTable(){
 
 // A percentage formatted to 2 decimals, except a value that rounds to a
 // clean whole number (e.g. "20.00%") collapses to just "20%".
+// "a" or "an" for a number as it will be read aloud, from its whole-number
+// part: "an 8.12% lead", "an 11.20% lead", "an 18.40% lead", "an 85.00%
+// lead", but "a 7.61% lead", "a 10.22% lead", "a 0.45% lead". Pass the
+// number as DISPLAYED (already rounded), so 7.999 -> "8.00" -> "an".
+function aOrAnForNumber(value){
+  const n = Math.floor(Math.abs(value));
+  return (n === 8 || n === 11 || n === 18 || (n >= 80 && n <= 89)) ? 'an' : 'a';
+}
+
 function formatPctTweet(fraction){
   const raw = (fraction*100).toFixed(2);
   if(raw.endsWith('.00')) return Math.round(fraction*100) + '%';
@@ -2943,7 +2952,55 @@ ${countiesReporting} of 67 counties have votes.`;
   const section2 =
 `${countiesUpdatedCount} counties have been updated with ${fmt(totalNewTotal)} new votes counted. Here are the counties that updated and who won the latest vote drop by county.`;
 
-  // Card 3: Top 3 Largest Updates -- medal rank plus a color emoji
+  // Card 3: the statewide margin -- how big the current lead is, how much
+  // this update moved it, and why. "Margin" here is Democratic % minus
+  // Republican % of ALL ballots (NPA/Other included in the denominator),
+  // the same number as the dashboard readout and the PNG headline
+  // ("+10.22%"). That is a different measure than the "move toward"
+  // line in card 1, which is the shift in the two-party share, so the
+  // two percentages are not expected to match.
+  //
+  // New margin = vote-weighted average of the old margin and the drop's
+  // own margin, so the lead grows exactly when the drop was more
+  // favorable to the leader than the old margin was. That's why
+  // "increase" always pairs with "more [leader's party]" and "decrease"
+  // with "less" -- both come from the same sign.
+  let marginCard = '';
+  if(totalVotes > 0){
+    const yellow = '\u{1F7E1}';
+    if(totalD === totalR){
+      marginCard = `${yellow} The statewide vote is tied between Democrats and Republicans.`;
+    }else{
+      const nowMargin = (totalD - totalR) / totalVotes * 100;         // points, + = Democratic
+      const leaderSign = totalD > totalR ? 1 : -1;
+      const leaderParty = totalD > totalR ? 'Democrats' : 'Republicans';
+      const leaderAdj = totalD > totalR ? 'Democratic' : 'Republican';
+      const leadStr = Math.abs(nowMargin).toFixed(2);
+      marginCard = `${yellow} The statewide margin is ${aOrAnForNumber(parseFloat(leadStr))} ${leadStr}% lead for ${leaderParty}.`;
+
+      const votesBefore = totalVotes - totalNewTotal;
+      if(votesBefore > 0){                                             // not the very first update
+        const prevMargin = (oldD - oldR) / votesBefore * 100;
+        const change = leaderSign * (nowMargin - prevMargin);          // + = the leader's lead grew
+        const changeStr = Math.abs(change).toFixed(2);
+        if(parseFloat(changeStr) === 0){
+          marginCard += ' This is essentially unchanged from the previous update.';
+        }else{
+          const grew = change > 0;
+          marginCard += ` This is a statewide ${grew ? 'increase' : 'decrease'} of ${changeStr}% compared to the previous update`;
+          if(totalNewTotal > 0){
+            const dropMargin = (demNewTotal - repNewTotal) / totalNewTotal * 100;
+            const dropGap = Math.abs(leaderSign * (dropMargin - prevMargin)).toFixed(2);
+            marginCard += ` because the latest drop was ${dropGap} points ${grew ? 'more' : 'less'} ${leaderAdj}.`;
+          }else{
+            marginCard += '.';
+          }
+        }
+      }
+    }
+  }
+
+  // Card 4: Top 3 Largest Updates -- medal rank plus a color emoji
   // showing who actually won each county's drop (using the same
   // leader-finding logic as the Drop Winners map, so a tie shows both
   // parties' colors and a true 3-way tie shows green, never a wrong
@@ -2982,7 +3039,8 @@ ${topDropsText}
 
 #FlaPol #Midterms2026 #FLSen #FLGov`;
 
-  return [section1, section2, section3];
+  // The margin card is left out only when there are no votes at all.
+  return marginCard ? [section1, section2, marginCard, section3] : [section1, section2, section3];
 }
 
 function escapeHtmlForCard(str){
@@ -3067,13 +3125,17 @@ document.getElementById('refreshBtn').addEventListener('click', () => loadLatest
 document.getElementById('tweetCopyBtn').addEventListener('click', async () => {
   const btn = document.getElementById('tweetCopyBtn');
   if(!tweetCards.length) return;
+  // Built from however many cards there are (not fixed positions), in the
+  // same layout as always: first card, blank line, then each later card
+  // separated by "___".
+  const [firstCard, ...laterCards] = tweetCards;
+  const cardLines = [firstCard, '', '___'];
+  laterCards.forEach((card, i) => {
+    cardLines.push(card);
+    if(i < laterCards.length - 1) cardLines.push('___');
+  });
   const fullText = [
-    tweetCards[0],
-    '',
-    '___',
-    tweetCards[1],
-    '___',
-    tweetCards[2],
+    ...cardLines,
     '',
     '\u2014\u2014\u2014',
     'Compiled by Jayson Frascatore',

@@ -1092,7 +1092,7 @@
         <option value="y2024">2024 Presidential Race (actual)</option>
       </select>
     </div>
-    <button class="sim-btn" id="simFillSafeBtn" title="Fill in the counties that were rated Safe in the 2026 primary (leaves every other county as it is)">Fill safe counties</button>
+    <button class="sim-btn" id="simFillSafeBtn" title="Fill in the counties that were rated Safe in the 2026 primary, each at its own 2018/2022/2024 average (leaves every other county as it is)">Fill safe counties</button>
     <button class="sim-btn" id="simResetAllBtn" title="Clear every county back to 50/50, including the pre-filled Safe ones">Reset all counties to 50/50</button>
     <div class="sim-csv-row">
       <span class="sim-csv-label">Scenario file</span>
@@ -4031,6 +4031,10 @@ let selectedRatingBrush = null;
 // Six counties were ALSO Safe R in the primary but are deliberately NOT
 // filled (SIM_SAFE_R_EXCEPTIONS) -- they're left at 50/50 for the user
 // to decide. There are no Democratic exceptions.
+//
+// WHICH counties are filled comes from the primary (above). WHAT each is
+// filled with comes from that county's own 2018/2022/2024 history -- see
+// simBlendedDemPct() -- not one fixed value for all of them.
 const SIM_SAFE_D = [
   'Alachua', 'Broward', 'Gadsden', 'Leon', 'Orange'
 ];
@@ -4052,16 +4056,49 @@ const SIM_SAFE_OTHERS_OPEN = [
   'Pinellas', 'Seminole', 'St. Lucie'
 ];
 
-// Sets ONLY the Safe counties to their bucket's representative value
-// (the same 65 / 35 the Safe D / Safe R paintbrush uses) and leaves every
-// other county exactly as it is -- so pressing "Fill safe counties"
-// never wipes out work someone already did on the competitive ones.
+// A county's Democratic share (0-100) of the two-party vote in one past
+// election, from that year's [dem votes, rep votes] table. Two-party on
+// purpose: this whole map splits only the Democratic vs Republican vote.
+function simPastDemPct(yearData, name){
+  const v = yearData[name];
+  if(!v) return null;
+  const total = v[0] + v[1];
+  return total > 0 ? (v[0] / total) * 100 : null;
+}
+
+// The county's own "likely scenario": the plain average of its two-party
+// Democratic share in the 2018 governor's race, the 2022 governor's race
+// and the 2024 presidential race -- each year counted equally (not
+// weighted by turnout, so the bigger 2024 electorate doesn't drown out
+// the other two). Rounded to 0.1, the slider's step, so what's filled in
+// is exactly a value the slider can show. A single number for every Safe
+// county was wrong in both directions: Holmes County runs about 90%
+// Republican, so a uniform 65% R would have had Republicans badly
+// underperforming there, while most Safe D counties sit well under a
+// uniform 65% D. Falls back to the old bucket value only if a county is
+// missing from every year's table (none are today).
+function simBlendedDemPct(name){
+  const shares = [SIM_2018, SIM_2022, SIM_2024]
+    .map(year => simPastDemPct(year, name))
+    .filter(v => v !== null);
+  if(!shares.length) return null;
+  return Math.round(shares.reduce((a, b) => a + b, 0) / shares.length * 10) / 10;
+}
+
+// Sets ONLY the Safe counties, each to its own blended value above, and
+// leaves every other county exactly as it is -- so pressing "Fill safe
+// counties" never wipes out work someone already did on the competitive
+// ones. These are starting points only: the slider moves any of them.
 function simApplySafeCounties(){
   SIM_SAFE_D.forEach(name => {
-    if(name in simDemPct) simDemPct[name] = RATING_BRUSH_DEMPCT['Safe D'];
+    if(!(name in simDemPct)) return;
+    const blend = simBlendedDemPct(name);
+    simDemPct[name] = blend !== null ? blend : RATING_BRUSH_DEMPCT['Safe D'];
   });
   SIM_SAFE_R.forEach(name => {
-    if(name in simDemPct) simDemPct[name] = RATING_BRUSH_DEMPCT['Safe R'];
+    if(!(name in simDemPct)) return;
+    const blend = simBlendedDemPct(name);
+    simDemPct[name] = blend !== null ? blend : RATING_BRUSH_DEMPCT['Safe R'];
   });
 }
 
@@ -4169,13 +4206,21 @@ function renderSimSafeNote(){
   const el = document.getElementById('simSafeNote');
   if(!el) return;
   const nD = SIM_SAFE_D.length, nR = SIM_SAFE_R.length;
-  const pctD = RATING_BRUSH_DEMPCT['Safe D'];
-  const pctR = 100 - RATING_BRUSH_DEMPCT['Safe R'];
   const nOpen = SIM_SAFE_R_EXCEPTIONS.length + SIM_SAFE_OTHERS_OPEN.length;
+  // Where the filled-in values actually land, read from the same blend
+  // that fills the map -- so the ranges and the example counties named
+  // below can never disagree with what's on screen.
+  const spread = names => {
+    const vals = names.map(n => ({ name:n, v:simBlendedDemPct(n) })).filter(x => x.v !== null).sort((a, b) => a.v - b.v);
+    return { lo: vals[0], hi: vals[vals.length - 1] };
+  };
+  const sD = spread(SIM_SAFE_D), sR = spread(SIM_SAFE_R);
+  const rLabel = x => `${x.v.toFixed(1)}% D (${x.name})`;
   el.innerHTML = `
     <div class="sim-safe-summary">
       <b>New to Florida?</b> We've filled in the <b>${nD + nR} counties rated Safe in the 2026 primary</b>
-      (<span class="r">${nR} R</span> &middot; <span class="d">${nD} D</span>) so you only have to decide the competitive ones.
+      (<span class="r">${nR} R</span> &middot; <span class="d">${nD} D</span>), each starting at its own 2018 / 2022 / 2024
+      average, so you only have to decide the competitive ones.
       Use <b>Reset all counties</b> to start from a blank map, or <b>Fill safe counties</b> to bring them back.
     </div>
     <details class="sim-safe-details">
@@ -4184,11 +4229,20 @@ function renderSimSafeNote(){
         <p>In the 2026 primary, each of these counties leaned one way by a very wide margin &mdash; even the
         closest of them (Orange for Democrats, Lake for Republicans) was about 19 points. A gap that size is
         rarely made up in a single election, so they start out as <b>Safe</b>.</p>
+        <p><b>How the starting numbers are set.</b> &ldquo;Safe&rdquo; doesn't mean the same margin everywhere:
+        ${sR.lo.name} County runs about ${Math.round(100 - sR.lo.v)}% Republican, while ${sR.hi.name} is closer to
+        ${Math.round(100 - sR.hi.v)}%. Giving every Safe county the same split would make some of them badly
+        underperform their own history. So each county starts at the average of its Democratic share of the
+        two-party vote in the <b>2018 governor's race</b>, the <b>2022 governor's race</b> and the
+        <b>2024 presidential race</b>, counting each year equally. (Two-party means Democratic and Republican
+        votes only &mdash; NPA and third-party votes aren't counted, the same as everywhere else on this map.)</p>
         <ul>
-          <li><b class="d">Safe D (${nD}):</b> ${simJoinNames(SIM_SAFE_D)} &mdash; filled at ${pctD}% D.</li>
+          <li><b class="d">Safe D (${nD}):</b> ${simJoinNames(SIM_SAFE_D)} &mdash; starting from
+          ${rLabel(sD.lo)} up to ${rLabel(sD.hi)}.</li>
           <li><b class="r">Safe R (${nR}):</b> every other county the primary rated Safe R, except the six below
-          &mdash; filled at ${100 - pctR}% D / ${pctR}% R.</li>
+          &mdash; starting from ${rLabel(sR.lo)} up to ${rLabel(sR.hi)}.</li>
         </ul>
+        <p>These are only starting points. Click any county and drag its slider to change it.</p>
         <p><b>Left open on purpose (${nOpen}):</b></p>
         <ul>
           <li>${simJoinNames(SIM_SAFE_R_EXCEPTIONS)} were also Safe R in the primary, but they're large,
@@ -4196,9 +4250,11 @@ function renderSimSafeNote(){
           they're yours to decide.</li>
           <li>${simJoinNames(SIM_SAFE_OTHERS_OPEN)} were rated closer than Safe in the primary.</li>
         </ul>
-        <p class="sim-safe-caveat"><b>Keep in mind:</b> &ldquo;Safe&rdquo; is based on past results &mdash; this
-        year's primary &mdash; not a guarantee. A strong national environment for either party, or unusual
-        turnout, can move even these counties. Change any of them on the map whenever you like.</p>
+        <p class="sim-safe-caveat"><b>Keep in mind:</b> &ldquo;Safe&rdquo; and these starting numbers are based on
+        past results &mdash; this year's primary and the 2018, 2022 and 2024 elections &mdash; not a guarantee.
+        Those were three different kinds of races with different candidates, and a strong national environment
+        for either party, or unusual turnout, can move even these counties. Change any of them on the map
+        whenever you like.</p>
       </div>
     </details>`;
 }
@@ -4400,9 +4456,18 @@ function renderSimCheckpoint(){
   const beat22 = s.demPct > h22.demPct;
   const goalLine = `Your setting (${s.demPct.toFixed(1)}% D) ${beat18?'exceeds':'falls short of'} 2018 and ${beat22?'exceeds':'falls short of'} 2022 for Democrats here.`;
 
+  // 2024 and the 3-election average are shown here too: the average is
+  // what the pre-filled Safe counties start from (and a handy baseline
+  // for any other county), so the three numbers behind it are visible
+  // right where someone is about to drag the slider.
+  const h24 = simHistoricalStats(name, SIM_2024);
+  const blend = simBlendedDemPct(name);
+
   el.innerHTML =
     `<div class="sim-checkpoint-tier"><span class="tier-name">2018 result (goal to exceed)</span><span>${marginLabel(h18.margin)} (${h18.demPct.toFixed(1)}% D)</span></div>` +
     `<div class="sim-checkpoint-tier"><span class="tier-name">2022 result (goal to exceed)</span><span>${marginLabel(h22.margin)} (${h22.demPct.toFixed(1)}% D)</span></div>` +
+    `<div class="sim-checkpoint-tier"><span class="tier-name">2024 result</span><span>${marginLabel(h24.margin)} (${h24.demPct.toFixed(1)}% D)</span></div>` +
+    (blend !== null ? `<div class="sim-checkpoint-tier"><span class="tier-name">Average of 2018 / 2022 / 2024</span><span>${blend.toFixed(1)}% D</span></div>` : '') +
     shiftLine + prelimBlock +
     `<div class="sim-checkpoint-recipe" style="margin-top:6px;">${goalLine}</div>`;
 }

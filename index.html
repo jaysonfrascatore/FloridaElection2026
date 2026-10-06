@@ -345,23 +345,23 @@
   /* Explainer above the sim map: a short summary that's always visible,
      with the longer "why" tucked into a collapsed <details> so it informs
      without crowding the map. */
-  .sim-safe-note{
+  .sim-forecast-note{
     background:var(--panel-2); border:1px solid var(--border); border-radius:8px;
     padding:10px 12px; margin-bottom:12px;
     font-family:var(--mono); font-size:11.5px; line-height:1.55; color:var(--muted);
   }
-  .sim-safe-note:empty{ display:none; }
-  .sim-safe-note b{ color:var(--text); font-weight:600; }
-  .sim-safe-note .r, .sim-safe-note b.r{ color:var(--rep); }
-  .sim-safe-note .d, .sim-safe-note b.d{ color:var(--dem); }
-  .sim-safe-details{ margin-top:8px; }
-  .sim-safe-details summary{ cursor:pointer; color:var(--gold); font-size:11px; user-select:none; }
-  .sim-safe-details summary:hover{ text-decoration:underline; }
-  .sim-safe-body{ margin-top:8px; }
-  .sim-safe-body p{ margin:0 0 8px; }
-  .sim-safe-body ul{ margin:0 0 8px; padding-left:18px; }
-  .sim-safe-body li{ margin-bottom:5px; }
-  .sim-safe-caveat{
+  .sim-forecast-note:empty{ display:none; }
+  .sim-forecast-note b{ color:var(--text); font-weight:600; }
+  .sim-forecast-note .r, .sim-forecast-note b.r{ color:var(--rep); }
+  .sim-forecast-note .d, .sim-forecast-note b.d{ color:var(--dem); }
+  .sim-forecast-details{ margin-top:8px; }
+  .sim-forecast-details summary{ cursor:pointer; color:var(--gold); font-size:11px; user-select:none; }
+  .sim-forecast-details summary:hover{ text-decoration:underline; }
+  .sim-forecast-body{ margin-top:8px; }
+  .sim-forecast-body p{ margin:0 0 8px; }
+  .sim-forecast-body ul{ margin:0 0 8px; padding-left:18px; }
+  .sim-forecast-body li{ margin-bottom:5px; }
+  .sim-forecast-caveat{
     color:var(--text); border-left:2px solid var(--gold); padding-left:9px; margin-top:10px !important;
   }
 
@@ -444,6 +444,15 @@
   #demLoyaltySlider{ background:linear-gradient(90deg, var(--dem-dim), var(--dem)); }
   #repLoyaltySlider{ background:linear-gradient(90deg, var(--rep-dim), var(--rep)); }
   #historySlider{ background:linear-gradient(90deg, #4a3f1f, var(--gold)); }
+  /* National environment: left = Republican shift, right = Democratic. */
+  .sim-env-wrap{
+    margin:2px 0 14px; padding:12px 14px; background:var(--panel-2);
+    border:1px solid var(--border); border-radius:8px;
+  }
+  #simEnvSlider{ background:linear-gradient(90deg, var(--rep) 0%, #3a4254 50%, var(--dem) 100%); }
+  .sim-env-result{ font-family:var(--mono); font-size:12.5px; font-weight:600; margin-top:10px; }
+  .sim-env-result.d{ color:var(--dem); } .sim-env-result.r{ color:var(--rep); }
+  .sim-env-hint{ font-family:var(--mono); font-size:10.5px; color:var(--muted-2); line-height:1.55; margin-top:6px; }
   #historySlider:disabled{ opacity:.4; cursor:not-allowed; }
   .npa-slider-ends{
     display:flex; justify-content:space-between; font-family:var(--mono); font-size:9.5px;
@@ -762,7 +771,7 @@
 
 <div class="mode-tabs">
   <button class="mode-tab active" id="modeLiveBtn">Live Results</button>
-  <button class="mode-tab" id="modeSimBtn">Build Your Own Map</button>
+  <button class="mode-tab" id="modeSimBtn">Build Your Own Forecast</button>
 </div>
 
 <div class="error-msg" id="errorMsg"></div>
@@ -1048,7 +1057,7 @@
 
   <div class="margin-strip">
     <div class="row">
-      <span class="label">Hypothetical statewide margin</span>
+      <span class="label" id="simStripLabel">Forecast statewide margin</span>
       <span class="leader" id="simStateLeader">&mdash;</span>
     </div>
     <div class="bar-track">
@@ -1061,7 +1070,7 @@
     </div>
     <div class="stat-cards">
       <div class="stat-card"><div class="v" id="simStatTotal">&mdash;</div><div class="k">Total votes (this turnout)</div></div>
-      <div class="stat-card"><div class="v" id="simStatCounties">&mdash;</div><div class="k">Counties moved off 50/50</div></div>
+      <div class="stat-card"><div class="v" id="simStatCounties">&mdash;</div><div class="k">Counties you've adjusted</div></div>
       <div class="stat-card"><div class="v" id="simStatRating">&mdash;</div><div class="k">Statewide rating</div></div>
     </div>
   </div>
@@ -1086,14 +1095,14 @@
     <div class="sim-checkpoint-mode" style="margin-top:0;">
       <label for="simCheckpointMode">Map mode</label>
       <select id="simCheckpointMode">
-        <option value="tie">Tie &mdash; build the map by hand</option>
+        <option value="tie">Forecast &mdash; build your own</option>
         <option value="y2018">2018 Governor's Race (actual)</option>
         <option value="y2022">2022 Governor's Race (actual)</option>
         <option value="y2024">2024 Presidential Race (actual)</option>
       </select>
     </div>
-    <button class="sim-btn" id="simFillSafeBtn" title="Fill in the counties that were rated Safe in the 2026 primary, each at its own 2018/2022/2024 average (leaves every other county as it is)">Fill safe counties</button>
-    <button class="sim-btn" id="simResetAllBtn" title="Clear every county back to 50/50, including the pre-filled Safe ones">Reset all counties to 50/50</button>
+    <button class="sim-btn" id="simResetForecastBtn" title="Back to the 2018/2022/2024 average: the national slider returns to Even and every county adjustment is cleared">Reset forecast</button>
+    <button class="sim-btn" id="simResetAllBtn" title="Start from scratch: every county at 50/50 with no forecast behind it">Blank map (all 50/50)</button>
     <div class="sim-csv-row">
       <span class="sim-csv-label">Scenario file</span>
       <button class="sim-btn" id="simDownloadCsvBtn">Download CSV</button>
@@ -1106,7 +1115,17 @@
   <div class="grid">
     <div class="panel">
       <h2 id="simMapHeader">Click a county to set its margin</h2>
-      <div class="sim-safe-note" id="simSafeNote"></div>
+      <div class="sim-forecast-note" id="simForecastNote"></div>
+      <div class="sim-env-wrap" id="simEnvWrap">
+        <div class="npa-slider-label" style="margin-bottom:8px;">
+          <span><b>National environment</b> <span style="color:var(--muted-2);">&mdash; shifts every county together</span></span>
+          <span class="val" id="simEnvValue">Even &mdash; the 2018/2022/2024 average</span>
+        </div>
+        <input type="range" id="simEnvSlider" class="adj-slider" min="-15" max="15" step="0.5" value="0">
+        <div class="npa-slider-ends"><span>R+15</span><span id="simEnvMidLabel">Average</span><span>D+15</span></div>
+        <div class="sim-env-result" id="simEnvResult"></div>
+        <div class="sim-env-hint" id="simEnvHint"></div>
+      </div>
       <div class="segmented" id="simRatingBrush" style="margin-bottom:12px; flex-wrap:wrap;">
         <button data-rating="Safe R" style="color:#dd2d4a;">Safe R</button>
         <button data-rating="Likely R" style="color:#ee6a86;">Likely R</button>
@@ -1128,7 +1147,7 @@
       <div id="simEditor" class="sim-editor" style="display:none;">
         <div class="sim-editor-title" id="simEditorCounty">&mdash;</div>
         <div class="sim-editor-sub" id="simEditorVoters">&mdash;</div>
-        <button class="sim-link-btn" id="simViewLiveBtn" title="Leave the hypothetical map and see this county's real, live General Election results">See this county's live General Election results &rarr;</button>
+        <button class="sim-link-btn" id="simViewLiveBtn" title="Leave the forecast and see this county's real, live General Election results">See this county's live General Election results &rarr;</button>
 
         <div id="simEditableBlock">
           <div class="npa-slider-label" style="margin-top:6px; margin-bottom:8px;">
@@ -1146,7 +1165,7 @@
         <div class="sim-checkpoint" id="simCheckpoint"></div>
 
         <div class="sim-editor-actions" id="simEditorActions">
-          <button class="sim-btn" id="simResetCountyBtn">Reset this county to 50/50</button>
+          <button class="sim-btn" id="simResetCountyBtn" title="Remove your adjustment so this county follows the forecast again">Reset this county to the forecast</button>
         </div>
       </div>
       <div class="sim-placeholder" id="simPlaceholder">Click any county on the map or in the table to set its margin.</div>
@@ -4015,46 +4034,24 @@ const RATING_BRUSH_DEMPCT = {
 };
 let selectedRatingBrush = null;
 
-// ---- Pre-filled "Safe" counties for Build Your Own Map ----
-// Someone who doesn't know Florida shouldn't have to guess which of the
-// 67 counties are foregone conclusions, so the map starts with those
-// already filled in. Source: the frozen 2026 primary snapshot
-// (archive/florida_turnout_2026-08-23_00-19-23.csv, the same data the
-// Primary Election tab shows) -- every county whose rating there was
-// "Safe D" or "Safe R". Hard-coded rather than read from
-// STATIC_DVR_COUNTIES at runtime on purpose: that snapshot loads
-// asynchronously, and opening this tab before it finished would
-// silently pre-fill nothing. The snapshot is frozen, so a fixed list is
-// equivalent. The narrowest margin among the counties filled below is
-// about 19 points (Orange for D, Lake for R).
+// ============================================================
+// FORECAST MODEL -- how every county's number is built
+// ============================================================
+// Nothing on this tab starts from a number someone has to guess. Each
+// county's value is built in three layers:
 //
-// Six counties were ALSO Safe R in the primary but are deliberately NOT
-// filled (SIM_SAFE_R_EXCEPTIONS) -- they're left at 50/50 for the user
-// to decide. There are no Democratic exceptions.
+//   1. STARTING POINT -- the county's own average: its Democratic share
+//      of the two-party vote in the 2018 governor's race, the 2022
+//      governor's race and the 2024 presidential race, each counted
+//      equally (simBlendedDemPctRaw).
+//   2. NATIONAL ENVIRONMENT -- one statewide slider, R+15 to D+15, that
+//      shifts every county together (simSwungPct).
+//   3. YOUR ADJUSTMENTS -- anything dragged on a single county, stored as
+//      a DIFFERENCE from the forecast (simAdj) so it keeps riding along
+//      when the national slider moves.
 //
-// WHICH counties are filled comes from the primary (above). WHAT each is
-// filled with comes from that county's own 2018/2022/2024 history -- see
-// simBlendedDemPct() -- not one fixed value for all of them.
-const SIM_SAFE_D = [
-  'Alachua', 'Broward', 'Gadsden', 'Leon', 'Orange'
-];
-const SIM_SAFE_R = [
-  'Baker', 'Bay', 'Bradford', 'Calhoun', 'Charlotte', 'Citrus', 'Clay', 'Collier', 'Columbia',
-  'DeSoto', 'Dixie', 'Flagler', 'Franklin', 'Gilchrist', 'Glades', 'Gulf', 'Hamilton', 'Hardee',
-  'Hendry', 'Hernando', 'Highlands', 'Holmes', 'Indian River', 'Jackson', 'Lafayette', 'Lake',
-  'Lee', 'Levy', 'Liberty', 'Madison', 'Marion', 'Martin', 'Nassau', 'Okaloosa', 'Okeechobee',
-  'Pasco', 'Putnam', 'Santa Rosa', 'St. Johns', 'Sumter', 'Suwannee', 'Taylor', 'Union',
-  'Wakulla', 'Walton', 'Washington'
-];
-const SIM_SAFE_R_EXCEPTIONS = [
-  'Escambia', 'Polk', 'Sarasota', 'Manatee', 'Volusia', 'Brevard'
-];
-// The remaining counties the primary rated closer than Safe (Likely/Lean/
-// Toss Up) -- also left open. Listed only so the explanation can name them.
-const SIM_SAFE_OTHERS_OPEN = [
-  'Duval', 'Hillsborough', 'Jefferson', 'Miami-Dade', 'Monroe', 'Osceola', 'Palm Beach',
-  'Pinellas', 'Seminole', 'St. Lucie'
-];
+// simDemPct -- the one value the map, table, stats, CSV and PNG all read
+// -- is the result of all three, rebuilt by simRecompute().
 
 // A county's Democratic share (0-100) of the two-party vote in one past
 // election, from that year's [dem votes, rep votes] table. Two-party on
@@ -4066,45 +4063,180 @@ function simPastDemPct(yearData, name){
   return total > 0 ? (v[0] / total) * 100 : null;
 }
 
-// The county's own "likely scenario": the plain average of its two-party
-// Democratic share in the 2018 governor's race, the 2022 governor's race
-// and the 2024 presidential race -- each year counted equally (not
-// weighted by turnout, so the bigger 2024 electorate doesn't drown out
-// the other two). Rounded to 0.1, the slider's step, so what's filled in
-// is exactly a value the slider can show. A single number for every Safe
-// county was wrong in both directions: Holmes County runs about 90%
-// Republican, so a uniform 65% R would have had Republicans badly
-// underperforming there, while most Safe D counties sit well under a
-// uniform 65% D. Falls back to the old bucket value only if a county is
-// missing from every year's table (none are today).
-function simBlendedDemPct(name){
+// The plain average of a county's two-party Democratic share in the
+// 2018 governor's race, the 2022 governor's race and the 2024
+// presidential race -- each year counted equally (not weighted by
+// turnout, so the bigger 2024 electorate doesn't drown out the other
+// two). Unrounded: it's the starting point the swing is applied to.
+function simBlendedDemPctRaw(name){
   const shares = [SIM_2018, SIM_2022, SIM_2024]
     .map(year => simPastDemPct(year, name))
     .filter(v => v !== null);
   if(!shares.length) return null;
-  return Math.round(shares.reduce((a, b) => a + b, 0) / shares.length * 10) / 10;
+  return shares.reduce((a, b) => a + b, 0) / shares.length;
+}
+// The same average rounded to 0.1 (the county slider's step), for display.
+function simBlendedDemPct(name){
+  const raw = simBlendedDemPctRaw(name);
+  return raw === null ? null : Math.round(raw * 10) / 10;
+}
+// 50 only if a county were missing from every year's table (none are).
+function simAverageBase(name){
+  const raw = simBlendedDemPctRaw(name);
+  return raw === null ? 50 : raw;
 }
 
-// Sets ONLY the Safe counties, each to its own blended value above, and
-// leaves every other county exactly as it is -- so pressing "Fill safe
-// counties" never wipes out work someone already did on the competitive
-// ones. These are starting points only: the slider moves any of them.
-function simApplySafeCounties(){
-  SIM_SAFE_D.forEach(name => {
-    if(!(name in simDemPct)) return;
-    const blend = simBlendedDemPct(name);
-    simDemPct[name] = blend !== null ? blend : RATING_BRUSH_DEMPCT['Safe D'];
-  });
-  SIM_SAFE_R.forEach(name => {
-    if(!(name in simDemPct)) return;
-    const blend = simBlendedDemPct(name);
-    simDemPct[name] = blend !== null ? blend : RATING_BRUSH_DEMPCT['Safe R'];
-  });
+// What the forecast is built ON: 'average' (each county's own average),
+// 'blank' (every county 50/50, for someone who wants to paint from
+// scratch) or 'loaded' (a scenario file they uploaded -- simBaseLoaded).
+let simBaseKind = 'average';
+let simBaseLoaded = {};
+// National environment: a statewide shift in margin points, -15 (R+15)
+// to +15 (D+15). 0 = the starting point, unchanged.
+const SIM_ENV_MAX = 15;
+let simEnvShift = 0;
+// county -> points of Democratic share a person added on top of the
+// forecast. Absent = the county is just following the forecast.
+let simAdj = {};
+
+function simBasePct(name){
+  if(simBaseKind === 'blank') return 50;
+  if(simBaseKind === 'loaded' && name in simBaseLoaded) return simBaseLoaded[name];
+  return simAverageBase(name);
 }
 
-function simResetAll(){
-  simDemPct = {};
-  SIM_COUNTY_NAMES.forEach(name => { simDemPct[name] = 50; });
+// WHY THE SLIDER DOESN'T MOVE EVERY COUNTY THE SAME NUMBER OF POINTS.
+// Counties don't swing equally -- tested against this file's own 2018,
+// 2022 and 2024 county results. When the statewide mood moved a lot
+// (2018 -> 2022, 2018 -> 2024), counties that started lopsided (under
+// 25% D) moved far less than competitive ones: shifting everything by
+// the same number of points missed them by about 3.1 points on average,
+// an elastic shift by about 1.3-1.5. Holmes County really went 11.0% ->
+// 7.9% D from 2018 to 2022; a same-sized uniform shift predicts 2.2%,
+// the elastic one 7.8%. For competitive counties the two agree, and for
+// the small 2022 -> 2024 move they were about equally accurate (uniform
+// very slightly better), so the choice only matters at the big slider
+// settings -- which is exactly where a uniform shift would send a deep-
+// red rural county to an impossible 2% or 17% D.
+//
+// So the shift is applied on the log-odds scale (a "logit swing"): a
+// toss-up county moves the most, a lopsided one much less, and nothing
+// can leave 0-100%. One number still drives every county.
+function simSwungPct(basePct, shift, k){
+  if(!shift) return basePct;
+  const p = Math.min(0.9995, Math.max(0.0005, basePct / 100));
+  return 100 / (1 + Math.exp(-(Math.log(p / (1 - p)) + k * shift)));
+}
+
+// k (log-odds per margin point of slider) is solved so the slider's
+// number MEANS something: from the 2018/22/24 average, a setting of D+10
+// moves Florida's overall margin by about 10 points, not "10 for a toss-
+// up county and less for everyone else". Weighted by registered voters,
+// the same weighting the statewide readout uses (turnout is uniform
+// across counties here, so the turnout slider doesn't change it).
+// Calibrated on the average of the +max and -max settings so the two
+// ends miss by about the same small amount (about 0.2 points) instead of
+// one end being exact and the other off by about 0.5. Always calibrated
+// against the AVERAGE starting point, whatever the map is currently
+// built on, so the slider means the same thing in every case.
+let simSwingK = null;
+function simGetSwingK(){
+  if(simSwingK !== null) return simSwingK;
+  const W = SIM_COUNTY_NAMES.reduce((sum, n) => sum + SIM_REG[n][0], 0);
+  const statewideMargin = (shift, k) => SIM_COUNTY_NAMES.reduce((sum, n) => {
+    const p = simSwungPct(simAverageBase(n), shift, k) / 100;
+    return sum + SIM_REG[n][0] * (2 * p - 1);
+  }, 0) / W;
+  const reach = k => (statewideMargin(SIM_ENV_MAX, k) - statewideMargin(-SIM_ENV_MAX, k)) / 2 * 100;
+  let lo = 0.005, hi = 0.06;
+  for(let i = 0; i < 60; i++){
+    const mid = (lo + hi) / 2;
+    if(reach(mid) < SIM_ENV_MAX) lo = mid; else hi = mid;
+  }
+  simSwingK = (lo + hi) / 2;
+  return simSwingK;
+}
+
+// The statewide margin (-1..1, + = Democratic) a set of per-county
+// Democratic shares produces under the sim's own registered-voter
+// weighting. Used for the starting statewide margin and the past-election
+// reference points on the slider.
+function simWeightedMargin(pctFor){
+  const W = SIM_COUNTY_NAMES.reduce((sum, n) => sum + SIM_REG[n][0], 0);
+  return SIM_COUNTY_NAMES.reduce((sum, n) => {
+    const v = pctFor(n);
+    return sum + SIM_REG[n][0] * (2 * (v === null ? 50 : v) / 100 - 1);
+  }, 0) / W;
+}
+// The statewide margin of the plain 2018/22/24 average (about R+11).
+function simAverageStatewideMargin(){
+  return simWeightedMargin(simAverageBase);
+}
+// Where each past election sits on THIS slider: its statewide margin
+// minus the average's, same weighting. Gives "15" something to compare
+// to. These include candidate effects and Florida-specific shifts, not
+// only the national mood, and the text that shows them says so.
+function simEnvReferences(){
+  const avg = simAverageStatewideMargin();
+  return [['2018', SIM_2018], ['2022', SIM_2022], ['2024', SIM_2024]].map(([label, yd]) => ({
+    label,
+    shift: (simWeightedMargin(n => simPastDemPct(yd, n)) - avg) * 100
+  }));
+}
+
+// "D+4.5" / "R+7.0" / "Even" for a margin-point shift.
+function simFmtEnv(shift){
+  return Math.abs(shift) < 0.05 ? 'Even' : (shift > 0 ? 'D+' : 'R+') + Math.abs(shift).toFixed(1);
+}
+
+// The forecast for a county BEFORE anyone's personal adjustment.
+function simForecastPct(name){
+  return simSwungPct(simBasePct(name), simEnvShift, simGetSwingK());
+}
+// The county's value after everything, rounded to 0.1 (the slider step).
+function simFinalPct(name){
+  const v = simForecastPct(name) + (simAdj[name] || 0);
+  return Math.round(Math.min(100, Math.max(0, v)) * 10) / 10;
+}
+// Rebuilds simDemPct (in place -- other code reads the same object)
+// from the three layers. Call after changing the base, the environment
+// or any adjustment.
+function simRecompute(){
+  SIM_COUNTY_NAMES.forEach(name => { simDemPct[name] = simFinalPct(name); });
+}
+
+// A person set a county to a specific value (dragged its slider or
+// painted it with a rating). Stored as the difference from what the
+// forecast says, so the county keeps that difference if the national
+// slider later moves. Within 0.05 of the forecast isn't an adjustment.
+function simSetCountyFinal(name, finalPct){
+  const diff = finalPct - simForecastPct(name);
+  if(Math.abs(diff) < 0.05) delete simAdj[name]; else simAdj[name] = diff;
+  simDemPct[name] = simFinalPct(name);
+}
+// Drops one county's adjustment, so it follows the forecast again.
+function simClearCountyAdj(name){
+  delete simAdj[name];
+  simDemPct[name] = simFinalPct(name);
+}
+// Back to the starting average: slider to 0 and every adjustment gone.
+function simResetForecast(){
+  simBaseKind = 'average'; simBaseLoaded = {}; simEnvShift = 0; simAdj = {};
+  simRecompute();
+}
+// A blank map: every county 50/50 with no forecast behind it.
+function simStartBlank(){
+  simBaseKind = 'blank'; simBaseLoaded = {}; simEnvShift = 0; simAdj = {};
+  simRecompute();
+}
+// A scenario file becomes the new starting point (counties the file
+// doesn't mention keep what they currently show), so the national slider
+// can still shift it and nothing counts as a hand adjustment.
+function simLoadMap(values){
+  const current = { ...simDemPct };
+  simBaseKind = 'loaded'; simBaseLoaded = {}; simEnvShift = 0; simAdj = {};
+  SIM_COUNTY_NAMES.forEach(n => { simBaseLoaded[n] = (n in values) ? values[n] : current[n]; });
+  simRecompute();
 }
 
 function simCountyTotal(name){
@@ -4181,88 +4313,107 @@ function simCountyStats(name){
 }
 
 function simStatewide(){
-  let dem = 0, rep = 0, total = 0, movedCount = 0;
+  let dem = 0, rep = 0, total = 0;
   SIM_COUNTY_NAMES.forEach(name => {
     const s = simCountyStats(name);
     dem += s.demVotes; rep += s.repVotes; total += s.total;
-    if(simCheckpointMode === 'tie' && Math.abs(simDemPct[name]-50) > 0.05) movedCount++;
   });
+  // Counties a person has adjusted by hand on top of the forecast (not
+  // "counties off 50/50" any more: with every county starting at its own
+  // average, nearly all of them are, which would say nothing).
+  const movedCount = Object.keys(simAdj).length;
   const margin = total ? (dem-rep)/total : 0;
   return { dem, rep, total, movedCount, margin, rating: simRatingFor(margin) };
 }
 
-// "A, B and C" -- for naming counties in plain English.
-function simJoinNames(names){
-  if(names.length <= 1) return names.join('');
-  return names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
-}
-
-// The short explainer above the map. Built once (initSim) from the same
-// arrays that drive the fill, so the counts and names in the text can
-// never drift out of sync with what's actually filled in. The caveat at
-// the bottom is intentional and important: "Safe" is a statement about
-// past results (this year's primary), not a guarantee.
-function renderSimSafeNote(){
-  const el = document.getElementById('simSafeNote');
+// The explainer above the map. Built once (initSim) from the model
+// itself, so every number and county name in it is read from the same
+// data the map uses and can never drift out of sync with what's on screen.
+function renderSimForecastNote(){
+  const el = document.getElementById('simForecastNote');
   if(!el) return;
-  const nD = SIM_SAFE_D.length, nR = SIM_SAFE_R.length;
-  const nOpen = SIM_SAFE_R_EXCEPTIONS.length + SIM_SAFE_OTHERS_OPEN.length;
-  // Where the filled-in values actually land, read from the same blend
-  // that fills the map -- so the ranges and the example counties named
-  // below can never disagree with what's on screen.
-  const spread = names => {
-    const vals = names.map(n => ({ name:n, v:simBlendedDemPct(n) })).filter(x => x.v !== null).sort((a, b) => a.v - b.v);
-    return { lo: vals[0], hi: vals[vals.length - 1] };
-  };
-  const sD = spread(SIM_SAFE_D), sR = spread(SIM_SAFE_R);
-  const rLabel = x => `${x.v.toFixed(1)}% D (${x.name})`;
+  const k = simGetSwingK();
+  const avgMargin = simAverageStatewideMargin() * 100;
+  const refs = simEnvReferences();
+  // The most lopsided county, and how far the slider's maximum moves it
+  // compared to a toss-up county -- the concrete case behind "counties
+  // don't all move the same".
+  const lopsided = SIM_COUNTY_NAMES.slice().sort((a, b) => simAverageBase(a) - simAverageBase(b))[0];
+  const lopsidedPct = simAverageBase(lopsided);
+  const lopsidedMove = simSwungPct(lopsidedPct, SIM_ENV_MAX, k) - lopsidedPct;
+  const tossUpMove = simSwungPct(50, SIM_ENV_MAX, k) - 50;
+  const relative = Math.round(lopsidedMove / tossUpMove * 100);
+  const sample = SIM_COUNTY_NAMES.slice().sort((a, b) => simAverageBase(b) - simAverageBase(a))[0];
+  const refText = refs.map(r => `${r.label} near ${simFmtEnv(r.shift)}`);
+
   el.innerHTML = `
-    <div class="sim-safe-summary">
-      <b>New to Florida?</b> We've filled in the <b>${nD + nR} counties rated Safe in the 2026 primary</b>
-      (<span class="r">${nR} R</span> &middot; <span class="d">${nD} D</span>), each starting at its own 2018 / 2022 / 2024
-      average, so you only have to decide the competitive ones.
-      Use <b>Reset all counties</b> to start from a blank map, or <b>Fill safe counties</b> to bring them back.
+    <div class="sim-forecast-summary">
+      <b>New to Florida?</b> You don't need to know the counties. Every county starts at its own
+      <b>2018 / 2022 / 2024 average</b>, and the <b>National environment</b> slider shifts all of them
+      together &mdash; slide toward D or R based on what you think the national mood will be. Then click
+      any county, on the map or in the table, to fine-tune it.
     </div>
-    <details class="sim-safe-details">
-      <summary>Why are these counties already filled in?</summary>
-      <div class="sim-safe-body">
-        <p>In the 2026 primary, each of these counties leaned one way by a very wide margin &mdash; even the
-        closest of them (Orange for Democrats, Lake for Republicans) was about 19 points. A gap that size is
-        rarely made up in a single election, so they start out as <b>Safe</b>.</p>
-        <p><b>How the starting numbers are set.</b> &ldquo;Safe&rdquo; doesn't mean the same margin everywhere:
-        ${sR.lo.name} County runs about ${Math.round(100 - sR.lo.v)}% Republican, while ${sR.hi.name} is closer to
-        ${Math.round(100 - sR.hi.v)}%. Giving every Safe county the same split would make some of them badly
-        underperform their own history. So each county starts at the average of its Democratic share of the
+    <details class="sim-forecast-details">
+      <summary>How does this forecast work?</summary>
+      <div class="sim-forecast-body">
+        <p><b>1. The starting point.</b> Each county starts at the average of its Democratic share of the
         two-party vote in the <b>2018 governor's race</b>, the <b>2022 governor's race</b> and the
-        <b>2024 presidential race</b>, counting each year equally. (Two-party means Democratic and Republican
-        votes only &mdash; NPA and third-party votes aren't counted, the same as everywhere else on this map.)</p>
-        <ul>
-          <li><b class="d">Safe D (${nD}):</b> ${simJoinNames(SIM_SAFE_D)} &mdash; starting from
-          ${rLabel(sD.lo)} up to ${rLabel(sD.hi)}.</li>
-          <li><b class="r">Safe R (${nR}):</b> every other county the primary rated Safe R, except the six below
-          &mdash; starting from ${rLabel(sR.lo)} up to ${rLabel(sR.hi)}.</li>
-        </ul>
-        <p>These are only starting points. Click any county and drag its slider to change it.</p>
-        <p><b>Left open on purpose (${nOpen}):</b></p>
-        <ul>
-          <li>${simJoinNames(SIM_SAFE_R_EXCEPTIONS)} were also Safe R in the primary, but they're large,
-          politically mixed counties that can look different in a general election than in a primary, so
-          they're yours to decide.</li>
-          <li>${simJoinNames(SIM_SAFE_OTHERS_OPEN)} were rated closer than Safe in the primary.</li>
-        </ul>
-        <p class="sim-safe-caveat"><b>Keep in mind:</b> &ldquo;Safe&rdquo; and these starting numbers are based on
-        past results &mdash; this year's primary and the 2018, 2022 and 2024 elections &mdash; not a guarantee.
-        Those were three different kinds of races with different candidates, and a strong national environment
-        for either party, or unusual turnout, can move even these counties. Change any of them on the map
-        whenever you like.</p>
+        <b>2024 presidential race</b>, counting each year equally. (Two-party means Democratic and
+        Republican votes only &mdash; NPA and third-party votes aren't counted, the same as everywhere else
+        on this map.) So every county begins at what it has actually done, not a guess: ${lopsided} County at
+        ${simBlendedDemPct(lopsided).toFixed(1)}% D (about ${Math.round(100 - lopsidedPct)}% Republican),
+        ${sample} at ${simBlendedDemPct(sample).toFixed(1)}% D. Statewide, that average comes out to
+        ${simFmtEnv(avgMargin)}.</p>
+        <p><b>2. The national environment slider.</b> Drag toward D or R to move Florida away from that
+        average, up to ${SIM_ENV_MAX} points either way. The number on the slider is how far Florida's overall
+        margin moves, so D+10 means about ten points more Democratic statewide than the average. For scale,
+        on this slider ${refText.slice(0, -1).join(', ')} and ${refText[refText.length - 1]} &mdash; though
+        those also reflect the candidates and Florida-specific shifts, not only the national mood.</p>
+        <p><b>3. Why counties don't all move the same.</b> A toss-up county follows the national mood
+        closely, while a deeply Republican or Democratic one barely budges. At D+${SIM_ENV_MAX}, ${lopsided}
+        County moves about ${relative}% as far as a toss-up county. That matches how Florida's counties
+        really behaved between 2018, 2022 and 2024: when the statewide margin moved a lot, the most lopsided
+        counties moved far less than the competitive ones. Shifting every county by the same number of
+        points would push places like ${lopsided} to numbers they've never come close to.</p>
+        <p><b>4. Fine-tuning a county.</b> Click a county (or its row in the table) and drag its slider, or
+        paint it with a rating. Your change is kept as a difference from the forecast, so if you move the
+        national slider afterward, that county still moves with it and keeps your adjustment.
+        <b>Reset this county</b> removes just that adjustment; <b>Reset forecast</b> clears all of them and
+        puts the slider back to Even; <b>Blank map</b> starts every county at 50/50 instead.</p>
+        <p class="sim-forecast-caveat"><b>Keep in mind:</b> this is one national dial plus your own
+        adjustments, built from past results in three elections that had different candidates and different
+        national moods. It can't know about candidate quality, unusual turnout, or changes in how groups
+        vote &mdash; and a strong national environment for either party can move even the most lopsided
+        counties more than this model allows. Use it to explore scenarios, not as a prediction.</p>
       </div>
     </details>`;
 }
 
+// The line under the slider: what the number means, and how big "15" is.
+function renderSimEnvHint(){
+  const el = document.getElementById('simEnvHint');
+  if(!el) return;
+  const refs = simEnvReferences().map(r => `${r.label} \u2248 ${simFmtEnv(r.shift)}`).join(' \u00b7 ');
+  el.textContent = `Moves Florida's overall margin by this much. For scale: ${refs} (these include candidate effects, not only the national mood).`;
+}
+
+// Keeps the slider's label and position in step with the model, whatever
+// changed it (the slider itself, Reset forecast, a scenario upload...).
+function updateSimEnvLabel(){
+  const slider = document.getElementById('simEnvSlider');
+  if(!slider) return;
+  slider.value = simEnvShift;
+  const base = { average:'the 2018/2022/2024 average', blank:'a blank map', loaded:'the map you loaded' }[simBaseKind];
+  document.getElementById('simEnvValue').textContent = Math.abs(simEnvShift) < 0.05
+    ? `Even \u2014 ${base}`
+    : `${simFmtEnv(simEnvShift)} shift from ${base}`;
+  document.getElementById('simEnvMidLabel').textContent = simBaseKind === 'average' ? 'Average' : 'Your map';
+}
+
 function initSim(){
-  simResetAll();
-  simApplySafeCounties();
-  renderSimSafeNote();
+  simResetForecast();
+  renderSimForecastNote();
+  renderSimEnvHint();
   document.getElementById('simTurnoutSlider').value = simTurnoutPct;
   renderSim();
 }
@@ -4378,6 +4529,11 @@ function renderSimStats(){
   document.getElementById('simLabelD').textContent = 'DEM ' + fmt(sw.dem) + ' (' + dPct.toFixed(1) + '%)';
   document.getElementById('simLabelR').textContent = 'REP ' + fmt(sw.rep) + ' (' + rPct.toFixed(1) + '%)';
 
+  const envResult = document.getElementById('simEnvResult');
+  envResult.textContent = `Florida result: ${marginLabel(sw.margin)} \u00b7 ${sw.rating}`;
+  envResult.className = 'sim-env-result ' + (sw.dem >= sw.rep ? 'd' : 'r');
+  document.getElementById('simStripLabel').textContent =
+    simCheckpointMode === 'tie' ? 'Forecast statewide margin' : 'Statewide margin (actual results)';
   document.getElementById('simStatTotal').textContent = fmt(sw.total);
   document.getElementById('simStatCounties').textContent = simCheckpointMode === 'tie' ? (sw.movedCount + ' / ' + SIM_COUNTY_NAMES.length) : '\u2014';
   document.getElementById('simStatRating').textContent = sw.rating;
@@ -4393,7 +4549,7 @@ function selectSimCounty(name){
   // it with that bucket's representative margin immediately, and the
   // brush stays selected so multiple counties can be painted in a row.
   if(selectedRatingBrush && simCheckpointMode === 'tie'){
-    simDemPct[name] = RATING_BRUSH_DEMPCT[selectedRatingBrush];
+    simSetCountyFinal(name, RATING_BRUSH_DEMPCT[selectedRatingBrush]);
     selectedSimCounty = name;
     document.getElementById('simPlaceholder').style.display = 'none';
     document.getElementById('simEditor').style.display = 'block';
@@ -4463,11 +4619,30 @@ function renderSimCheckpoint(){
   const h24 = simHistoricalStats(name, SIM_2024);
   const blend = simBlendedDemPct(name);
 
+  // Where this county's number comes from, layer by layer: starting
+  // point (only worth its own row when it ISN'T the average shown above),
+  // the national environment's effect, and anything adjusted by hand.
+  const startPct = simBasePct(name);
+  const envEffect = simForecastPct(name) - startPct;
+  const adjPts = simAdj[name] || 0;
+  const signed = v => (v >= 0 ? '+' : '') + v.toFixed(1) + ' pts';
+  const layerRows =
+    (simBaseKind !== 'average'
+      ? `<div class="sim-checkpoint-tier"><span class="tier-name">Starting point (${simBaseKind === 'blank' ? 'blank map' : 'your loaded map'})</span><span>${startPct.toFixed(1)}% D</span></div>`
+      : '') +
+    (Math.abs(envEffect) >= 0.05
+      ? `<div class="sim-checkpoint-tier"><span class="tier-name">National environment (${simFmtEnv(simEnvShift)})</span><span>${signed(envEffect)}</span></div>`
+      : '') +
+    (Math.abs(adjPts) >= 0.05
+      ? `<div class="sim-checkpoint-tier"><span class="tier-name">Your adjustment</span><span>${signed(adjPts)}</span></div>`
+      : '');
+
   el.innerHTML =
     `<div class="sim-checkpoint-tier"><span class="tier-name">2018 result (goal to exceed)</span><span>${marginLabel(h18.margin)} (${h18.demPct.toFixed(1)}% D)</span></div>` +
     `<div class="sim-checkpoint-tier"><span class="tier-name">2022 result (goal to exceed)</span><span>${marginLabel(h22.margin)} (${h22.demPct.toFixed(1)}% D)</span></div>` +
     `<div class="sim-checkpoint-tier"><span class="tier-name">2024 result</span><span>${marginLabel(h24.margin)} (${h24.demPct.toFixed(1)}% D)</span></div>` +
     (blend !== null ? `<div class="sim-checkpoint-tier"><span class="tier-name">Average of 2018 / 2022 / 2024</span><span>${blend.toFixed(1)}% D</span></div>` : '') +
+    layerRows +
     shiftLine + prelimBlock +
     `<div class="sim-checkpoint-recipe" style="margin-top:6px;">${goalLine}</div>`;
 }
@@ -4496,6 +4671,9 @@ function renderSimEditor(){
     const yearLabel = simCheckpointMode === 'y2018' ? '2018' : '2022';
     document.getElementById('simEditorVoters').textContent = `Actual ${yearLabel} Governor's race result \u00b7 ${fmt(s.total)} votes cast`;
   }
+  // Keep the county slider's handle on the county's current value even
+  // when something else changed it (e.g. the national slider moved it).
+  if(editable) document.getElementById('simDemSlider').value = s.demPct;
   document.getElementById('simDemPctLabel').textContent = `${s.demPct.toFixed(1)}% D / ${s.repPct.toFixed(1)}% R`;
   document.getElementById('simEditorResult').textContent = s.rating + ' (' + marginLabel(s.margin) + ')';
   document.getElementById('simEditorDemVotes').textContent = fmt(s.demVotes);
@@ -4509,8 +4687,14 @@ function renderSim(){
   renderSimMap();
   renderSimTable();
   updateSimTurnoutLabel();
-  document.getElementById('simTurnoutStrip').querySelectorAll('.adj-slider')[0].closest('div').style.opacity = simCheckpointMode === 'tie' ? '1' : '.4';
+  // Looked up by id (not "the first slider in the strip"), so adding other
+  // sliders to the strip can never make this dim the wrong control.
+  document.getElementById('simTurnoutSlider').closest('div').style.opacity = simCheckpointMode === 'tie' ? '1' : '.4';
   document.getElementById('simTurnoutSlider').disabled = simCheckpointMode !== 'tie';
+  // The national-environment slider only exists in forecast mode; the
+  // actual-results views show real results (2024 has its own swing slider).
+  document.getElementById('simEnvWrap').style.display = simCheckpointMode === 'tie' ? 'block' : 'none';
+  updateSimEnvLabel();
   document.getElementById('sim2024SwingWrap').style.display = simCheckpointMode === 'y2024' ? 'block' : 'none';
   let mapHeaderText = 'Click a county to set its margin';
   if(simCheckpointMode === 'y2018') mapHeaderText = "Actual 2018 Governor's race results by county";
@@ -4522,9 +4706,9 @@ function renderSim(){
   }
   document.getElementById('simMapHeader').textContent = mapHeaderText;
   document.getElementById('simRatingBrush').style.display = simCheckpointMode === 'tie' ? 'flex' : 'none';
-  // The Safe-counties explainer is about building the map by hand, so it
-  // only belongs in that mode (not on the 2018/2022/2024 actual-results views).
-  document.getElementById('simSafeNote').style.display = simCheckpointMode === 'tie' ? 'block' : 'none';
+  // The forecast explainer is about building a forecast, so it only
+  // belongs in that mode (not on the 2018/2022/2024 actual-results views).
+  document.getElementById('simForecastNote').style.display = simCheckpointMode === 'tie' ? 'block' : 'none';
   if(simCheckpointMode !== 'tie'){
     selectedRatingBrush = null;
     document.querySelectorAll('#simRatingBrush button').forEach(b=>b.classList.remove('active'));
@@ -4599,7 +4783,7 @@ document.getElementById('sim2024SwingSlider').addEventListener('input', e => {
 });
 document.getElementById('simDemSlider').addEventListener('input', e => {
   if(!selectedSimCounty || simCheckpointMode !== 'tie') return;
-  simDemPct[selectedSimCounty] = parseFloat(e.target.value);
+  simSetCountyFinal(selectedSimCounty, parseFloat(e.target.value));
   renderSimStats();
   renderSimMap();
   renderSimTable();
@@ -4619,12 +4803,15 @@ document.getElementById('simCheckpointMode').addEventListener('change', e => {
 });
 document.getElementById('simResetCountyBtn').addEventListener('click', () => {
   if(!selectedSimCounty || simCheckpointMode !== 'tie') return;
-  simDemPct[selectedSimCounty] = 50;
-  document.getElementById('simDemSlider').value = 50;
+  // Back to what the forecast says for this county (average + the
+  // national environment), dropping only the hand adjustment.
+  simClearCountyAdj(selectedSimCounty);
+  document.getElementById('simDemSlider').value = simDemPct[selectedSimCounty];
   renderSim();
 });
 document.getElementById('simResetAllBtn').addEventListener('click', () => {
-  simResetAll();
+  // Blank map: every county 50/50 with no forecast behind it.
+  simStartBlank();
   selectedSimCounty = null;
   selectedRatingBrush = null;
   document.querySelectorAll('#simRatingBrush button').forEach(b=>b.classList.remove('active'));
@@ -4637,19 +4824,26 @@ document.getElementById('simResetAllBtn').addEventListener('click', () => {
   document.getElementById('simPlaceholder').style.display = 'block';
   renderSim();
 });
-// The counterpart to "Reset all counties": puts the Safe counties back
-// (or fills them, if someone reset first). Only touches those 51 counties
-// -- the competitive ones keep whatever the user already set.
-document.getElementById('simFillSafeBtn').addEventListener('click', () => {
-  // Filling only makes sense on the hand-built map, so leave any
-  // actual-results view first (the same thing Reset does).
+// Back to the starting average: national slider to Even and every
+// hand adjustment cleared. (Also what gets you from a blank map or an
+// uploaded one back to the forecast.)
+document.getElementById('simResetForecastBtn').addEventListener('click', () => {
+  // A forecast only makes sense on the hand-built view, so leave any
+  // actual-results view first (the same thing the blank-map button does).
   simCheckpointMode = 'tie';
   document.getElementById('simCheckpointMode').value = 'tie';
   sim2024Swing = 0;
   document.getElementById('sim2024SwingSlider').value = 0;
   document.getElementById('sim2024SwingValue').textContent = 'Even (actual results)';
-  simApplySafeCounties();
+  simResetForecast();
   if(selectedSimCounty) document.getElementById('simDemSlider').value = simDemPct[selectedSimCounty];
+  renderSim();
+});
+// The national environment slider: shifts every county together.
+document.getElementById('simEnvSlider').addEventListener('input', e => {
+  if(simCheckpointMode !== 'tie') return;
+  simEnvShift = parseFloat(e.target.value);
+  simRecompute();
   renderSim();
 });
 document.getElementById('simMapRetryBtn').addEventListener('click', () => {
@@ -4675,13 +4869,29 @@ document.getElementById('simRatingBrush').addEventListener('click', e => {
 
 // Statewide numbers shared by the CSV and PNG exports: raw DEM/REP votes,
 // turnout (votes cast vs. total registered), and the resulting margin.
+// A short description of the forecast for the CSV and the PNG title, e.g.
+// "D+4.5 environment \u00b7 3 adjusted". Kept short: the PNG title has to
+// fit on one line.
+function simForecastLabel(){
+  const n = Object.keys(simAdj).length;
+  const even = Math.abs(simEnvShift) < 0.05;
+  let label;
+  if(simBaseKind === 'average') label = even ? 'Average forecast' : `${simFmtEnv(simEnvShift)} environment`;
+  else{
+    const baseName = simBaseKind === 'blank' ? 'Blank map' : 'Loaded map';
+    label = even ? baseName : `${baseName}, ${simFmtEnv(simEnvShift)}`;
+  }
+  if(n) label += ` \u00b7 ${n} adjusted`;
+  return label;
+}
+
 function simStatewideSummary(){
   const sw = simStatewide();
   const totalRegistered = SIM_COUNTY_NAMES.reduce((s,name)=>s+SIM_REG[name][0],0);
   const turnoutPct = totalRegistered ? (sw.total/totalRegistered*100) : 0;
   const leader = sw.dem >= sw.rep ? 'DEM' : 'REP';
   let modeLabel;
-  if(simCheckpointMode === 'tie') modeLabel = 'Hypothetical scenario';
+  if(simCheckpointMode === 'tie') modeLabel = simForecastLabel();
   else if(simCheckpointMode === 'y2018') modeLabel = "2018 Governor's race (actual)";
   else if(simCheckpointMode === 'y2022') modeLabel = "2022 Governor's race (actual)";
   else if(simCheckpointMode === 'y2024'){
@@ -4767,8 +4977,17 @@ document.getElementById('simDownloadPngBtn').addEventListener('click', async () 
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.fillStyle = '#e9edf5';
-    ctx.font = `600 ${Math.round(24*scale)}px Inter, Arial, sans-serif`;
-    ctx.fillText(`Florida Build Your Own Map \u2014 ${summary.modeLabel}`, 24*scale, 40*scale);
+    // The forecast label can be long (e.g. "Loaded map, D+15.0 \u00b7 12
+    // adjusted"), so shrink the title to fit the image rather than letting
+    // it run off the edge.
+    const titleText = `Florida Build Your Own Forecast \u2014 ${summary.modeLabel}`;
+    let titleSize = 24;
+    ctx.font = `600 ${Math.round(titleSize*scale)}px Inter, Arial, sans-serif`;
+    while(ctx.measureText(titleText).width > canvas.width - 48*scale && titleSize > 13){
+      titleSize -= 1;
+      ctx.font = `600 ${Math.round(titleSize*scale)}px Inter, Arial, sans-serif`;
+    }
+    ctx.fillText(titleText, 24*scale, 40*scale);
 
     ctx.fillStyle = summary.leader === 'DEM' ? '#5b9bd9' : '#d4675a';
     ctx.font = `600 ${Math.round(19*scale)}px Inter, Arial, sans-serif`;
@@ -4819,19 +5038,23 @@ document.getElementById('simCsvFileInput').addEventListener('change', e => {
       const parsed = Papa.parse(evt.target.result, { header:true, skipEmptyLines:true });
       if(!parsed.data.length) throw new Error('CSV is empty');
       let applied = 0;
+      const loaded = {};
       const turnoutValues = new Set();
       parsed.data.forEach(row => {
         const name = (row.County || '').trim();
         if(!SIM_REG[name]) return;
         const demPct = parseFloat(row.DEM_Pct);
         if(!isNaN(demPct)){
-          simDemPct[name] = Math.min(100, Math.max(0, demPct));
+          loaded[name] = Math.min(100, Math.max(0, demPct));
           applied++;
         }
         const tp = parseFloat(row.TurnoutPct);
         if(!isNaN(tp)) turnoutValues.add(tp.toFixed(1));
       });
       if(applied === 0) throw new Error('no matching counties found in that file');
+      // The file becomes the new starting point (the national slider can
+      // still shift it); counties it doesn't mention keep what they show now.
+      simLoadMap(loaded);
       if(turnoutValues.size === 1){
         simTurnoutPct = parseFloat([...turnoutValues][0]);
         document.getElementById('simTurnoutSlider').value = simTurnoutPct;

@@ -158,16 +158,22 @@
     font-family:var(--mono); font-size:10.5px; color:var(--muted-2); line-height:1.5;
     margin:-6px 0 14px; font-style:italic;
   }
+  .margin-tracker-lead{ font-family:var(--mono); font-size:20px; font-weight:700; margin-bottom:12px; color:var(--text); }
+  .margin-tracker-lead.d{ color:var(--dem); } .margin-tracker-lead.r{ color:var(--rep); }
+  .margin-tracker-lead .votes{ font-size:12px; font-weight:400; color:var(--muted); }
   .margin-tracker-split{ display:flex; justify-content:space-between; margin-bottom:8px; }
   .margin-tracker-side{ font-family:var(--mono); }
   .margin-tracker-side .lbl{ font-size:11px; color:var(--muted); margin-right:7px; }
   .margin-tracker-side .pct{ font-size:17px; font-weight:700; }
-  .margin-tracker-side.d .pct{ color:var(--dem); } .margin-tracker-side.r .pct{ color:var(--rep); }
+  .margin-tracker-side.d .pct{ color:var(--dem); } .margin-tracker-side.r .pct{ color:var(--rep); } .margin-tracker-side.o .pct{ color:var(--npa); }
   .margin-tracker-bar{
     display:flex; width:100%; height:12px; border-radius:6px; overflow:hidden; background:#333d4f;
   }
   .margin-tracker-bar-d{ background:var(--dem); transition:width .3s ease; }
+  .margin-tracker-bar-o{ background:var(--npa); opacity:.55; transition:width .3s ease; }
   .margin-tracker-bar-r{ background:var(--rep); transition:width .3s ease; }
+  .margin-line-key{ font-family:var(--mono); font-size:10.5px; color:var(--muted-2); margin-top:6px; }
+  .margin-line-key .key-d{ color:#5b9bd9; } .margin-line-key .key-r{ color:#d4675a; }
   .margin-tracker-explain{
     font-family:var(--mono); font-size:12px; color:var(--muted); line-height:1.6; margin-top:12px;
   }
@@ -916,35 +922,39 @@
       </div>
       <div class="legend" id="mapLegend"></div>
       <div class="margin-tracker-wrap" id="marginTrackerWrap" style="display:none;">
-        <h3>Statewide Two-Party Margin</h3>
-        <div class="margin-tracker-note">DEM vs REP only &mdash; a "margin" is a two-candidate idea, so NPA/Other isn't part of it here. The full DEM/REP/NPA breakdown is on the General Election tab.</div>
+        <h3>Statewide Margin</h3>
+        <div class="margin-tracker-note">Margin = Democratic % minus Republican % of all ballots counted (NPA/Other included in the total) &mdash; the same number used in the update text and the screenshots.</div>
+        <div class="margin-tracker-lead" id="marginTrackLead">&mdash;</div>
         <div class="margin-tracker-split">
           <div class="margin-tracker-side d"><span class="lbl">DEM</span><span class="pct" id="marginTrackD">&mdash;</span></div>
+          <div class="margin-tracker-side o"><span class="lbl">OTHER</span><span class="pct" id="marginTrackO">&mdash;</span></div>
           <div class="margin-tracker-side r"><span class="lbl">REP</span><span class="pct" id="marginTrackR">&mdash;</span></div>
         </div>
         <div class="margin-tracker-bar">
-          <div class="margin-tracker-bar-d" id="marginTrackBarD" style="width:50%;"></div>
-          <div class="margin-tracker-bar-r" id="marginTrackBarR" style="width:50%;"></div>
+          <div class="margin-tracker-bar-d" id="marginTrackBarD" style="width:0%;"></div>
+          <div class="margin-tracker-bar-o" id="marginTrackBarO" style="width:0%;"></div>
+          <div class="margin-tracker-bar-r" id="marginTrackBarR" style="width:0%;"></div>
         </div>
         <div class="margin-tracker-explain" id="marginTrackExplain"></div>
 
         <div class="drop-goals" id="marginDropGoals" style="display:none;">
           <div class="drop-goals-label">DROP GOALS &mdash; what's needed to gain ground on the next update</div>
-          <div class="drop-goal-row d"><span class="dot"></span><span><b>Democrats</b> need more than <b id="dropGoalD">&mdash;</b> of the next drop's two-party vote</span></div>
-          <div class="drop-goal-row r"><span class="dot"></span><span><b>Republicans</b> need more than <b id="dropGoalR">&mdash;</b> of the next drop's two-party vote</span></div>
-          <div class="drop-goals-note">This doesn't depend on how big the next drop is or how long it takes to arrive &mdash; only on its party makeup. A tiny drop and a huge drop are judged the exact same way.</div>
+          <div class="drop-goal-row d"><span class="dot"></span><span id="dropGoalTextD">&mdash;</span></div>
+          <div class="drop-goal-row r"><span class="dot"></span><span id="dropGoalTextR">&mdash;</span></div>
+          <div class="drop-goals-note">This doesn't depend on how big the next drop is or how long it takes to arrive &mdash; only on its makeup. Points are measured against every ballot in the drop, including NPA/Other.</div>
         </div>
 
         <div class="county-detail-chart-wrap" style="margin-top:20px;">
           <div class="chart-header-row">
-            <h3>Margin Shift Per Update</h3>
+            <h3>Statewide Margin Over Time</h3>
             <label class="show-all-toggle">
-              <input type="checkbox" id="marginShiftShowAllToggle">
+              <input type="checkbox" id="marginLineShowAllToggle">
               <span>Show all datapoints</span>
             </label>
           </div>
-          <div class="chart-window-note" id="marginShiftWindowNote">For clarity, showing the 10 most recent updates.</div>
-          <div class="county-detail-chart" id="marginShiftChart" style="min-height:280px;"></div>
+          <div class="chart-window-note" id="marginLineWindowNote">For clarity, showing the 10 most recent updates.</div>
+          <div class="county-detail-chart" id="marginLineChart" style="min-height:280px;"></div>
+          <div class="margin-line-key"><span class="key-d">&#9632;</span> Democrats lead &nbsp;&middot;&nbsp; <span class="key-r">&#9632;</span> Republicans lead &nbsp;&middot;&nbsp; hover a point to see the lead</div>
         </div>
       </div>
     </div>
@@ -2443,7 +2453,7 @@ async function renderMap(){
   document.getElementById('marginTrackerWrap').style.display = (currentMetric === 'move') ? 'block' : 'none';
   if(currentMetric === 'move'){
     renderMarginTracker();
-    renderMarginShiftChart();
+    renderMarginLineChart();
   }
 
   const { trace, legendHtml, legendVisible } = buildMapTrace(currentMetric, activeCounties);
@@ -2581,81 +2591,109 @@ function formatPctTweet(fraction){
   return raw + '%';
 }
 
-// Builds the 4 copy-paste-ready text blocks (each becomes one carousel
-// card, and together make up the full "Copy" output).
-// Shared by the tweet text's lead-change line/margin-move line AND the
-// Statewide Margin Tracker panel on the Margin move tab, so both
-// always show the exact same numbers. Works entirely in TWO-PARTY
-// terms (DEM / (DEM+REP)), the same convention used everywhere else
-// margin is described in this app -- NPA/Other is not part of a
-// "margin" in a two-candidate sense.
-function computeStatewideMarginInfo(){
-  const totalD = COUNTIES.reduce((s,c)=>s+c.dem,0);
-  const totalR = COUNTIES.reduce((s,c)=>s+c.rep,0);
-  const demNewTotal = COUNTIES.reduce((s,c)=>s+(c.demNew||0),0);
-  const repNewTotal = COUNTIES.reduce((s,c)=>s+(c.repNew||0),0);
-  const oldD = totalD - demNewTotal;
-  const oldR = totalR - repNewTotal;
-
-  const hasCurrent = (totalD + totalR) > 0;
-  const hasPrior = (oldD + oldR) > 0;
-  const hasDrop = (demNewTotal + repNewTotal) > 0;
-
-  const currentShareD = hasCurrent ? totalD / (totalD + totalR) : null;
-  const oldShareD = hasPrior ? oldD / (oldD + oldR) : null;
-  const dropShareD = hasDrop ? demNewTotal / (demNewTotal + repNewTotal) : null;
-
-  let shareChange = null, towardParty = null, towardEmoji = null;
-  if(hasCurrent && hasPrior){
-    shareChange = currentShareD - oldShareD;
-    if(Math.abs(shareChange) >= 0.00005){
-      towardParty = shareChange > 0 ? 'Democrats' : 'Republicans';
-      towardEmoji = shareChange > 0 ? '\u{1F535}' : '\u{1F534}';
-    }
+// ============================================================
+// THE ONE DEFINITION OF "STATEWIDE MARGIN"
+// ============================================================
+// Margin = Democratic % minus Republican % of ALL ballots counted, with
+// NPA/Other included in the total. It is the same number as the
+// dashboard's leader readout and the PNG headline ("+10.22%"), and
+// anyone can check it from the percentages printed in the update text
+// (e.g. 43.07% - 35.76%). The update text (card 1's "move toward" line
+// and card 3), the Statewide Margin panel and the margin line chart all
+// get their numbers from here, so they can never disagree.
+//
+// Why a drop moves it the way it does: the new margin is the
+// vote-weighted average of the old margin and the drop's own margin.
+// So the margin moves toward whichever party did BETTER in that drop
+// than the race had been running overall, whatever the drop's size --
+// and the break-even for the NEXT drop is exactly today's margin.
+//
+// Pure function (no page state) so it can be tested directly.
+// D/R/O are the statewide totals AFTER the latest update; dD/dR/dO are
+// that update's own new votes. Margins are in percentage points,
+// positive = Democratic.
+function statewideMarginMath(D, R, O, dD, dR, dO){
+  const T = D + R + O;
+  const dT = dD + dR + dO;
+  const T0 = T - dT, D0 = D - dD, R0 = R - dR;
+  const hasCurrent = T > 0;
+  const hasPrior = T0 > 0;
+  const hasDrop = dT > 0;
+  const margin = hasCurrent ? (D - R) / T * 100 : null;
+  const prevMargin = hasPrior ? (D0 - R0) / T0 * 100 : null;
+  const dropMargin = hasDrop ? (dD - dR) / dT * 100 : null;
+  const change = (hasCurrent && hasPrior) ? margin - prevMargin : null;   // + = toward Democrats
+  // A move too small to show as 0.01 is "steady", not a move.
+  let towardParty = null, towardEmoji = null;
+  if(change !== null && Math.abs(change) >= 0.005){
+    towardParty = change > 0 ? 'Democrats' : 'Republicans';
+    towardEmoji = change > 0 ? '\u{1F535}' : '\u{1F534}';
   }
-
-  return {
-    totalD, totalR, demNewTotal, repNewTotal, hasCurrent, hasPrior, hasDrop,
-    currentShareD, oldShareD, dropShareD, shareChange, towardParty, towardEmoji
-  };
+  const leader = (!hasCurrent || D === R) ? null : (D > R ? 'Democrats' : 'Republicans');
+  return { D, R, O, T, dD, dR, dO, dT, hasCurrent, hasPrior, hasDrop,
+           margin, prevMargin, dropMargin, change, towardParty, towardEmoji, leader };
 }
 
-// Fills in the Statewide Margin Tracker panel (Margin move tab): the
-// current two-party split, a plain-English explanation of the LAST
-// update's shift and why it happened, and the break-even thresholds
-// for what each party needs out of the NEXT update to gain further
-// ground. The "why" and the "next" threshold both fall straight out
-// of the same fact: the race's overall two-party share is a running
-// weighted average, so a drop pulls the margin toward whichever party
-// did BETTER in that drop than the race had been running overall --
-// and the break-even point for the next drop is exactly today's
-// current share, no separate calculation needed.
+// The same math over the live feed (COUNTIES).
+function computeStatewideMarginInfo(){
+  const sum = f => COUNTIES.reduce((s, c) => s + f(c), 0);
+  return statewideMarginMath(
+    sum(c => c.dem), sum(c => c.rep), sum(c => c.ind + c.npa + c.other),
+    sum(c => c.demNew || 0), sum(c => c.repNew || 0), sum(c => c.otherNew || 0)
+  );
+}
+
+// "D+7.32%" / "R+1.20%" / "Even" for a margin in points.
+function formatMarginLabel(m){
+  const s = Math.abs(m).toFixed(2);
+  if(parseFloat(s) === 0) return 'Even';
+  return (m > 0 ? 'D+' : 'R+') + s + '%';
+}
+
+// Fills in the Statewide Margin panel (Margin move tab): the current
+// margin and the DEM / OTHER / REP split it comes from, a plain-English
+// account of what the LAST update did and why, and the break-even each
+// party needs from the NEXT update.
 function renderMarginTracker(){
   const info = computeStatewideMarginInfo();
+  const leadEl = document.getElementById('marginTrackLead');
   const dEl = document.getElementById('marginTrackD');
+  const oEl = document.getElementById('marginTrackO');
   const rEl = document.getElementById('marginTrackR');
   const barD = document.getElementById('marginTrackBarD');
+  const barO = document.getElementById('marginTrackBarO');
   const barR = document.getElementById('marginTrackBarR');
   const explainEl = document.getElementById('marginTrackExplain');
   const goalsWrap = document.getElementById('marginDropGoals');
-  const goalD = document.getElementById('dropGoalD');
-  const goalR = document.getElementById('dropGoalR');
+  const goalD = document.getElementById('dropGoalTextD');
+  const goalR = document.getElementById('dropGoalTextR');
   if(!dEl) return;
 
   if(!info.hasCurrent){
-    dEl.textContent = '\u2014'; rEl.textContent = '\u2014';
-    barD.style.width = '50%'; barR.style.width = '50%';
+    leadEl.textContent = '\u2014'; leadEl.className = 'margin-tracker-lead';
+    dEl.textContent = '\u2014'; oEl.textContent = '\u2014'; rEl.textContent = '\u2014';
+    barD.style.width = '0%'; barO.style.width = '0%'; barR.style.width = '0%';
     explainEl.textContent = 'No votes counted yet \u2014 the margin will appear here once the first results come in.';
     goalsWrap.style.display = 'none';
     return;
   }
 
-  const dPct = info.currentShareD * 100;
-  const rPct = 100 - dPct;
+  const dPct = info.D / info.T * 100;
+  const rPct = info.R / info.T * 100;
+  const oPct = info.O / info.T * 100;
   dEl.textContent = dPct.toFixed(2) + '%';
+  oEl.textContent = oPct.toFixed(2) + '%';
   rEl.textContent = rPct.toFixed(2) + '%';
-  barD.style.width = dPct + '%';
-  barR.style.width = rPct + '%';
+  barD.style.width = dPct + '%'; barO.style.width = oPct + '%'; barR.style.width = rPct + '%';
+
+  const absMargin = Math.abs(info.margin);
+  if(!info.leader){
+    leadEl.className = 'margin-tracker-lead';
+    leadEl.innerHTML = 'The statewide vote is tied';
+  }else{
+    leadEl.className = 'margin-tracker-lead ' + (info.leader === 'Democrats' ? 'd' : 'r');
+    leadEl.innerHTML = `${info.leader} lead by ${absMargin.toFixed(2)}%<span class="votes"> &middot; ${fmt(Math.abs(info.D - info.R))} votes ahead</span>`;
+  }
 
   let explainHtml;
   if(!info.hasPrior){
@@ -2663,48 +2701,95 @@ function renderMarginTracker(){
   }else if(!info.towardParty){
     explainHtml = 'The margin held essentially steady on the last update.';
   }else{
-    // Simple blue/red throughout, not gold -- the whole "X% move
-    // toward Party" phrase is one consistently-colored unit (blue for
-    // Democrats, red for Republicans), and every other mention of
-    // either party's name in the explanation below gets the same
-    // treatment for consistency within this tab.
-    const towardColor = info.towardParty === 'Democrats' ? 'var(--dem)' : 'var(--rep)';
-    const shiftPct = formatPctTweet(Math.abs(info.shareChange));
+    const toD = info.towardParty === 'Democrats';
+    const towardColor = toD ? 'var(--dem)' : 'var(--rep)';
+    const towardAdj = toD ? 'Democratic' : 'Republican';
     let whyHtml = '';
     if(info.hasDrop){
-      const dropPct = (info.dropShareD*100).toFixed(2);
-      const oldPct = (info.oldShareD*100).toFixed(2);
-      const wasMoreDem = info.dropShareD > info.oldShareD;
-      const towardLabel = wasMoreDem
-        ? '<b style="color:var(--dem)">toward Democrats</b>'
-        : '<b style="color:var(--rep)">toward Republicans</b>';
-      whyHtml = ` The new votes in that update ran about <b>${dropPct}%</b> <span style="color:var(--dem)">Democratic</span> (of just DEM+REP, ignoring NPA/Other) \u2014 ${wasMoreDem ? 'more' : 'less'} <span style="color:var(--dem)">Democratic</span> than the race's running average of <b>${oldPct}%</b>, which is what pulled the margin ${towardLabel} even if the other party also gained votes in raw numbers.`;
+      const gap = Math.abs(info.dropMargin - info.prevMargin).toFixed(2);
+      whyHtml = ` The new votes in that update came in at <b>${formatMarginLabel(info.dropMargin)}</b> on their own (counting every ballot in that drop) \u2014 <b style="color:${towardColor}">${gap} points more ${towardAdj}</b> than the race's running margin of <b>${formatMarginLabel(info.prevMargin)}</b>, which is what pulled the margin <b style="color:${towardColor}">toward ${info.towardParty}</b>.`;
+      // The case that confuses people most: the party that LOST ground
+      // still outvoted the other in the drop, just by less than the race
+      // had been running -- so its raw lead grew while its margin shrank.
+      const dropWinner = info.dD > info.dR ? 'Democrats' : (info.dR > info.dD ? 'Republicans' : null);
+      if(dropWinner && dropWinner !== info.towardParty){
+        const other = dropWinner === 'Democrats' ? 'Republicans' : 'Democrats';
+        whyHtml += ` ${dropWinner} still outvoted ${other} in that drop by ${fmt(Math.abs(info.dD - info.dR))} votes, but by less than the race had been running, so the overall margin still moved the other way.`;
+      }
     }
-    explainHtml = `Last update: <b style="color:${towardColor}">${shiftPct} move toward ${info.towardParty}</b>.${whyHtml}`;
+    explainHtml = `Last update: <b style="color:${towardColor}">${Math.abs(info.change).toFixed(2)}% move toward ${info.towardParty}</b>.${whyHtml}`;
   }
   explainEl.innerHTML = explainHtml;
 
+  // Drop goals: the next drop moves the margin toward whichever party
+  // beats today's margin in that drop. The leader has to win the drop by
+  // MORE than its current margin to widen its lead; the trailing party
+  // only has to keep the leader's win in that drop BELOW that margin
+  // (it can even lose the drop and still gain ground).
   goalsWrap.style.display = 'block';
-  goalD.textContent = dPct.toFixed(2) + '%';
-  goalR.textContent = rPct.toFixed(2) + '%';
+  if(!info.leader){
+    goalD.innerHTML = '<b>Democrats</b> gain ground with any drop they win.';
+    goalR.innerHTML = '<b>Republicans</b> gain ground with any drop they win.';
+  }else{
+    const m = absMargin.toFixed(2);
+    const winTxt = `<b>${info.leader}</b> need to win the next drop by more than <b>${m} points</b> (their current margin) to widen their lead.`;
+    const other = info.leader === 'Democrats' ? 'Republicans' : 'Democrats';
+    const holdTxt = `<b>${other}</b> only need to hold ${info.leader} under a <b>${m}-point</b> win in the next drop to gain ground \u2014 they can even lose the drop and still gain.`;
+    goalD.innerHTML = info.leader === 'Democrats' ? winTxt : holdTxt;
+    goalR.innerHTML = info.leader === 'Republicans' ? winTxt : holdTxt;
+  }
 }
 
 // ------------------------------------------------------------
-// MARGIN SHIFT CHART (Margin move tab)
+// STATEWIDE MARGIN LINE (Margin move tab)
 // ------------------------------------------------------------
-// One bar per historical statewide update: how far (in two-party
-// percentage points) that single update moved the race, with position
-// above/below zero carrying the direction (up = toward DEM, down =
-// toward REP) so every bar can stay the Margin move map's own gold
-// rather than needing DEM/REP color to also do that job. Same
-// 10-most-recent default + "Show all datapoints" toggle as the
-// cumulative vote charts, reusing CUMULATIVE_WINDOW_SIZE.
-let marginShiftShowAll = false;
-let lastMarginShiftData = null;
+// One point per statewide update showing the margin at that moment,
+// joined by a single line: light blue while Democrats lead, red while
+// Republicans lead, switching color exactly where the line crosses
+// "Even". Hover a point to see the lead. Same 10-most-recent default +
+// "Show all datapoints" toggle as the cumulative vote charts.
+//
+// Only the CURRENT election period is plotted: the history file also
+// holds earlier counts (e.g. the August primary), and a line running
+// from the primary's final margin straight into the general election's
+// first would be meaningless.
+const MARGIN_LINE_BLUE = '#5b9bd9';
+const MARGIN_LINE_RED = '#d4675a';
+let marginLineShowAll = false;
+let lastMarginLineData = null;
 
-async function renderMarginShiftChart(){
-  const el = document.getElementById('marginShiftChart');
-  const noteEl = document.getElementById('marginShiftWindowNote');
+// Splits one polyline into a blue (>= 0) and a red (<= 0) polyline,
+// inserting a point at the exact zero crossing -- interpolated in TIME --
+// so the color changes precisely where the line crosses Even. Runs are
+// separated by nulls so a color that comes back later doesn't draw a line
+// through the stretch where it was absent. Pure function.
+function splitMarginLineBySign(xs, ys){
+  const runs = { pos: { x: [], y: [], open: false }, neg: { x: [], y: [], open: false } };
+  const closeRun = k => { const r = runs[k]; if(r.open){ r.x.push(null); r.y.push(null); r.open = false; } };
+  const addSegment = (k, x0, y0, x1, y1) => {
+    closeRun(k === 'pos' ? 'neg' : 'pos');               // a color switch ends the other color's run
+    const r = runs[k];
+    if(!r.open){ r.x.push(x0); r.y.push(y0); r.open = true; }
+    r.x.push(x1); r.y.push(y1);
+  };
+  for(let i = 1; i < xs.length; i++){
+    const x0 = xs[i-1], x1 = xs[i], y0 = ys[i-1], y1 = ys[i];
+    if(y0 >= 0 && y1 >= 0){ addSegment('pos', x0, y0, x1, y1); }
+    else if(y0 <= 0 && y1 <= 0){ addSegment('neg', x0, y0, x1, y1); }
+    else{                                                 // strictly opposite signs: it crosses Even
+      const f = (0 - y0) / (y1 - y0);
+      const xc = new Date(x0.getTime() + f * (x1.getTime() - x0.getTime()));
+      if(y0 > 0){ addSegment('pos', x0, y0, xc, 0); addSegment('neg', xc, 0, x1, y1); }
+      else{       addSegment('neg', x0, y0, xc, 0); addSegment('pos', xc, 0, x1, y1); }
+    }
+  }
+  closeRun('pos'); closeRun('neg');
+  return { pos: { x: runs.pos.x, y: runs.pos.y }, neg: { x: runs.neg.x, y: runs.neg.y } };
+}
+
+async function renderMarginLineChart(){
+  const el = document.getElementById('marginLineChart');
+  const noteEl = document.getElementById('marginLineWindowNote');
   if(!el) return;
 
   let rows = null;
@@ -2715,85 +2800,111 @@ async function renderMarginShiftChart(){
     .filter(r => r._time)
     .sort((a,b) => a._time - b._time);
 
-  const dem = parsed.map(r => num(pick(r,['DEM'])));
-  const rep = parsed.map(r => num(pick(r,['REP'])));
-  const times = parsed.map(r => r._time);
+  const D = parsed.map(r => num(pick(r,['DEM'])));
+  const R = parsed.map(r => num(pick(r,['REP'])));
+  const O = parsed.map(r => num(pick(r,['NPA/Other'])));
+  const totals = parsed.map((r, i) => num(pick(r,['Total'])) || (D[i] + R[i] + O[i]));
+  const start = findCurrentPeriodStart(totals);
 
-  const shiftTimes = [], shiftValues = [], shiftFromPct = [], shiftToPct = [];
-  for(let i=1;i<times.length;i++){
-    const oldTwoParty = dem[i-1]+rep[i-1];
-    const newTwoParty = dem[i]+rep[i];
-    if(oldTwoParty <= 0 || newTwoParty <= 0) continue; // can't compute a two-party share with no D+R votes yet
-    const oldShare = dem[i-1]/oldTwoParty;
-    const newShare = dem[i]/newTwoParty;
-    shiftTimes.push(times[i]);
-    shiftValues.push((newShare-oldShare)*100);
-    shiftFromPct.push(oldShare*100);
-    shiftToPct.push(newShare*100);
+  const times = [], margins = [], leads = [], changes = [];
+  for(let i = start; i < parsed.length; i++){
+    const T = D[i] + R[i] + O[i];
+    if(T <= 0) continue;
+    const margin = (D[i] - R[i]) / T * 100;
+    times.push(parsed[i]._time);
+    margins.push(margin);
+    leads.push(D[i] - R[i]);
+    changes.push(margins.length > 1 ? margin - margins[margins.length - 2] : null);
   }
 
-  if(!shiftTimes.length){
-    el.innerHTML = '<div class="county-detail-note">Not enough historical updates logged yet to chart margin shifts \u2014 this needs at least two updates with DEM/REP votes.</div>';
+  if(!times.length){
+    el.innerHTML = '<div class="county-detail-note">No statewide updates logged yet \u2014 the margin line will appear once the first results come in.</div>';
     if(noteEl) noteEl.style.display = 'none';
-    lastMarginShiftData = null;
+    lastMarginLineData = null;
     return;
   }
 
-  lastMarginShiftData = { times: shiftTimes, values: shiftValues, fromPct: shiftFromPct, toPct: shiftToPct };
-  drawMarginShiftChart(lastMarginShiftData, marginShiftShowAll);
+  lastMarginLineData = { times, margins, leads, changes };
+  drawMarginLineChart(lastMarginLineData, marginLineShowAll);
 }
 
-function drawMarginShiftChart(data, showAll){
-  const el = document.getElementById('marginShiftChart');
-  const noteEl = document.getElementById('marginShiftWindowNote');
+// Hover text for one datapoint: when, who leads and by how much (percent
+// and votes), and how far that update moved it. Plain strings (not
+// Plotly's hovertemplate mini-language) so there's no percent-sign
+// escaping to get wrong.
+function marginLineHoverText(time, margin, lead, change){
+  const side = Math.abs(margin) < 0.005
+    ? 'The race is tied'
+    : `${margin > 0 ? 'Democrats' : 'Republicans'} lead by ${Math.abs(margin).toFixed(2)}%`;
+  const votes = lead === 0 ? '' : `<br>${fmt(Math.abs(lead))} votes ahead`;
+  let move = '';
+  if(change !== null){
+    move = Math.abs(change) < 0.005
+      ? '<br>No change from the previous update'
+      : `<br>${Math.abs(change).toFixed(2)}% move toward ${change > 0 ? 'Democrats' : 'Republicans'} from the previous update`;
+  }
+  return `${formatSortedHoverDate(time)}<br>${side}${votes}${move}`;
+}
+
+function drawMarginLineChart(data, showAll){
+  const el = document.getElementById('marginLineChart');
+  const noteEl = document.getElementById('marginLineWindowNote');
+  // Windowed AFTER the changes were computed, so the first visible point
+  // still reports its move from the update just outside the window.
   const sliceStart = showAll ? 0 : Math.max(0, data.times.length - CUMULATIVE_WINDOW_SIZE);
   const times = data.times.slice(sliceStart);
-  const values = data.values.slice(sliceStart);
-  const fromPct = data.fromPct.slice(sliceStart);
-  const toPct = data.toPct.slice(sliceStart);
+  const margins = data.margins.slice(sliceStart);
+  const leads = data.leads.slice(sliceStart);
+  const changes = data.changes.slice(sliceStart);
 
-  // Hover text built as plain strings (not Plotly's hovertemplate
-  // mini-language) so there's no percent-sign escaping ambiguity to
-  // get wrong without being able to render it to check.
-  const hoverTexts = times.map((t,i) => {
-    const dateLabel = formatSortedHoverDate(t);
-    const towardParty = values[i] >= 0 ? 'Democrats' : 'Republicans';
-    const shiftStr = Math.abs(values[i]).toFixed(2) + ' pts toward ' + towardParty;
-    return `${dateLabel}<br>Shift: ${shiftStr}<br>DEM share: ${fromPct[i].toFixed(2)}% \u2192 ${toPct[i].toFixed(2)}%`;
-  });
-  // Color carries direction now (blue toward DEM, red toward REP) --
-  // no gold, no axis label explaining the direction; the bar color and
-  // the hover text do that job, so nothing else needs to be on the
-  // chart itself.
-  const barColors = values.map(v => v >= 0 ? '#5b9bd9' : '#d4675a');
-  const trace = {
-    type:'bar', x:times, y:values,
-    marker:{ color:barColors },
-    // hovertext (not text) -- "text" on a bar trace can get rendered
-    // AS A LABEL inside/on the bar itself, which is exactly the tiny
-    // sideways text that showed up. hovertext is hover-only, never
-    // drawn on the chart.
-    hovertext: hoverTexts, hoverinfo:'text'
-  };
+  const lines = splitMarginLineBySign(times, margins);
+  const traces = [
+    { type:'scatter', mode:'lines', x:lines.pos.x, y:lines.pos.y, connectgaps:false,
+      line:{ color:MARGIN_LINE_BLUE, width:3 }, hoverinfo:'skip' },
+    { type:'scatter', mode:'lines', x:lines.neg.x, y:lines.neg.y, connectgaps:false,
+      line:{ color:MARGIN_LINE_RED, width:3 }, hoverinfo:'skip' },
+    { type:'scatter', mode:'markers', x:times, y:margins,
+      marker:{ size:8, color:margins.map(m => m >= 0 ? MARGIN_LINE_BLUE : MARGIN_LINE_RED), line:{ color:'#0a0e17', width:1.5 } },
+      hovertext: times.map((t, i) => marginLineHoverText(t, margins[i], leads[i], changes[i])),
+      hoverinfo:'text' }
+  ];
+
+  // Axis labelled the way the rest of the app talks ("D+10%", "Even",
+  // "R+5%") instead of bare signed numbers, with ticks at a round step.
+  const lo = Math.min(0, ...margins), hi = Math.max(0, ...margins);
+  const span = Math.max(hi - lo, 1);
+  const step = [0.5, 1, 2, 5, 10, 20, 25, 50].find(s => span / s <= 6) || 50;
+  const tickvals = [], ticktext = [];
+  for(let v = Math.floor(lo / step) * step; v <= Math.ceil(hi / step) * step + 1e-9; v += step){
+    const r = Math.round(v * 100) / 100;
+    tickvals.push(r);
+    ticktext.push(r === 0 ? 'Even' : (r > 0 ? 'D+' : 'R+') + Math.abs(r) + '%');
+  }
+
   const layout = {
     ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
+    margin:{ ...COUNTY_DETAIL_CHART_LAYOUT_BASE.margin, l:62 },
+    // automargin: the shared 40px bottom margin clips the rotated date
+    // labels on this chart, so let Plotly grow it to fit them.
+    xaxis:{ ...COUNTY_DETAIL_CHART_LAYOUT_BASE.xaxis, automargin:true },
     yaxis:{
       ...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis,
+      tickvals, ticktext,
+      rangemode:'tozero',          // always keep "Even" on the chart, even when one party leads throughout
       zeroline:true, zerolinecolor:'#556076', zerolinewidth:1.5
     },
-    // 'x' (not 'closest') triggers hover from anywhere in a bar's full
-    // column, not just the rendered bar itself -- a near-zero shift
-    // renders as a sliver only a pixel or two tall, which 'closest'
-    // mode makes nearly impossible to actually land a cursor on.
-    hovermode:'x',
+    hovermode:'closest',
+    hoverdistance:40,
     hoverlabel:{ bgcolor:'#151b28', bordercolor:'#7c879c', font:{family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5'} },
     showlegend:false
   };
-  Plotly.newPlot(el, [trace], layout, {displayModeBar:false, responsive:true});
+  Plotly.newPlot(el, traces, layout, {displayModeBar:false, responsive:true});
 
   if(noteEl) noteEl.style.display = (showAll || data.times.length <= CUMULATIVE_WINDOW_SIZE) ? 'none' : 'block';
 }
 
+// Builds the 4 copy-paste-ready text blocks (each becomes one carousel
+// card, and together make up the full "Copy" output).
 function buildTweetSections(){
   const list = COUNTIES;
   const sign = n => (n>=0?'+':'') + fmt(n);
@@ -2875,25 +2986,18 @@ function buildTweetSections(){
     }
   }
 
-  // Margin move: same "old two-party share vs new two-party share"
-  // comparison, but framed as a move toward whichever party is
+  // Margin move: how far this update moved the statewide margin
+  // (Democratic % minus Republican % of ALL ballots -- see
+  // statewideMarginMath), framed as a move toward whichever party is
   // actually GAINING ground this update -- not necessarily the current
   // leader (a leader who's still ahead can still be losing ground).
   // Always shown as a positive percentage; the direction is carried by
-  // the party name and emoji, never a minus sign.
-  let marginMoveLine = '';
-  const oldTwoParty = oldD + oldR;
-  const newTwoParty = totalD + totalR;
-  if(oldTwoParty > 0 && newTwoParty > 0){
-    const oldShare = oldD / oldTwoParty;
-    const newShare = totalD / newTwoParty;
-    const shareChange = newShare - oldShare; // positive = toward D, negative = toward R
-    if(Math.abs(shareChange) >= 0.00005){
-      const towardParty = shareChange > 0 ? 'Democrats' : 'Republicans';
-      const towardEmoji = shareChange > 0 ? '\u{1F535}' : '\u{1F534}';
-      marginMoveLine = `${towardEmoji} This is a ${formatPctTweet(Math.abs(shareChange))} move toward ${towardParty}.`;
-    }
-  }
+  // the party name and emoji, never a minus sign. Card 3 reads the SAME
+  // number from the SAME helper, so the two always agree.
+  const marginInfo = computeStatewideMarginInfo();
+  const marginMoveLine = marginInfo.towardParty
+    ? `${marginInfo.towardEmoji} This is a ${Math.abs(marginInfo.change).toFixed(2)}% move toward ${marginInfo.towardParty}.`
+    : '';
 
   // Same idea as the statewide totals' percentages, but scoped to just
   // THIS drop's own composition (what share of the new votes just
@@ -2953,44 +3057,37 @@ ${countiesReporting} of 67 counties have votes.`;
 `${countiesUpdatedCount} counties have been updated with ${fmt(totalNewTotal)} new votes counted. Here are the counties that updated and who won the latest vote drop by county.`;
 
   // Card 3: the statewide margin -- how big the current lead is, how much
-  // this update moved it, and why. "Margin" here is Democratic % minus
-  // Republican % of ALL ballots (NPA/Other included in the denominator),
-  // the same number as the dashboard readout and the PNG headline
-  // ("+10.22%"). That is a different measure than the "move toward"
-  // line in card 1, which is the shift in the two-party share, so the
-  // two percentages are not expected to match.
+  // this update moved it, and why. Every number comes from
+  // statewideMarginMath (the same helper card 1's "move toward" line and
+  // the Statewide Margin panel use), so card 1 says "0.35% move toward
+  // Republicans" exactly when this card says "decrease of 0.35%" for a
+  // Democratic lead.
   //
-  // New margin = vote-weighted average of the old margin and the drop's
-  // own margin, so the lead grows exactly when the drop was more
-  // favorable to the leader than the old margin was. That's why
+  // The party word in the last clause follows whoever leads, so
   // "increase" always pairs with "more [leader's party]" and "decrease"
-  // with "less" -- both come from the same sign.
+  // with "less": both come from the same sign (the new margin is the
+  // vote-weighted average of the old margin and the drop's margin).
   let marginCard = '';
-  if(totalVotes > 0){
+  if(marginInfo.hasCurrent){
     const yellow = '\u{1F7E1}';
-    if(totalD === totalR){
+    if(!marginInfo.leader){
       marginCard = `${yellow} The statewide vote is tied between Democrats and Republicans.`;
     }else{
-      const nowMargin = (totalD - totalR) / totalVotes * 100;         // points, + = Democratic
-      const leaderSign = totalD > totalR ? 1 : -1;
-      const leaderParty = totalD > totalR ? 'Democrats' : 'Republicans';
-      const leaderAdj = totalD > totalR ? 'Democratic' : 'Republican';
-      const leadStr = Math.abs(nowMargin).toFixed(2);
-      marginCard = `${yellow} The statewide margin is ${aOrAnForNumber(parseFloat(leadStr))} ${leadStr}% lead for ${leaderParty}.`;
+      const leaderSign = marginInfo.leader === 'Democrats' ? 1 : -1;
+      const leaderAdj = marginInfo.leader === 'Democrats' ? 'Democratic' : 'Republican';
+      const leadStr = Math.abs(marginInfo.margin).toFixed(2);
+      marginCard = `${yellow} The statewide margin is ${aOrAnForNumber(parseFloat(leadStr))} ${leadStr}% lead for ${marginInfo.leader}.`;
 
-      const votesBefore = totalVotes - totalNewTotal;
-      if(votesBefore > 0){                                             // not the very first update
-        const prevMargin = (oldD - oldR) / votesBefore * 100;
-        const change = leaderSign * (nowMargin - prevMargin);          // + = the leader's lead grew
+      if(marginInfo.hasPrior){                                         // not the very first update
+        const change = leaderSign * marginInfo.change;                 // + = the leader's lead grew
         const changeStr = Math.abs(change).toFixed(2);
         if(parseFloat(changeStr) === 0){
           marginCard += ' This is essentially unchanged from the previous update.';
         }else{
           const grew = change > 0;
           marginCard += ` This is a statewide ${grew ? 'increase' : 'decrease'} of ${changeStr}% compared to the previous update`;
-          if(totalNewTotal > 0){
-            const dropMargin = (demNewTotal - repNewTotal) / totalNewTotal * 100;
-            const dropGap = Math.abs(leaderSign * (dropMargin - prevMargin)).toFixed(2);
+          if(marginInfo.hasDrop){
+            const dropGap = Math.abs(leaderSign * (marginInfo.dropMargin - marginInfo.prevMargin)).toFixed(2);
             marginCard += ` because the latest drop was ${dropGap} points ${grew ? 'more' : 'less'} ${leaderAdj}.`;
           }else{
             marginCard += '.';
@@ -3062,13 +3159,27 @@ function showTweetCard(index){
   );
 }
 
+// How long each card stays up before the carousel moves on, so there's
+// time to actually read it. Clicking a dot starts a fresh full count, so
+// the card someone just picked also gets the full time.
+const TWEET_CARD_DWELL_MS = 10000;
+
 function restartTweetCarouselTimer(){
   if(tweetCarouselTimer) clearInterval(tweetCarouselTimer);
-  tweetCarouselTimer = setInterval(() => showTweetCard(tweetCardIndex + 1), 6000);
+  tweetCarouselTimer = setInterval(() => showTweetCard(tweetCardIndex + 1), TWEET_CARD_DWELL_MS);
 }
 
 function renderTweetCarousel(){
-  tweetCards = buildTweetSections();
+  const newCards = buildTweetSections();
+  // render() runs on every 60-second data check, not only when there's a
+  // new update. If the text is identical there is nothing to redraw, and
+  // redrawing would snap a reader back to card 1 mid-sentence and restart
+  // the timer -- so leave the card (and its countdown) alone.
+  const unchanged = tweetCards.length === newCards.length
+    && newCards.every((text, i) => text === tweetCards[i])
+    && document.querySelectorAll('.tweet-card').length === newCards.length;
+  if(unchanged) return;
+  tweetCards = newCards;
   const viewport = document.getElementById('tweetCardViewport');
   const dotsEl = document.getElementById('tweetCardDots');
   if(!viewport || !dotsEl) return;
@@ -5909,10 +6020,10 @@ document.getElementById('statewideShowAllToggle').addEventListener('change', e =
     renderCumulativeChartWindowed('statewideCumulativeChart', 'statewideWindowNote', lastStatewideCumulativeData, statewideShowAllCumulative);
   }
 });
-document.getElementById('marginShiftShowAllToggle').addEventListener('change', e => {
-  marginShiftShowAll = e.target.checked;
-  if(lastMarginShiftData){
-    drawMarginShiftChart(lastMarginShiftData, marginShiftShowAll);
+document.getElementById('marginLineShowAllToggle').addEventListener('change', e => {
+  marginLineShowAll = e.target.checked;
+  if(lastMarginLineData){
+    drawMarginLineChart(lastMarginLineData, marginLineShowAll);
   }
 });
 

@@ -3293,20 +3293,27 @@ ${countiesReporting} of 67 counties have votes.`;
   // Republicans" exactly when this card says "decrease of 0.35%" for a
   // Democratic lead.
   //
-  // The party word in the last clause follows whoever leads, so
-  // "increase" always pairs with "more [leader's party]" and "decrease"
-  // with "less": both come from the same sign (the new margin is the
-  // vote-weighted average of the old margin and the drop's margin).
+  // It opens with the statewide turnout ("With 1.77% turnout, ...") --
+  // the same figure as the Total Turnout screenshot and the turnout
+  // bars -- unless the SHOW_TURNOUT switch has turnout hidden.
+  //
+  // The last clause always names the party that GAINED ground, the way
+  // the Margin Move image words it: "the latest drop was 5.08 points more
+  // Republican" (never "less Democratic"). "Increase"/"decrease" still
+  // describes the LEADER's margin; "more [gainer]" describes the drop.
+  // Both come from the same math (the new margin is the vote-weighted
+  // average of the old margin and the drop's margin).
+  const turnoutInfo = SHOW_TURNOUT ? turnoutFooterContent(list, totalVotes) : null;
+  const marginOpener = turnoutInfo ? `With ${turnoutInfo.pctText} turnout, the statewide` : 'The statewide';
   let marginCard = '';
   if(marginInfo.hasCurrent){
     const yellow = '\u{1F7E1}';
     if(!marginInfo.leader){
-      marginCard = `${yellow} The statewide vote is tied between Democrats and Republicans.`;
+      marginCard = `${yellow} ${marginOpener} vote is tied between Democrats and Republicans.`;
     }else{
       const leaderSign = marginInfo.leader === 'Democrats' ? 1 : -1;
-      const leaderAdj = marginInfo.leader === 'Democrats' ? 'Democratic' : 'Republican';
       const leadStr = Math.abs(marginInfo.margin).toFixed(2);
-      marginCard = `${yellow} The statewide margin is ${aOrAnForNumber(parseFloat(leadStr))} ${leadStr}% lead for ${marginInfo.leader}.`;
+      marginCard = `${yellow} ${marginOpener} margin is ${aOrAnForNumber(parseFloat(leadStr))} ${leadStr}% lead for ${marginInfo.leader}.`;
 
       if(marginInfo.hasPrior){                                         // not the very first update
         const change = leaderSign * marginInfo.change;                 // + = the leader's lead grew
@@ -3316,9 +3323,10 @@ ${countiesReporting} of 67 counties have votes.`;
         }else{
           const grew = change > 0;
           marginCard += ` This is a statewide ${grew ? 'increase' : 'decrease'} of ${changeStr}% compared to the previous update`;
-          if(marginInfo.hasDrop){
-            const dropGap = Math.abs(leaderSign * (marginInfo.dropMargin - marginInfo.prevMargin)).toFixed(2);
-            marginCard += ` because the latest drop was ${dropGap} points ${grew ? 'more' : 'less'} ${leaderAdj}.`;
+          if(marginInfo.hasDrop && marginInfo.towardParty){
+            const gainerAdj = marginInfo.towardParty === 'Democrats' ? 'Democratic' : 'Republican';
+            const dropGap = Math.abs(marginInfo.dropMargin - marginInfo.prevMargin).toFixed(2);
+            marginCard += ` because the latest drop was ${dropGap} points more ${gainerAdj}.`;
           }else{
             marginCard += '.';
           }
@@ -3327,7 +3335,11 @@ ${countiesReporting} of 67 counties have votes.`;
     }
   }
 
-  // Card 4: Top 3 Largest Updates -- medal rank plus a color emoji
+  // Card 4: turnout by county, in sentences. Skipped when turnout is
+  // hidden (SHOW_TURNOUT) or there are no votes yet.
+  const turnoutCard = (SHOW_TURNOUT && marginInfo.hasCurrent) ? turnoutTweetText(turnoutFooterContent(list, totalVotes)) : '';
+
+  // Card 5: Top 3 Largest Updates -- medal rank plus a color emoji
   // showing who actually won each county's drop (using the same
   // leader-finding logic as the Drop Winners map, so a tie shows both
   // parties' colors and a true 3-way tie shows green, never a wrong
@@ -3367,7 +3379,14 @@ ${topDropsText}
 #FlaPol #Midterms2026 #FLSen #FLGov`;
 
   // The margin card is left out only when there are no votes at all.
-  return marginCard ? [section1, section2, marginCard, section3] : [section1, section2, section3];
+  // Top 3 is always last. The margin and turnout cards sit between the
+  // "counties updated" line and Top 3, and are each left out only when
+  // they have nothing to say (no votes yet, or turnout hidden).
+  const cards = [section1, section2];
+  if(marginCard) cards.push(marginCard);
+  if(turnoutCard) cards.push(turnoutCard);
+  cards.push(section3);
+  return cards;
 }
 
 function escapeHtmlForCard(str){
@@ -4304,6 +4323,23 @@ function turnoutFooterContent(counties, totalVotes){
     return { key: bin.key, color: bin.color, count, ...turnoutRangeText(bin, count) };
   }).filter(r => r.count > 0);
   return { frac, pctText: formatTurnoutPct(frac), votesText: fmt(totalVotes), registeredText: fmt(registered), rows };
+}
+
+// The "turnout by county" card of the update post, in plain sentences:
+//   "Here is the current turnout by county. 41 counties have less than 2%
+//    turnout, 24 counties have 2\u20135% turnout, and 2 counties have 5\u201310%
+//    turnout."
+// Same ranges and same wording as the Total Turnout screenshot's footer
+// (it reuses its rows), so the post and the picture always agree. Only
+// ranges that have counties are mentioned. Pure function.
+function turnoutTweetText(content){
+  const intro = 'Here is the current turnout by county.';
+  const rows = content.rows;
+  if(!rows.length) return '';
+  const clause = r => `${r.countText}${r.restText}`;
+  if(rows.length === 1) return `${intro} All ${clause(rows[0])}.`;
+  if(rows.length === 2) return `${intro} ${clause(rows[0])}, while ${clause(rows[1])}.`;
+  return `${intro} ${rows.slice(0, -1).map(clause).join(', ')}, and ${clause(rows[rows.length - 1])}.`;
 }
 
 // Unscaled height of the footer's content area (the left column is a

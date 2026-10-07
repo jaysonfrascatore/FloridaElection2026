@@ -460,6 +460,9 @@
   .sim-env-result.d{ color:var(--dem); } .sim-env-result.r{ color:var(--rep); }
   .sim-env-hint{ font-family:var(--mono); font-size:10.5px; color:var(--muted-2); line-height:1.55; margin-top:6px; }
   #historySlider:disabled{ opacity:.4; cursor:not-allowed; }
+  /* Total Turnout's time slider: white on the left to #98c1d9 on the right. */
+  #turnoutHistorySlider{ background:linear-gradient(90deg, #ffffff, #98c1d9); }
+  #turnoutHistorySlider:disabled{ opacity:.4; cursor:not-allowed; }
   .npa-slider-ends{
     display:flex; justify-content:space-between; font-family:var(--mono); font-size:9.5px;
     color:var(--muted-2); margin-top:6px; letter-spacing:.03em; text-transform:uppercase;
@@ -496,6 +499,18 @@
   #voteTable th:nth-child(7), #voteTable td:nth-child(7){ width:10%; }
   #voteTable th:nth-child(8), #voteTable td:nth-child(8){ width:10%; }
   #voteTable th:nth-child(9), #voteTable td:nth-child(9){ width:16%; }
+  /* Total Turnout's table has eight columns with longer headers than the
+     other tabs' nine, so it gets its own widths, and its headers wrap onto
+     two lines instead of being cut off ("Turnout Category", "Percent Turnout"). */
+  #voteTable.turnout-table th:nth-child(1), #voteTable.turnout-table td:nth-child(1){ width:15%; }
+  #voteTable.turnout-table th:nth-child(2), #voteTable.turnout-table td:nth-child(2){ width:15%; }
+  #voteTable.turnout-table th:nth-child(3), #voteTable.turnout-table td:nth-child(3){ width:14%; }
+  #voteTable.turnout-table th:nth-child(4), #voteTable.turnout-table td:nth-child(4){ width:12%; }
+  #voteTable.turnout-table th:nth-child(5), #voteTable.turnout-table td:nth-child(5),
+  #voteTable.turnout-table th:nth-child(6), #voteTable.turnout-table td:nth-child(6),
+  #voteTable.turnout-table th:nth-child(7), #voteTable.turnout-table td:nth-child(7),
+  #voteTable.turnout-table th:nth-child(8), #voteTable.turnout-table td:nth-child(8){ width:11%; }
+  #voteTable.turnout-table thead th{ white-space:normal; line-height:1.25; vertical-align:bottom; }
   thead th{
     position:sticky; top:0; background:var(--panel-2); text-align:left; padding:9px 7px;
     font-family:var(--mono); font-size:10px; letter-spacing:.04em; text-transform:uppercase;
@@ -890,6 +905,14 @@
             <span>&#8635;</span> <span id="countyZoomResetLabel">Reset Zoom</span>
           </button>
         </div>
+      </div>
+      <div class="npa-slider-wrap" id="turnoutSliderWrap" style="display:none;">
+        <div class="npa-slider-label">
+          <span>Historical turnout &mdash; drag to replay turnout by county at any past update</span>
+          <span class="val" id="turnoutHistoryValue">Live Results</span>
+        </div>
+        <input type="range" id="turnoutHistorySlider" class="adj-slider" min="0" max="1" step="1" value="1">
+        <div class="npa-slider-ends"><span id="turnoutHistoryStartLabel">Earliest</span><span>Live</span></div>
       </div>
       <div class="npa-slider-wrap" id="npaSliderWrap" style="display:none;">
         <div class="npa-slider-label">
@@ -1598,6 +1621,9 @@ let statewideTotals = { dem:0, rep:0, npa:0 };
 let historicalTicks = [];
 let historicalSnapshots = [];
 let historicalSliderIndex = null;
+// The Total Turnout tab's own time slider: same snapshots, its own position,
+// so each tab's slider stays where you left it.
+let historicalTurnoutIndex = null;
 let historicalDataReady = false;
 let historicalDataBuildPromise = null;
 
@@ -1696,9 +1722,22 @@ async function ensureHistoricalSnapshotsBuilt(){
 // when it's been moved off "Live" -- everything that already reads
 // through this function (map, table, tooltip, stats, zoom, PNG export)
 // automatically reflects it with no further changes needed.
+// Which past update (if any) a tab's time slider is currently on. Only
+// General Election and Total Turnout have one.
+function historicalIndexFor(metric){
+  if(metric === 'demrepnpa') return historicalSliderIndex;
+  if(metric === 'total') return historicalTurnoutIndex;
+  return null;
+}
+// That update's moment in time, or null when the tab is on Live Results.
+function historicalTickFor(metric){
+  const i = historicalIndexFor(metric);
+  return (i !== null && historicalTicks[i]) ? historicalTicks[i] : null;
+}
 function activeCountiesFor(metric){
-  if(metric === 'demrepnpa' && historicalSliderIndex !== null && historicalSnapshots[historicalSliderIndex]){
-    return historicalSnapshots[historicalSliderIndex];
+  const i = historicalIndexFor(metric);
+  if(i !== null && historicalSnapshots[i]){
+    return historicalSnapshots[i];
   }
   return metric === 'rating' ? STATIC_DVR_COUNTIES : COUNTIES;
 }
@@ -2212,14 +2251,56 @@ const TURNOUT_BINS = [
 // so a county's color, its hover and its bar can never disagree.
 // Rounding first means the range is decided by the number people SEE:
 // 1.996% displays as 2.00% and therefore lands in "2–5%".
-function countyTurnoutPct(c){
-  const reg = SIM_REG[c.county];
-  const frac = turnoutFraction(c.total, reg ? reg[0] : 0);
+function countyTurnoutPctFor(name, total){
+  const reg = SIM_REG[name];
+  const frac = turnoutFraction(total, reg ? reg[0] : 0);
   return Math.round(frac * 10000) / 100;
 }
-function turnoutBinFor(c){
-  const pct = countyTurnoutPct(c);
+function countyTurnoutPct(c){
+  return countyTurnoutPctFor(c.county, c.total);
+}
+// The range a county would be in at a given vote total -- so the same
+// county can be placed before and after an update.
+function turnoutBinKeyFor(name, total){
+  const pct = countyTurnoutPctFor(name, total);
   return TURNOUT_BINS.find(b => pct >= b.min && pct < b.max).key;
+}
+function turnoutBinFor(c){
+  return turnoutBinKeyFor(c.county, c.total);
+}
+
+// Black or white text, whichever reads better on a given background,
+// chosen by WCAG contrast ratio. (The older contrastText() uses a plain
+// brightness cutoff, which puts white on #FF4F03 and #EB1BC8 at only about
+// 3.3:1 and 3.8:1; this picks the dark text there, at 6.4:1 and 5.5:1.)
+function relativeLuminance(hex){
+  const n = parseInt(hex.slice(1), 16);
+  const ch = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+  return 0.2126 * ch((n >> 16) & 255) + 0.7152 * ch((n >> 8) & 255) + 0.0722 * ch(n & 255);
+}
+function contrastRatio(hexA, hexB){
+  const a = relativeLuminance(hexA), b = relativeLuminance(hexB);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+function readableTextOn(hex){
+  const dark = '#0a0e17', light = '#ffffff';
+  return contrastRatio(hex, dark) >= contrastRatio(hex, light) ? dark : light;
+}
+
+// Which counties moved into a different turnout range in the LATEST
+// update, grouped by the range they entered (lowest range first), each
+// group in alphabetical order. A county's range before the update comes
+// from its total minus the votes that update added. Pure function.
+function turnoutRangeMovement(counties){
+  const entered = {};
+  counties.forEach(c => {
+    const before = turnoutBinKeyFor(c.county, c.total - (c.totalNew || 0));
+    const after = turnoutBinKeyFor(c.county, c.total);
+    if(before !== after) (entered[after] = entered[after] || []).push(c.county);
+  });
+  return TURNOUT_BINS
+    .filter(b => entered[b.key])
+    .map(b => ({ key: b.key, counties: entered[b.key].slice().sort((x, y) => x.localeCompare(y, 'en')) }));
 }
 // The key shown beside the map: a color square and its range for every
 // one of the nine ranges (all of them, always -- early in the count most
@@ -2542,6 +2623,7 @@ async function renderMap(){
   const activeCounties = activeCountiesFor(currentMetric);
   document.getElementById('mapTitle').textContent = m.title;
   document.getElementById('npaSliderWrap').style.display = (currentMetric === 'demrepnpa') ? 'block' : 'none';
+  document.getElementById('turnoutSliderWrap').style.display = (currentMetric === 'total') ? 'block' : 'none';
   document.getElementById('marginTrackerWrap').style.display = (currentMetric === 'move') ? 'block' : 'none';
   if(currentMetric === 'move'){
     renderMarginTracker();
@@ -2588,13 +2670,67 @@ async function renderMap(){
   if(typeof attachCountyDetailClickHandler === 'function') attachCountyDetailClickHandler();
 }
 
+// ---- the county table ----
+// Every tab shows the same table except Total Turnout, which swaps in its
+// own columns -- a colored Turnout Category chip and Percent Turnout in
+// place of Leader, Margin and Rating, since a county's rating or margin
+// says nothing about turnout:
+//   County | Turnout Category | Percent Turnout | Total | DEM | REP | NPA | Diff
+// (var, not let: renderTable first runs before this point is reached.)
+var tableHeadDefaultHtml;
+var tableHeadMode = 'default';
+
+function tableModeFor(metric){
+  return metric === 'total' ? 'turnout' : 'default';
+}
+function tableKeysFor(mode){
+  return mode === 'turnout'
+    ? ['county', 'turnoutBin', 'turnoutPct', 'total', 'dem', 'rep', 'npa', 'diff']
+    : ['county', 'leader', 'dem', 'rep', 'npa', 'diff', 'total', 'marginPct', 'rating'];
+}
+function turnoutTableHeadHtml(){
+  return '<th data-key="county">County</th>' +
+    '<th data-key="turnoutBin">Turnout Category</th>' +
+    '<th data-key="turnoutPct">Percent Turnout</th>' +
+    '<th data-key="total">Total</th>' +
+    '<th data-key="dem">DEM</th>' +
+    '<th data-key="rep">REP</th>' +
+    '<th data-key="npa">NPA</th>' +
+    '<th data-key="diff">Diff</th>';
+}
+// What a row is sorted on. The two turnout columns are computed (the
+// category sorts by range order, lowest first); everything else is just
+// the county's own field.
+function tableSortValue(c, key){
+  if(key === 'turnoutBin') return TURNOUT_BINS.findIndex(b => b.key === turnoutBinFor(c));
+  if(key === 'turnoutPct') return countyTurnoutPct(c);
+  return c[key];
+}
+
 function renderTable(){
   const activeCounties = activeCountiesFor(currentMetric);
   const useNpaAdj = currentMetric === 'demrepnpa';
+  const mode = tableModeFor(currentMetric);
+
+  // Header: swap it when the tab's column set changes, and fall back to
+  // sorting by County if the column we were sorted on isn't in this set.
+  const headRow = document.querySelector('#voteTable thead tr');
+  if(tableHeadDefaultHtml === undefined) tableHeadDefaultHtml = headRow.innerHTML;
+  if(tableHeadMode !== mode){
+    headRow.innerHTML = mode === 'turnout' ? turnoutTableHeadHtml() : tableHeadDefaultHtml;
+    tableHeadMode = mode;
+  }
+  document.getElementById('voteTable').classList.toggle('turnout-table', mode === 'turnout');
+  if(!tableKeysFor(mode).includes(sortKey)){ sortKey = 'county'; sortAsc = true; }
+  headRow.querySelectorAll('th').forEach(th => {
+    th.classList.toggle('sorted', th.dataset.key === sortKey);
+    th.classList.toggle('asc', th.dataset.key === sortKey && sortAsc);
+  });
+
   const q = document.getElementById('searchInput').value.trim().toLowerCase();
   let rows = activeCounties.filter(c => c.county.toLowerCase().includes(q));
   rows.sort((a,b)=>{
-    let av=a[sortKey], bv=b[sortKey];
+    let av=tableSortValue(a, sortKey), bv=tableSortValue(b, sortKey);
     if(typeof av === 'string'){ av=av.toLowerCase(); bv=bv.toLowerCase(); }
     if(av<bv) return sortAsc?-1:1;
     if(av>bv) return sortAsc?1:-1;
@@ -2602,6 +2738,22 @@ function renderTable(){
   });
   const body = document.getElementById('tableBody');
   body.innerHTML = rows.map(c => {
+    if(mode === 'turnout'){
+      const binKey = turnoutBinFor(c);
+      const color = TURNOUT_BINS.find(b => b.key === binKey).color;
+      return `
+    <tr data-county="${c.county}" class="${c.county===highlightedCounty?'hl':''}">
+      <td class="county-name">${c.county}</td>
+      <td><span class="chip" style="background:${color};color:${readableTextOn(color)}">${binKey}</span></td>
+      <td class="num-total">${countyTurnoutPct(c).toFixed(2)}%</td>
+      <td class="num-total">${fmt(c.total)}</td>
+      <td class="num-d">${fmt(c.dem)}</td>
+      <td class="num-r">${fmt(c.rep)}</td>
+      <td class="num-npa">${fmt(c.npa)}</td>
+      <td class="num-diff">${fmt(c.diff)}</td>
+    </tr>
+  `;
+    }
     const cat = useNpaAdj ? categoryForNpaDisplay(c) : c.category;
     const pending = useNpaAdj && isCountyPending(c);
     const d = pending ? npaDisplayRecord(c) : c;
@@ -3337,7 +3489,10 @@ ${countiesReporting} of 67 counties have votes.`;
 
   // Card 4: turnout by county, in sentences. Skipped when turnout is
   // hidden (SHOW_TURNOUT) or there are no votes yet.
-  const turnoutCard = (SHOW_TURNOUT && marginInfo.hasCurrent) ? turnoutTweetText(turnoutFooterContent(list, totalVotes)) : '';
+  // The range-movement lines need a previous update to compare against,
+  // so they're left out on the very first one.
+  const rangeMovement = marginInfo.hasPrior ? turnoutRangeMovement(list) : [];
+  const turnoutCard = (SHOW_TURNOUT && marginInfo.hasCurrent) ? turnoutTweetText(turnoutFooterContent(list, totalVotes), rangeMovement) : '';
 
   // Card 5: Top 3 Largest Updates -- medal rank plus a color emoji
   // showing who actually won each county's drop (using the same
@@ -3634,19 +3789,54 @@ let historySliderLoadStarted = false;
 function triggerHistorySliderLoad(){
   if(historySliderLoadStarted) return;
   historySliderLoadStarted = true;
-  ensureHistoricalSnapshotsBuilt().then(() => {
-    const slider = document.getElementById('historySlider');
-    if(!slider || !historicalTicks.length) return;
-    // Positions 0..N-1 are historical ticks; position N (the max, and
-    // the default/reset position) is "Live Results".
+  ensureHistoricalSnapshotsBuilt().then(configureHistorySliders);
+}
+// Sets BOTH time sliders (General Election's and Total Turnout's) to the
+// real range once the history is in, whichever one was touched first.
+// Positions 0..N-1 are past updates; position N (the max, and the default
+// / reset position) is "Live Results".
+function configureHistorySliders(){
+  if(!historicalTicks.length) return;
+  [['historySlider', 'historySliderStartLabel', historicalSliderIndex],
+   ['turnoutHistorySlider', 'turnoutHistoryStartLabel', historicalTurnoutIndex]].forEach(([sliderId, labelId, index]) => {
+    const slider = document.getElementById(sliderId);
+    if(!slider) return;
     slider.max = historicalTicks.length;
-    slider.value = historicalTicks.length;
-    document.getElementById('historySliderStartLabel').textContent = formatSortedHoverDate(historicalTicks[0]);
+    slider.value = index === null ? historicalTicks.length : index;
+    document.getElementById(labelId).textContent = formatSortedHoverDate(historicalTicks[0]);
   });
 }
 const historySliderEl = document.getElementById('historySlider');
 historySliderEl.addEventListener('pointerdown', triggerHistorySliderLoad);
 historySliderEl.addEventListener('touchstart', triggerHistorySliderLoad, { passive:true });
+const turnoutHistorySliderEl = document.getElementById('turnoutHistorySlider');
+turnoutHistorySliderEl.addEventListener('pointerdown', triggerHistorySliderLoad);
+turnoutHistorySliderEl.addEventListener('touchstart', triggerHistorySliderLoad, { passive:true });
+
+// Total Turnout's time slider: identical behavior to the General Election
+// one above -- past update replays the turnout map and table, far right is
+// Live Results.
+turnoutHistorySliderEl.addEventListener('input', e => {
+  const valueEl = document.getElementById('turnoutHistoryValue');
+  if(!historicalTicks.length){
+    // Nothing real loaded yet -- stays on Live Results until it is.
+    historicalTurnoutIndex = null;
+    valueEl.textContent = 'Live Results';
+    return;
+  }
+  const val = parseInt(e.target.value, 10);
+  if(val >= historicalTicks.length){
+    historicalTurnoutIndex = null;
+    valueEl.textContent = 'Live Results';
+  }else{
+    historicalTurnoutIndex = val;
+    valueEl.textContent = formatSortedHoverDate(historicalTicks[val]);
+  }
+  if(currentMetric === 'total'){
+    renderStats();
+    if(zoomedCounty){ refreshZoomedCountyView(); } else { renderMap(); renderTable(); }
+  }
+});
 
 historySliderEl.addEventListener('input', e => {
   const valueEl = document.getElementById('historySliderValue');
@@ -3686,6 +3876,9 @@ document.getElementById('metricSelect').addEventListener('click', e => {
   document.querySelectorAll('#metricSelect button').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   currentMetric = btn.dataset.metric;
+  // The history may have been loaded by the OTHER tab's slider; make sure
+  // this tab's slider has the real range too.
+  if(historicalDataReady) configureHistorySliders();
   renderStats();
   if(zoomedCounty){
     // Switching metric tabs while a county is zoomed re-opens the SAME
@@ -3756,14 +3949,14 @@ document.getElementById('shiftSliderResetBtn').addEventListener('click', resetSh
 
 document.getElementById('searchInput').addEventListener('input', () => renderTable());
 
-document.querySelectorAll('#voteTable thead th').forEach(th => {
-  th.addEventListener('click', () => {
-    const key = th.dataset.key;
-    if(sortKey === key){ sortAsc = !sortAsc; } else { sortKey = key; sortAsc = true; }
-    document.querySelectorAll('#voteTable thead th').forEach(t=>t.classList.remove('sorted','asc'));
-    th.classList.add('sorted'); if(sortAsc) th.classList.add('asc');
-    renderTable();
-  });
+// One listener on the header row (not on each <th>), because the header
+// cells are swapped when the column set changes between tabs.
+document.querySelector('#voteTable thead tr').addEventListener('click', e => {
+  const th = e.target.closest('th');
+  if(!th || !th.dataset.key) return;
+  const key = th.dataset.key;
+  if(sortKey === key){ sortAsc = !sortAsc; } else { sortKey = key; sortAsc = true; }
+  renderTable();          // also moves the sort arrow to the clicked column
 });
 
 // Statewide highlights for the Live Results PNG snapshot: raw votes,
@@ -3888,7 +4081,12 @@ function liveResultsSummary(){
   const rawLastUpdated =
     latestTimestampString(list.map(c=>c.runTimestamp)) ||
     latestTimestampString(list.map(c=>c.lastUpdated));
-  const asOfText = rawLastUpdated ? formatAsOf(rawLastUpdated) : formatAsOfFromDate(new Date());
+  // A screenshot taken while a time slider is on a past update is "as of"
+  // THAT update. (The reconstructed past records carry no check time, so
+  // without this the header fell through to the current clock time.)
+  const pastTick = historicalTickFor(currentMetric);
+  const asOfText = pastTick ? formatAsOfFromDate(pastTick)
+    : (rawLastUpdated ? formatAsOf(rawLastUpdated) : formatAsOfFromDate(new Date()));
 
   const npaPct = barDenom ? (totalNpaOther/barDenom)*100 : 0;
 
@@ -4325,21 +4523,33 @@ function turnoutFooterContent(counties, totalVotes){
   return { frac, pctText: formatTurnoutPct(frac), votesText: fmt(totalVotes), registeredText: fmt(registered), rows };
 }
 
-// The "turnout by county" card of the update post, in plain sentences:
-//   "Here is the current turnout by county. 41 counties have less than 2%
-//    turnout, 24 counties have 2\u20135% turnout, and 2 counties have 5\u201310%
-//    turnout."
-// Same ranges and same wording as the Total Turnout screenshot's footer
-// (it reuses its rows), so the post and the picture always agree. Only
-// ranges that have counties are mentioned. Pure function.
-function turnoutTweetText(content){
+// The "turnout by county" card of the update post, in plain sentences,
+// then (when anything moved) which counties entered a new range:
+//   "Here is the current turnout by county. 35 counties have less than 2%
+//    turnout, 30 counties have 2\u20135% turnout, and 2 counties have 5\u201310%
+//    turnout.
+//
+//    Latest Turnout Range Movement:
+//    Entered 2\u20135%: Broward, Clay, Gadsden, St. Johns
+//    Entered 5\u201310%: Charlotte"
+// Same ranges and wording as the Total Turnout screenshot's footer (it
+// reuses that footer's rows), so the post and the picture always agree.
+// Only ranges that have counties are mentioned, and the movement block is
+// left out entirely when no county changed range. Pure function.
+function turnoutTweetText(content, movement){
   const intro = 'Here is the current turnout by county.';
   const rows = content.rows;
   if(!rows.length) return '';
   const clause = r => `${r.countText}${r.restText}`;
-  if(rows.length === 1) return `${intro} All ${clause(rows[0])}.`;
-  if(rows.length === 2) return `${intro} ${clause(rows[0])}, while ${clause(rows[1])}.`;
-  return `${intro} ${rows.slice(0, -1).map(clause).join(', ')}, and ${clause(rows[rows.length - 1])}.`;
+  let text;
+  if(rows.length === 1) text = `${intro} All ${clause(rows[0])}.`;
+  else if(rows.length === 2) text = `${intro} ${clause(rows[0])}, while ${clause(rows[1])}.`;
+  else text = `${intro} ${rows.slice(0, -1).map(clause).join(', ')}, and ${clause(rows[rows.length - 1])}.`;
+  if(movement && movement.length){
+    text += '\n\nLatest Turnout Range Movement:\n' +
+      movement.map(m => `Entered ${m.key}: ${m.counties.join(', ')}`).join('\n');
+  }
+  return text;
 }
 
 // Unscaled height of the footer's content area (the left column is a

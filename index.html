@@ -670,7 +670,25 @@
   }
   #countyZoomPngBtn:hover{ border-color:var(--gold); }
   #countyZoomPngBtn.visible{ display:inline-flex; }
-  #mapZoomRow{ display:flex; gap:14px; align-items:stretch; }
+  #mapZoomRow{ display:flex; gap:14px; align-items:stretch; position:relative; }
+  /* Total Turnout's key: sits over the open water at the map's lower left
+     (never over a county), and steps aside while a county page is open. */
+  .map-side-legend{
+    display:none; position:absolute; left:10px; bottom:12px; z-index:2; pointer-events:none;
+    background:rgba(10,14,23,0.78); border:1px solid var(--border); border-radius:8px;
+    padding:10px 13px 8px; font-family:var(--mono);
+  }
+  .map-side-legend .side-legend-title{
+    font-size:11px; font-weight:700; color:var(--text); letter-spacing:.05em; text-transform:uppercase;
+    line-height:1.3; margin-bottom:8px;
+  }
+  .map-side-legend .side-legend-title span{
+    display:block; font-size:9.5px; font-weight:400; color:var(--muted-2); text-transform:none; letter-spacing:0;
+  }
+  .map-side-legend .side-legend-row{ display:flex; align-items:center; gap:9px; font-size:11.5px; color:var(--text); margin:5px 0; }
+  .map-side-legend .sq{ width:15px; height:15px; border-radius:3px; border:1px solid rgba(255,255,255,0.22); flex:0 0 auto; }
+  .map-side-legend.on{ display:block; }
+  #mapZoomRow.zoomed .map-side-legend{ display:none !important; }
   #mapZoomRow #map{ flex:1 1 auto; min-width:0; width:auto; }
   #countyZoomInfoPanel{
     display:none; flex:0 0 270px; background:var(--panel-2); border:1px solid var(--border);
@@ -750,6 +768,16 @@
   }
 
   @media (max-width:640px){
+    /* Total Turnout key: below the map instead of floating over it. Lives in
+       this later block on purpose -- the base .map-side-legend rule above
+       would otherwise override it (same specificity, later wins). */
+    #mapZoomRow{ flex-wrap:wrap; }
+    #mapZoomRow #map{ flex:1 1 100%; }
+    .map-side-legend{ position:static; flex:1 1 100%; background:none; border:none; padding:2px 0 0; }
+    .map-side-legend.on{ display:flex; flex-wrap:wrap; align-items:center; gap:4px 14px; }
+    .map-side-legend .side-legend-title{ flex:1 1 100%; margin-bottom:2px; }
+    .map-side-legend .side-legend-row{ margin:2px 0; }
+
     #mapZoomRow.zoomed{ flex-direction:column; }
     #countyZoomInfoPanel{ flex:0 0 auto; }
     .county-detail-chart{ min-height:280px; }
@@ -907,6 +935,7 @@
            without needing to hover, which is the point on mobile. -->
       <div id="mapZoomRow">
         <div id="map"></div>
+        <div class="map-side-legend" id="mapSideLegend"></div>
         <div id="countyZoomInfoPanel">
           <div id="countyZoomInfoText"></div>
           <div class="turnout-bar-wrap" id="countyTurnoutWrap" style="display:none;">
@@ -2159,6 +2188,48 @@ function renderStats(){
   }
 }
 
+// ------------------------------------------------------------
+// TOTAL TURNOUT MAP: nine color ranges of "% of registered voters"
+// ------------------------------------------------------------
+// Each range includes its lower edge and stops just short of its upper
+// one: exactly 2.00% is in "2–5%", 1.99% is in "0–2%".
+const TURNOUT_BINS = [
+  { key:'0–2%',   min:0,  max:2,        color:'#D4D8C4' },
+  { key:'2–5%',   min:2,  max:5,        color:'#8BE9C6' },
+  { key:'5–10%',  min:5,  max:10,       color:'#E5EC1C' },
+  { key:'10–20%', min:10, max:20,       color:'#306F58' },
+  { key:'20–30%', min:20, max:30,       color:'#607A0D' },
+  { key:'30–45%', min:30, max:45,       color:'#E98A1E' },
+  { key:'45–60%', min:45, max:60,       color:'#FF4F03' },
+  { key:'60–75%', min:60, max:75,       color:'#EB1BC8' },
+  { key:'75%+',        min:75, max:Infinity, color:'#6212a4' }
+];
+
+// A county's turnout as a percent (0 to 95), rounded to two decimals --
+// the very same figure the county page's turnout bar shows (votes cast
+// divided by registered voters, same registration table, same 95% cap),
+// so a county's color, its hover and its bar can never disagree.
+// Rounding first means the range is decided by the number people SEE:
+// 1.996% displays as 2.00% and therefore lands in "2–5%".
+function countyTurnoutPct(c){
+  const reg = SIM_REG[c.county];
+  const frac = turnoutFraction(c.total, reg ? reg[0] : 0);
+  return Math.round(frac * 10000) / 100;
+}
+function turnoutBinFor(c){
+  const pct = countyTurnoutPct(c);
+  return TURNOUT_BINS.find(b => pct >= b.min && pct < b.max).key;
+}
+// The key shown beside the map: a color square and its range for every
+// one of the nine ranges (all of them, always -- early in the count most
+// are empty, but the scale should be readable before turnout fills it in).
+function turnoutSideLegendHtml(){
+  return `<div class="side-legend-title">Turnout<span>% of registered voters</span></div>` +
+    TURNOUT_BINS.map(b =>
+      `<div class="side-legend-row"><span class="sq" style="background:${b.color}"></span><span class="lbl">${b.key}</span></div>`
+    ).join('');
+}
+
 const METRICS = {
   // "Primary Election" — pinned to the frozen snapshot (STATIC_DVR_COUNTIES), never
   // touched by the live auto-refresh.
@@ -2168,7 +2239,11 @@ const METRICS = {
   // the tier is decided from a margin that folds NPA into the denominator
   // alongside DEM and REP, so heavy-NPA counties can show a lighter lean.
   demrepnpa: { title:'General Election rating by county', categorical:true, cats:NPA_DISPLAY_CATS, catFn:categoryForNpaDisplay },
-  total: { title:'Total turnout by county', get:c=>c.total, scale:[[0,'#bce784'],[0.5,'#8ac926'],[1,'#007200']], range:cs=>Math.max(1,...cs.map(c=>c.total)), isCount:true },
+  // Turnout as a share of registered voters, in nine color ranges (see
+  // TURNOUT_BINS). The raw vote count is still in the hover, the county
+  // page and the table. sideLegend: the key sits beside the map as a
+  // vertical list of squares instead of the chips under it.
+  total: { title:'Turnout by county (% of registered voters)', categorical:true, cats:TURNOUT_BINS, catFn:turnoutBinFor, sideLegend:true },
   move: { title:'Counties with a forecast rating change', categorical:true, cats:MOVE_CATS, catFn:moveCategoryFor },
   updated: { title:'Counties updated (new votes reported)', categorical:true, cats:UPDATED_CATS, catFn:updatedCategoryFor },
   // Which party won each county's latest hourly vote drop specifically —
@@ -2227,6 +2302,15 @@ function tooltipText(list){
         `<b>${winner} won this drop</b><br>` +
         `\u{1F535} DEM +${fmt(c.demNew)} \u00b7 \u{1F534} REP +${fmt(c.repNew)} \u00b7 \u{1F7E3} NPA/Other +${fmt(c.otherNew)}<br>` +
         `\u{1F7E2} Total +${fmt(c.totalNew)}`;
+    });
+  }
+  if(currentMetric === 'total'){
+    return list.map(c => {
+      const reg = SIM_REG[c.county] ? SIM_REG[c.county][0] : 0;
+      return `<b>${c.county}</b><br>` +
+        `<b>Turnout: ${formatTurnoutPct(turnoutFraction(c.total, reg))} of registered voters</b><br>` +
+        `\u{1F7E2} Total votes: ${fmt(c.total)}<br>` +
+        `Registered voters: ${fmt(reg)}`;
     });
   }
   if(currentMetric === 'party-dem'){
@@ -2395,7 +2479,7 @@ function buildMapTrace(metric, activeCounties){
   const m = METRICS[metric];
   const locations = activeCounties.map(c=>c.fips);
   const text = tooltipText(activeCounties);
-  let trace, legendHtml = '', legendVisible = false;
+  let trace, legendHtml = '', legendVisible = false, sideLegendHtml = '';
 
   if(m.categorical){
     const cats = m.cats, n = cats.length;
@@ -2413,6 +2497,13 @@ function buildMapTrace(metric, activeCounties){
       if(!count) return '';
       return `<span class="swatch" style="background:${cat.color};color:${contrastText(cat.color)}">${cat.key} · ${count}</span>`;
     }).join('');
+    // A side legend replaces the chips under the map (it lists every
+    // range, not just the ones that currently have counties).
+    if(m.sideLegend){
+      legendVisible = false;
+      legendHtml = '';
+      sideLegendHtml = turnoutSideLegendHtml();
+    }
   }else if(m.symmetric){
     const maxAbs = Math.max(0.01, ...activeCounties.map(c=>Math.abs(m.get(c))));
     const z = activeCounties.map(m.get);
@@ -2441,7 +2532,7 @@ function buildMapTrace(metric, activeCounties){
     };
   }
 
-  return { trace, legendHtml, legendVisible };
+  return { trace, legendHtml, legendVisible, sideLegendHtml };
 }
 
 async function renderMap(){
@@ -2456,10 +2547,13 @@ async function renderMap(){
     renderMarginLineChart();
   }
 
-  const { trace, legendHtml, legendVisible } = buildMapTrace(currentMetric, activeCounties);
+  const { trace, legendHtml, legendVisible, sideLegendHtml } = buildMapTrace(currentMetric, activeCounties);
   const legendEl = document.getElementById('mapLegend');
   legendEl.style.display = legendVisible ? 'flex' : 'none';
   legendEl.innerHTML = legendHtml;
+  const sideLegendEl = document.getElementById('mapSideLegend');
+  sideLegendEl.classList.toggle('on', !!sideLegendHtml);
+  sideLegendEl.innerHTML = sideLegendHtml;
 
   // This function waits on the county shapes above, so a county page can
   // be opened in the meantime (e.g. clicking a table row right after
@@ -3876,6 +3970,60 @@ function drawMarginMoveBlock(ctx, info, x0, y0, width, scale){
   }
 }
 
+// The Total Turnout key, drawn onto the screenshot: the same nine color
+// squares and ranges as the on-page legend, in a panel at the map area's
+// lower left (open water, clear of every county). `x` is the panel's left
+// edge and `bottomY` its bottom edge, in canvas pixels; sizes are unscaled.
+function drawTurnoutLegendOnCanvas(ctx, x, bottomY, scale){
+  const S = v => v * scale;
+  const sans = 'Inter, Arial, sans-serif';
+  const pad = 14, sq = 17, rowH = 24, gap = 12;
+  const headH = 14 + 3 + 12 + 12;                       // title + subtitle + space before the rows
+  const boxH = pad + headH + TURNOUT_BINS.length * rowH + pad - 6;
+
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = `700 ${Math.round(S(17))}px ${sans}`;
+  const labelW = Math.max(...TURNOUT_BINS.map(b => ctx.measureText(b.key).width));
+  ctx.font = `400 ${Math.round(S(12))}px ${sans}`;
+  const subW = ctx.measureText('% of registered voters').width;
+  const boxW = Math.max(S(pad * 2 + sq + gap) + labelW, S(pad * 2) + subW);
+  const top = bottomY - S(boxH);
+
+  // panel (rounded corners drawn by hand: ctx.roundRect isn't everywhere yet)
+  const r = S(8);
+  ctx.beginPath();
+  ctx.moveTo(x + r, top);
+  ctx.arcTo(x + boxW, top, x + boxW, top + boxH * scale, r);
+  ctx.arcTo(x + boxW, top + boxH * scale, x, top + boxH * scale, r);
+  ctx.arcTo(x, top + boxH * scale, x, top, r);
+  ctx.arcTo(x, top, x + boxW, top, r);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(10,14,23,0.88)';
+  ctx.fill();
+  ctx.strokeStyle = '#212a3b';
+  ctx.lineWidth = Math.max(1, S(1));
+  ctx.stroke();
+
+  ctx.fillStyle = '#e9edf5';
+  ctx.font = `700 ${Math.round(S(14))}px ${sans}`;
+  ctx.fillText('TURNOUT', x + S(pad), top + S(pad + 14));
+  ctx.fillStyle = '#7c879c';
+  ctx.font = `400 ${Math.round(S(12))}px ${sans}`;
+  ctx.fillText('% of registered voters', x + S(pad), top + S(pad + 14 + 3 + 12));
+
+  TURNOUT_BINS.forEach((b, i) => {
+    const rowTop = top + S(pad + headH + i * rowH);
+    ctx.fillStyle = b.color;
+    ctx.fillRect(x + S(pad), rowTop, S(sq), S(sq));
+    ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+    ctx.lineWidth = Math.max(1, S(1));
+    ctx.strokeRect(x + S(pad), rowTop, S(sq), S(sq));
+    ctx.fillStyle = '#e9edf5';
+    ctx.font = `700 ${Math.round(S(17))}px ${sans}`;
+    ctx.fillText(b.key, x + S(pad + sq + gap), rowTop + S(sq) - S(2));
+  });
+}
+
 // Renders a small statewide DEM/REP/NPA bar chart to an image via a
 // temporary, off-screen Plotly plot (kept in the DOM but positioned off
 // canvas, since Plotly needs real layout to render into). Used only for
@@ -4204,6 +4352,11 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
     ctx.drawImage(mapImg, 0, headerH*scale);
     if(chartImg){
       ctx.drawImage(chartImg, mapImg.width + gapPx, headerH*scale);
+    }
+    // Total Turnout: the color key goes on the map itself, at its lower
+    // left over open water. Every other tab's screenshot is unchanged.
+    if(currentMetric === 'total'){
+      drawTurnoutLegendOnCanvas(ctx, 24*scale, headerH*scale + mapImg.height - 24*scale, scale);
     }
 
     // Footer

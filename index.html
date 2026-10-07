@@ -2288,19 +2288,26 @@ function readableTextOn(hex){
 }
 
 // Which counties moved into a different turnout range in the LATEST
-// update, grouped by the range they entered (lowest range first), each
-// group in alphabetical order. A county's range before the update comes
-// from its total minus the votes that update added. Pure function.
+// update, grouped by the range they LANDED in (lowest range first), each
+// group in alphabetical order. A county that jumps past a whole range is
+// listed once, under where it ended up. Each county carries how many
+// points of turnout the update added: its turnout after minus its turnout
+// before (before = its total minus the votes that update added), both
+// rounded to two decimals the way the table and map show them, so the
+// figure always equals what you'd get by subtracting the table's numbers.
+// Negative if a correction pulled it down. Pure function.
 function turnoutRangeMovement(counties){
   const entered = {};
   counties.forEach(c => {
+    const pctBefore = countyTurnoutPctFor(c.county, c.total - (c.totalNew || 0));
+    const pctAfter = countyTurnoutPctFor(c.county, c.total);
     const before = turnoutBinKeyFor(c.county, c.total - (c.totalNew || 0));
     const after = turnoutBinKeyFor(c.county, c.total);
-    if(before !== after) (entered[after] = entered[after] || []).push(c.county);
+    if(before !== after) (entered[after] = entered[after] || []).push({ name: c.county, change: pctAfter - pctBefore });
   });
   return TURNOUT_BINS
     .filter(b => entered[b.key])
-    .map(b => ({ key: b.key, counties: entered[b.key].slice().sort((x, y) => x.localeCompare(y, 'en')) }));
+    .map(b => ({ key: b.key, counties: entered[b.key].slice().sort((x, y) => x.name.localeCompare(y.name, 'en')) }));
 }
 // The key shown beside the map: a color square and its range for every
 // one of the nine ranges (all of them, always -- early in the count most
@@ -4530,8 +4537,9 @@ function turnoutFooterContent(counties, totalVotes){
 //    turnout.
 //
 //    Latest Turnout Range Movement:
-//    Entered 2\u20135%: Broward, Clay, Gadsden, St. Johns
-//    Entered 5\u201310%: Charlotte"
+//    Entered 2\u20135%: Broward County (+1.20%), Clay County (+0.80%)
+//    Entered 5\u201310%: Charlotte County (+0.50%)"
+// (the figure is how many points of turnout that update added)
 // Same ranges and wording as the Total Turnout screenshot's footer (it
 // reuses that footer's rows), so the post and the picture always agree.
 // Only ranges that have counties are mentioned, and the movement block is
@@ -4546,8 +4554,10 @@ function turnoutTweetText(content, movement){
   else if(rows.length === 2) text = `${intro} ${clause(rows[0])}, while ${clause(rows[1])}.`;
   else text = `${intro} ${rows.slice(0, -1).map(clause).join(', ')}, and ${clause(rows[rows.length - 1])}.`;
   if(movement && movement.length){
+    // "+0.50%" for a rise, "-0.30%" if a correction pulled a county down.
+    const gain = c => `${c.change >= 0 ? '+' : '-'}${Math.abs(c.change).toFixed(2)}%`;
     text += '\n\nLatest Turnout Range Movement:\n' +
-      movement.map(m => `Entered ${m.key}: ${m.counties.join(', ')}`).join('\n');
+      movement.map(m => `Entered ${m.key}: ${m.counties.map(c => `${c.name} County (${gain(c)})`).join(', ')}`).join('\n');
   }
   return text;
 }

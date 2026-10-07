@@ -875,6 +875,7 @@
       <input type="text" id="searchInput" placeholder="Search county...">
     </div>
     <button class="sim-btn" id="downloadMapPngBtn">Download PNG</button>
+    <button class="sim-btn" id="downloadMapOnlyBtn" style="display:none;">Download Map</button>
   </div>
 
   <div class="grid">
@@ -2551,6 +2552,8 @@ async function renderMap(){
   const legendEl = document.getElementById('mapLegend');
   legendEl.style.display = legendVisible ? 'flex' : 'none';
   legendEl.innerHTML = legendHtml;
+  const mapOnlyBtn = document.getElementById('downloadMapOnlyBtn');
+  if(mapOnlyBtn) mapOnlyBtn.style.display = (SHOW_MARGIN_MOVE_MAP_DOWNLOAD && currentMetric === 'move') ? '' : 'none';
   const sideLegendEl = document.getElementById('mapSideLegend');
   sideLegendEl.classList.toggle('on', !!sideLegendHtml);
   sideLegendEl.innerHTML = sideLegendHtml;
@@ -2744,6 +2747,64 @@ function formatMarginLabel(m){
   return (m > 0 ? 'D+' : 'R+') + s + '%';
 }
 
+// The "what just happened" explanation as a list of styled runs of text
+// ({ text, bold, party }), not a finished HTML string, so the Statewide
+// Margin panel on the page and the Margin Move image are built from the
+// very same words and can never drift apart. `party` ('D' or 'R') means
+// "show this in that party's color"; `bold` means emphasis.
+function marginExplanationRuns(info){
+  if(!info.hasCurrent){
+    return [{ text: 'No votes counted yet \u2014 the margin will appear here once the first results come in.' }];
+  }
+  if(!info.hasPrior){
+    return [{ text: 'This is the first update logged \u2014 there is no previous margin yet to compare against.' }];
+  }
+  if(!info.towardParty){
+    return [{ text: 'The margin held essentially steady on the last update.' }];
+  }
+  const party = info.towardParty === 'Democrats' ? 'D' : 'R';
+  const adj = party === 'D' ? 'Democratic' : 'Republican';
+  const runs = [
+    { text: 'Last update: ' },
+    { text: `${Math.abs(info.change).toFixed(2)}% move toward ${info.towardParty}`, bold: true, party },
+    { text: '.' }
+  ];
+  if(info.hasDrop){
+    const gap = Math.abs(info.dropMargin - info.prevMargin).toFixed(2);
+    runs.push(
+      { text: ' The new votes in that update came in at ' },
+      { text: formatMarginLabel(info.dropMargin), bold: true },
+      { text: ' on their own (counting every ballot in that drop) \u2014 ' },
+      { text: `${gap} points more ${adj}`, bold: true, party },
+      { text: " than the race's running margin of " },
+      { text: formatMarginLabel(info.prevMargin), bold: true },
+      { text: ', which is what pulled the margin ' },
+      { text: `toward ${info.towardParty}`, bold: true, party },
+      { text: '.' }
+    );
+    // The case that confuses people most: the party that LOST ground
+    // still outvoted the other in the drop, just by less than the race
+    // had been running -- so its raw lead grew while its margin shrank.
+    const dropWinner = info.dD > info.dR ? 'Democrats' : (info.dR > info.dD ? 'Republicans' : null);
+    if(dropWinner && dropWinner !== info.towardParty){
+      const other = dropWinner === 'Democrats' ? 'Republicans' : 'Democrats';
+      runs.push({ text: ` ${dropWinner} still outvoted ${other} in that drop by ${fmt(Math.abs(info.dD - info.dR))} votes, but by less than the race had been running, so the overall margin still moved the other way.` });
+    }
+  }
+  return runs;
+}
+
+// Runs -> HTML for the page: bold runs become <b>, party runs take the
+// page's party colors.
+function marginRunsToHtml(runs){
+  return runs.map(r => {
+    const text = escapeHtmlForCard(r.text);
+    if(!r.bold && !r.party) return text;
+    const style = r.party ? ` style="color:${r.party === 'D' ? 'var(--dem)' : 'var(--rep)'}"` : '';
+    return `<b${style}>${text}</b>`;
+  }).join('');
+}
+
 // Fills in the Statewide Margin panel (Margin move tab): the current
 // margin and the DEM / OTHER / REP split it comes from, a plain-English
 // account of what the LAST update did and why, and the break-even each
@@ -2789,31 +2850,7 @@ function renderMarginTracker(){
     leadEl.innerHTML = `${info.leader} lead by ${absMargin.toFixed(2)}%<span class="votes"> &middot; ${fmt(Math.abs(info.D - info.R))} votes ahead</span>`;
   }
 
-  let explainHtml;
-  if(!info.hasPrior){
-    explainHtml = 'This is the first update logged \u2014 there is no previous margin yet to compare against.';
-  }else if(!info.towardParty){
-    explainHtml = 'The margin held essentially steady on the last update.';
-  }else{
-    const toD = info.towardParty === 'Democrats';
-    const towardColor = toD ? 'var(--dem)' : 'var(--rep)';
-    const towardAdj = toD ? 'Democratic' : 'Republican';
-    let whyHtml = '';
-    if(info.hasDrop){
-      const gap = Math.abs(info.dropMargin - info.prevMargin).toFixed(2);
-      whyHtml = ` The new votes in that update came in at <b>${formatMarginLabel(info.dropMargin)}</b> on their own (counting every ballot in that drop) \u2014 <b style="color:${towardColor}">${gap} points more ${towardAdj}</b> than the race's running margin of <b>${formatMarginLabel(info.prevMargin)}</b>, which is what pulled the margin <b style="color:${towardColor}">toward ${info.towardParty}</b>.`;
-      // The case that confuses people most: the party that LOST ground
-      // still outvoted the other in the drop, just by less than the race
-      // had been running -- so its raw lead grew while its margin shrank.
-      const dropWinner = info.dD > info.dR ? 'Democrats' : (info.dR > info.dD ? 'Republicans' : null);
-      if(dropWinner && dropWinner !== info.towardParty){
-        const other = dropWinner === 'Democrats' ? 'Republicans' : 'Democrats';
-        whyHtml += ` ${dropWinner} still outvoted ${other} in that drop by ${fmt(Math.abs(info.dD - info.dR))} votes, but by less than the race had been running, so the overall margin still moved the other way.`;
-      }
-    }
-    explainHtml = `Last update: <b style="color:${towardColor}">${Math.abs(info.change).toFixed(2)}% move toward ${info.towardParty}</b>.${whyHtml}`;
-  }
-  explainEl.innerHTML = explainHtml;
+  explainEl.innerHTML = marginRunsToHtml(marginExplanationRuns(info));
 
   // Drop goals: the next drop moves the margin toward whichever party
   // beats today's margin in that drop. The leader has to win the drop by
@@ -2940,9 +2977,10 @@ function marginLineHoverText(time, margin, lead, change){
   return `${formatSortedHoverDate(time)}<br>${side}${votes}${move}`;
 }
 
-function drawMarginLineChart(data, showAll){
-  const el = document.getElementById('marginLineChart');
-  const noteEl = document.getElementById('marginLineWindowNote');
+// The chart's traces and layout, in one place: the page draws it into
+// #marginLineChart, and the Margin Move image renders the very same spec
+// off-screen, so the two always show the same line.
+function marginLineChartSpec(data, showAll){
   // Windowed AFTER the changes were computed, so the first visible point
   // still reports its move from the update just outside the window.
   const sliceStart = showAll ? 0 : Math.max(0, data.times.length - CUMULATIVE_WINDOW_SIZE);
@@ -2992,9 +3030,107 @@ function drawMarginLineChart(data, showAll){
     hoverlabel:{ bgcolor:'#151b28', bordercolor:'#7c879c', font:{family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5'} },
     showlegend:false
   };
-  Plotly.newPlot(el, traces, layout, {displayModeBar:false, responsive:true});
+  return { traces, layout, windowed: !showAll && data.times.length > CUMULATIVE_WINDOW_SIZE };
+}
 
-  if(noteEl) noteEl.style.display = (showAll || data.times.length <= CUMULATIVE_WINDOW_SIZE) ? 'none' : 'block';
+function drawMarginLineChart(data, showAll){
+  const el = document.getElementById('marginLineChart');
+  const noteEl = document.getElementById('marginLineWindowNote');
+  const { traces, layout, windowed } = marginLineChartSpec(data, showAll);
+  Plotly.newPlot(el, traces, layout, {displayModeBar:false, responsive:true});
+  if(noteEl) noteEl.style.display = windowed ? 'block' : 'none';
+}
+
+// The same chart rendered off-screen into an image for the Margin Move
+// screenshot (sizes are unscaled; the image comes back at `scale` times
+// that). Text is a little larger than on the page since it's read in a
+// shared picture, not a live page.
+async function renderMarginLineChartImage(data, showAll, width, height, scale){
+  const { traces, layout } = marginLineChartSpec(data, showAll);
+  const tempDiv = document.createElement('div');
+  tempDiv.style.position = 'fixed';
+  tempDiv.style.left = '-9999px';
+  tempDiv.style.top = '0';
+  tempDiv.style.width = width + 'px';
+  tempDiv.style.height = height + 'px';
+  document.body.appendChild(tempDiv);
+  try{
+    const imgLayout = {
+      ...layout, width, height,
+      paper_bgcolor:'#0a0e17', plot_bgcolor:'#0a0e17',
+      margin:{ ...layout.margin, t:12, r:20 },
+      font:{ ...layout.font, size:13 },
+      // Two-line labels ("Oct 4" over "12:00 PM") instead of the page's slanted
+      // ones: they read straight across and leave the plot more height.
+      xaxis:{ ...layout.xaxis, tickfont:{ size:12 }, tickformat:'%b %-d<br>%-I:%M %p', tickangle:0 },
+      yaxis:{ ...layout.yaxis, tickfont:{ size:13 } }
+    };
+    await Plotly.newPlot(tempDiv, traces, imgLayout, { displayModeBar:false });
+    const dataUrl = await Plotly.toImage(tempDiv, { format:'png', width, height, scale });
+    const img = new Image();
+    await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = dataUrl; });
+    return img;
+  }finally{
+    Plotly.purge(tempDiv);
+    document.body.removeChild(tempDiv);
+  }
+}
+
+// ---- wrapping styled text for the image ----
+// Splits runs of styled text into lines no wider than maxWidth.
+// `measure(token)` returns the width of token.text drawn in that token's
+// style. A word is never split from the punctuation stuck to it (even
+// across a style change, e.g. a bold "Democrats" then a plain "."), so a
+// period can't be stranded at the start of a new line. Pure function.
+function wrapRuns(runs, maxWidth, measure){
+  // 1. tokens, then 2. units (a word = consecutive non-space tokens)
+  const units = [];
+  runs.forEach(run => {
+    run.text.split(/(\s+)/).forEach(piece => {
+      if(piece === '') return;
+      const tok = { text: piece, bold: !!run.bold, party: run.party || null };
+      const isSpace = /^\s+$/.test(piece);
+      const last = units[units.length - 1];
+      if(!isSpace && last && !last.space) last.tokens.push(tok);
+      else units.push({ space: isSpace, tokens: [tok] });
+    });
+  });
+  const widthOf = u => u.tokens.reduce((w, t) => w + measure(t), 0);
+
+  const lines = [[]];
+  let lineW = 0;
+  units.forEach(u => {
+    const line = lines[lines.length - 1];
+    const w = widthOf(u);
+    if(u.space){
+      if(line.length === 0) return;                 // no spaces at the start of a line
+      line.push(u); lineW += w;
+    }else if(lineW + w > maxWidth && line.some(x => !x.space)){
+      while(line.length && line[line.length - 1].space) line.pop();   // no spaces at the end of a line
+      lines.push([u]); lineW = w;
+    }else{
+      line.push(u); lineW += w;
+    }
+  });
+  const last = lines[lines.length - 1];
+  while(last.length && last[last.length - 1].space) last.pop();
+  return lines.filter(l => l.length).map(l => l.flatMap(u => u.tokens));
+}
+
+// Draws wrapped lines from wrapRuns(). fontPx is unscaled; bold runs are
+// bright, party runs take the party's color, the rest is body text.
+function drawRichLines(ctx, lines, x, firstBaselineY, lineH, fontPx, scale){
+  const sans = 'Inter, Arial, sans-serif';
+  lines.forEach((line, i) => {
+    let cx = x;
+    const y = firstBaselineY + i * lineH * scale;
+    line.forEach(tok => {
+      ctx.font = `${tok.bold ? 700 : 400} ${Math.round(fontPx * scale)}px ${sans}`;
+      ctx.fillStyle = tok.party === 'D' ? '#5b9bd9' : tok.party === 'R' ? '#d4675a' : (tok.bold ? '#e9edf5' : '#b8c0d0');
+      ctx.fillText(tok.text, cx, y);
+      cx += ctx.measureText(tok.text).width;
+    });
+  });
 }
 
 // Builds the 4 copy-paste-ready text blocks (each becomes one carousel
@@ -3396,6 +3532,12 @@ const SIM_COUNTY_NAMES = Object.keys(SIM_REG).sort();
 // Flip this to false to hide every bit of turnout UI -- the statewide
 // bar, the per-county bar, and its presence in both PNG exports --
 // without touching anything else in the app.
+// Margin Move's "Download PNG" is now the explanation + trend chart + data
+// image. The older version -- the county-by-county margin MAP with the data
+// block under it -- is still built by the same code, just not offered. Set
+// this to true to bring it back as a separate "Download Map" button next to
+// "Download PNG" on the Margin Move tab.
+const SHOW_MARGIN_MOVE_MAP_DOWNLOAD = false;
 const SHOW_TURNOUT = true;
 
 // Never shown under a recognizable "<1%" floor (so a handful of early
@@ -4024,6 +4166,355 @@ function drawTurnoutLegendOnCanvas(ctx, x, bottomY, scale){
   });
 }
 
+// ============================================================
+// SHARED SCREENSHOT PIECES
+// ============================================================
+// The header every statewide screenshot starts with: title, who leads,
+// the vote totals, and the "as of" time. Moved here (unchanged) so the
+// map screenshots and the Margin Move infographic draw the same header.
+function drawStatewideHeader(ctx, summary, scale, titleText){
+  ctx.fillStyle = '#e9edf5';
+  ctx.font = `600 ${Math.round(24*scale)}px Inter, Arial, sans-serif`;
+  ctx.fillText(titleText, 24*scale, 40*scale);
+
+  if(summary.statewideTie){
+    // A major party is genuinely tied with NPA statewide -- say so
+    // directly rather than reporting a misleading margin against the
+    // third party.
+    ctx.fillStyle = '#d8b466';
+    ctx.font = `600 ${Math.round(19*scale)}px Inter, Arial, sans-serif`;
+    ctx.fillText(
+      `${summary.statewideTie.partyA} and ${summary.statewideTie.partyB} are tied statewide \u2014 ${fmt(summary.statewideTie.votes)} votes each`,
+      24*scale, 74*scale
+    );
+  }else if(summary.npaLead){
+    // NPA is genuinely outleading BOTH major parties statewide -- this
+    // has to be called out explicitly, since the normal DEM-vs-REP
+    // leader line never even considers NPA as a possible leader.
+    ctx.fillStyle = '#c77dff';
+    ctx.font = `600 ${Math.round(19*scale)}px Inter, Arial, sans-serif`;
+    ctx.fillText(
+      `NPA takes the lead statewide \u2014 ${fmt(summary.npaLead.votes)} votes, +${fmt(Math.round(summary.npaLead.voteLead))} ahead (+${summary.npaLead.marginPct.toFixed(2)}%)`,
+      24*scale, 74*scale
+    );
+  }else{
+    const leaderFull = summary.leader === 'DEM' ? 'Democrats' : 'Republicans';
+    ctx.fillStyle = summary.leader === 'DEM' ? '#5b9bd9' : '#d4675a';
+    ctx.font = `600 ${Math.round(19*scale)}px Inter, Arial, sans-serif`;
+    ctx.fillText(
+      `${leaderFull} lead by ${fmt(Math.round(summary.voteLead))} votes (+${summary.marginPct.toFixed(2)}%)`,
+      24*scale, 74*scale
+    );
+  }
+
+  ctx.font = `${Math.round(15*scale)}px Inter, Arial, sans-serif`;
+  drawColoredLine(ctx, [
+    { text: 'Total votes: ', color: '#7c879c' },
+    { text: fmt(summary.totalVotes), color: '#80ed99' },
+    { text: ' (DEM ', color: '#7c879c' },
+    { text: fmt(summary.totalD), color: '#5b9bd9' },
+    { text: ' \u00b7 REP ', color: '#7c879c' },
+    { text: fmt(summary.totalR), color: '#d4675a' },
+    { text: ' \u00b7 NPA/Other ', color: '#7c879c' },
+    { text: fmt(summary.totalNPA), color: '#c77dff' },
+    { text: `) \u00b7 Turnout: ${summary.countiesReporting} / 67 counties reporting`, color: '#7c879c' }
+  ], 24*scale, 98*scale);
+
+  ctx.fillStyle = '#d8b466';
+  ctx.font = `600 ${Math.round(13*scale)}px IBM Plex Mono, monospace`;
+  ctx.fillText(summary.asOfText, 24*scale, 120*scale);
+}
+
+// The thin "STATEWIDE TURNOUT (EST.)" label + percent + bar that sits in
+// the footer of the map screenshots. turnoutY is the label's baseline.
+function drawStatewideTurnoutBar(ctx, summary, turnoutY, width, scale){
+  const registered = statewideRegisteredTotal();
+  const frac = turnoutFraction(summary.totalVotes, registered);
+
+  ctx.fillStyle = '#7c879c';
+  ctx.font = `600 ${Math.round(13*scale)}px IBM Plex Mono, monospace`;
+  ctx.fillText('STATEWIDE TURNOUT (EST.)', 24*scale, turnoutY);
+  ctx.fillStyle = '#80ed99';
+  ctx.font = `700 ${Math.round(14*scale)}px IBM Plex Mono, monospace`;
+  ctx.fillText(formatTurnoutPct(frac), 250*scale, turnoutY);
+
+  const barY = turnoutY + 7*scale;
+  const barW = width - 48*scale;
+  const barH = 10*scale;
+  ctx.fillStyle = '#333d4f';
+  ctx.fillRect(24*scale, barY, barW, barH);
+  ctx.fillStyle = '#80ed99';
+  ctx.fillRect(24*scale, barY, barW*frac, barH);
+}
+
+// The Margin Move footer: the "N counties with a rating change" line, the
+// big Statewide Margin Move block, the turnout bar and the credit. Used by
+// the Margin Move infographic and by the optional map-only download.
+const MARGIN_MOVE_BLOCK_TOP = 52;
+function marginMoveFooterHeight(){
+  return MARGIN_MOVE_BLOCK_TOP + MARGIN_MOVE_BLOCK_H + (SHOW_TURNOUT ? 42 : 0) + 40;
+}
+function drawMarginMoveFooter(ctx, summary, footerY0, width, scale){
+  const footerH = marginMoveFooterHeight();
+  ctx.fillStyle = '#151b28';
+  ctx.fillRect(0, footerY0, width, footerH*scale);
+
+  ctx.fillStyle = '#e9edf5';
+  ctx.font = `600 ${Math.round(15*scale)}px Inter, Arial, sans-serif`;
+  ctx.fillText(
+    `Margin move: ${summary.marginMoveCount} counties with a rating change \u00b7 Counties updated: ${summary.countiesUpdated}`,
+    24*scale, footerY0 + 30*scale
+  );
+  drawMarginMoveBlock(ctx, computeStatewideMarginInfo(), 24*scale, footerY0 + MARGIN_MOVE_BLOCK_TOP*scale, width - 48*scale, scale);
+  if(SHOW_TURNOUT){
+    drawStatewideTurnoutBar(ctx, summary, footerY0 + (MARGIN_MOVE_BLOCK_TOP + MARGIN_MOVE_BLOCK_H + 26)*scale, width, scale);
+  }
+  drawSourceCredit(ctx, 24*scale, footerY0 + footerH*scale - 16*scale, scale);
+}
+
+// ============================================================
+// TOTAL TURNOUT SCREENSHOT: footer
+// ============================================================
+// Replaces the usual "rating changes / top 3 counties" footer on the
+// Total Turnout screenshot with what that map is actually about: the
+// statewide turnout (big number) and how many counties fall in each
+// turnout range. Only ranges that have at least one county get a line,
+// so it starts short and grows as turnout spreads across more ranges;
+// the footer's height follows, so nothing is ever squeezed or cut off.
+const TURNOUT_FOOTER_ROW_H = 34;
+
+// "46 counties have less than 2% turnout" / "1 county has 5-10% turnout" /
+// "3 counties have 75% or more turnout", split into the count (drawn bold)
+// and the rest of the sentence.
+function turnoutRangeText(bin, count){
+  const verb = count === 1 ? 'county has' : 'counties have';
+  let range;
+  if(bin.min === 0) range = `less than ${bin.max}%`;
+  else if(bin.max === Infinity) range = `${bin.min}% or more`;
+  else range = `${bin.min}\u2013${bin.max}%`;
+  return { countText: String(count), restText: ` ${verb} ${range} turnout` };
+}
+
+// What the footer says, as plain data (no canvas), so it can be tested.
+function turnoutFooterContent(counties, totalVotes){
+  const registered = statewideRegisteredTotal();
+  const frac = turnoutFraction(totalVotes, registered);
+  const rows = TURNOUT_BINS.map(bin => {
+    const count = counties.filter(c => turnoutBinFor(c) === bin.key).length;
+    return { key: bin.key, color: bin.color, count, ...turnoutRangeText(bin, count) };
+  }).filter(r => r.count > 0);
+  return { frac, pctText: formatTurnoutPct(frac), votesText: fmt(totalVotes), registeredText: fmt(registered), rows };
+}
+
+// Unscaled height of the footer's content area (the left column is a
+// fixed 190; the right column grows one row per populated range).
+function turnoutFooterContentHeight(content){
+  return Math.max(190, 70 + (content.rows.length - 1) * TURNOUT_FOOTER_ROW_H + 16);
+}
+// Whole footer: the content plus room for the credit line.
+function turnoutFooterHeight(content){
+  return turnoutFooterContentHeight(content) + 56;
+}
+
+function drawTurnoutFooter(ctx, content, footerY0, width, scale){
+  const S = v => v * scale;
+  const sans = 'Inter, Arial, sans-serif';
+  const footerH = turnoutFooterHeight(content);
+  const contentH = turnoutFooterContentHeight(content);
+  ctx.fillStyle = '#151b28';
+  ctx.fillRect(0, footerY0, width, S(footerH));
+  ctx.textBaseline = 'alphabetic';
+
+  // largest size (down to minPx) at which `text` fits maxW canvas pixels
+  const fitPx = (weight, px, minPx, maxW, text) => {
+    let size = px;
+    ctx.font = `${weight} ${Math.round(S(size))}px ${sans}`;
+    while(ctx.measureText(text).width > maxW && size > minPx){
+      size -= 1;
+      ctx.font = `${weight} ${Math.round(S(size))}px ${sans}`;
+    }
+    return size;
+  };
+
+  // ---- left: statewide turnout ----
+  const x0 = S(24), leftW = S(316);
+  ctx.fillStyle = '#7c879c';
+  ctx.font = `700 ${Math.round(S(14))}px ${sans}`;
+  ctx.fillText('STATEWIDE TURNOUT (EST.)', x0, footerY0 + S(34));
+
+  ctx.fillStyle = '#80ed99';
+  ctx.font = `700 ${Math.round(S(fitPx(700, 58, 30, leftW, content.pctText)))}px ${sans}`;
+  ctx.fillText(content.pctText, x0, footerY0 + S(98));
+
+  ctx.fillStyle = '#9aa4b8';
+  ctx.font = `400 ${Math.round(S(fitPx(400, 16, 10, leftW, `of ${content.registeredText} registered voters`)))}px ${sans}`;
+  ctx.fillText(`${content.votesText} votes cast`, x0, footerY0 + S(126));
+  ctx.fillText(`of ${content.registeredText} registered voters`, x0, footerY0 + S(148));
+
+  const barY = footerY0 + S(164), barH = S(12);
+  ctx.fillStyle = '#333d4f';
+  ctx.fillRect(x0, barY, leftW, barH);
+  ctx.fillStyle = '#80ed99';
+  ctx.fillRect(x0, barY, content.frac > 0 ? Math.max(S(2), leftW * content.frac) : 0, barH);
+
+  // ---- divider ----
+  ctx.fillStyle = '#2a3347';
+  ctx.fillRect(x0 + S(334), footerY0 + S(22), Math.max(1, S(1)), S(contentH - 30));
+
+  // ---- right: how many counties in each range ----
+  const rightX = x0 + S(352);
+  const textX = rightX + S(32);
+  const textW = width - textX - S(24);
+  ctx.fillStyle = '#d8b466';
+  ctx.font = `700 ${Math.round(S(14))}px ${sans}`;
+  ctx.fillText('COUNTIES BY TURNOUT', rightX, footerY0 + S(34));
+
+  content.rows.forEach((row, i) => {
+    const baseY = footerY0 + S(70 + i * TURNOUT_FOOTER_ROW_H);
+    ctx.fillStyle = row.color;
+    ctx.fillRect(rightX, baseY - S(17), S(20), S(20));
+    ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+    ctx.lineWidth = Math.max(1, S(1));
+    ctx.strokeRect(rightX, baseY - S(17), S(20), S(20));
+
+    // count (bold, a touch bigger) + the rest of the sentence, shrunk
+    // together if a line would be wider than the column
+    let size = 22;
+    const widthAt = px => {
+      ctx.font = `700 ${Math.round(S(px + 4))}px ${sans}`;
+      const w1 = ctx.measureText(row.countText).width;
+      ctx.font = `400 ${Math.round(S(px))}px ${sans}`;
+      return w1 + ctx.measureText(row.restText).width;
+    };
+    while(widthAt(size) > textW && size > 12) size -= 1;
+    ctx.font = `700 ${Math.round(S(size + 4))}px ${sans}`;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(row.countText, textX, baseY);
+    const countW = ctx.measureText(row.countText).width;
+    ctx.font = `400 ${Math.round(S(size))}px ${sans}`;
+    ctx.fillStyle = '#d3d9e6';
+    ctx.fillText(row.restText, textX + countW, baseY);
+  });
+
+  drawSourceCredit(ctx, 24*scale, footerY0 + S(footerH) - 16*scale, scale);
+}
+
+// ============================================================
+// MARGIN MOVE IMAGE (the Margin Move tab's "Download PNG")
+// ============================================================
+// Replaces the old county-by-county map picture with one explanatory
+// graphic, top to bottom:
+//   header          the same header as every other screenshot
+//   explanation     what the last update did to the margin, and why
+//   trend chart     the statewide margin over time (blue / red at Even)
+//   data block      previous -> now, votes gained, first vs second place,
+//                   statewide turnout (the block that used to sit under
+//                   the map)
+// Height follows the content (a longer explanation shrinks the chart a
+// little, within limits), and the whole image is kept to roughly the
+// tallest shape social sites show uncropped.
+const MARGIN_MOVE_IMAGE_MAX_H = 1120;     // unscaled; x2 = 2240px
+
+// Where everything goes, in unscaled px, from how many lines the
+// explanation wraps to. Pure, so the sizing rules can be tested.
+function marginMoveImageLayout(explLineCount, hasChart, footerH){
+  const headerH = 132, explLineH = 31;
+  const explTop = headerH + 26;
+  const explH = explLineCount * explLineH;
+  const sectionTop = explTop + explH + 20;          // where the chart section starts
+  const headH = 34, keyH = 30, tail = 10;
+  let chartH = 0, footerTop;
+  if(hasChart){
+    const fixed = sectionTop + headH + keyH + tail + footerH;
+    chartH = Math.max(200, Math.min(300, MARGIN_MOVE_IMAGE_MAX_H - fixed));
+    footerTop = sectionTop + headH + chartH + keyH + tail;
+  }else{
+    footerTop = sectionTop + tail;
+  }
+  return { headerH, explTop, explH, explLineH, sectionTop, headH, chartH, keyH, footerTop, totalH: footerTop + footerH };
+}
+
+async function downloadMarginMoveInfographic(summary){
+  const scale = 2, W = 900, pad = 24, indent = 18, explPx = 21;
+  const sans = 'Inter, Arial, sans-serif';
+  const info = computeStatewideMarginInfo();
+  const footerH = marginMoveFooterHeight();
+
+  // The trend chart's data is loaded when the tab opens; fetch it if the
+  // button is pressed before that finished.
+  if(!lastMarginLineData) await renderMarginLineChart();
+  const chartData = lastMarginLineData;
+
+  // Wrap the explanation with the exact fonts it will be drawn in.
+  const scratch = document.createElement('canvas').getContext('2d');
+  const lines = wrapRuns(marginExplanationRuns(info), (W - pad * 2 - indent) * scale, tok => {
+    scratch.font = `${tok.bold ? 700 : 400} ${Math.round(explPx * scale)}px ${sans}`;
+    return scratch.measureText(tok.text).width;
+  });
+  const L = marginMoveImageLayout(lines.length, !!chartData, footerH);
+
+  let chartImg = null;
+  if(chartData){
+    chartImg = await renderMarginLineChartImage(chartData, marginLineShowAll, W - pad * 2, L.chartH, scale);
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W * scale;
+  canvas.height = L.totalH * scale;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0a0e17';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  drawStatewideHeader(ctx, summary, scale, 'Florida Vote Tracker 2026 \u2014 Statewide Margin Move');
+
+  // ---- explanation, with an accent bar in the color of whoever gained ----
+  const accent = info.towardParty === 'Democrats' ? '#5b9bd9' : (info.towardParty === 'Republicans' ? '#d4675a' : '#556076');
+  ctx.fillStyle = accent;
+  ctx.fillRect(pad * scale, (L.explTop - 2) * scale, 5 * scale, (L.explH + 4) * scale);
+  ctx.textBaseline = 'alphabetic';
+  drawRichLines(ctx, lines, (pad + indent) * scale, (L.explTop + 20) * scale, L.explLineH, explPx, scale);
+
+  // ---- trend chart ----
+  if(chartImg){
+    const x = pad * scale, w = (W - pad * 2) * scale;
+    ctx.fillStyle = '#212a3b';
+    ctx.fillRect(x, L.sectionTop * scale, w, Math.max(1, scale));
+
+    ctx.fillStyle = '#d8b466';
+    ctx.font = `700 ${Math.round(15 * scale)}px ${sans}`;
+    ctx.fillText('STATEWIDE MARGIN OVER TIME', x, (L.sectionTop + 24) * scale);
+    if(chartData.times.length > CUMULATIVE_WINDOW_SIZE && !marginLineShowAll){
+      ctx.fillStyle = '#7c879c';
+      ctx.font = `400 ${Math.round(12 * scale)}px ${sans}`;
+      const note = `Showing the ${CUMULATIVE_WINDOW_SIZE} most recent updates`;
+      ctx.fillText(note, x + w - ctx.measureText(note).width, (L.sectionTop + 24) * scale);
+    }
+    ctx.drawImage(chartImg, x, (L.sectionTop + L.headH) * scale, w, L.chartH * scale);
+
+    // key: what the two colors mean
+    const keyY = (L.sectionTop + L.headH + L.chartH + 20) * scale;
+    ctx.font = `400 ${Math.round(13 * scale)}px ${sans}`;
+    let kx = x;
+    [['#5b9bd9', 'Democrats lead'], ['#d4675a', 'Republicans lead']].forEach(([color, label]) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(kx, keyY - 11 * scale, 12 * scale, 12 * scale);
+      ctx.fillStyle = '#9aa4b8';
+      ctx.fillText(label, kx + 20 * scale, keyY);
+      kx += (20 + 12) * scale + ctx.measureText(label).width + 16 * scale;
+    });
+  }
+
+  // ---- the data block (the part that used to sit under the map) ----
+  drawMarginMoveFooter(ctx, summary, L.footerTop * scale, canvas.width, scale);
+
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = `florida-vote-tracker-${currentMetric}-${filenameSafeTimestamp(summary.asOfText)}.png`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
 // Renders a small statewide DEM/REP/NPA bar chart to an image via a
 // temporary, off-screen Plotly plot (kept in the DOM but positioned off
 // canvas, since Plotly needs real layout to render into). Used only for
@@ -4226,13 +4717,19 @@ async function liveMapSvgToCanvas(svgEl, cssWidth, cssHeight, pixelScale){
   }
 }
 
-document.getElementById('downloadMapPngBtn').addEventListener('click', async () => {
-  const btn = document.getElementById('downloadMapPngBtn');
+// Builds and downloads the statewide screenshot for whichever tab is open.
+// opts.mapOnly: on the Margin Move tab, produce the older county-map
+// version instead of the explanation + chart + data image.
+async function exportStatewidePng(btn, opts = {}){
   const originalText = btn.textContent;
   btn.textContent = 'Rendering\u2026';
   btn.disabled = true;
   try{
     const summary = liveResultsSummary();
+    if(currentMetric === 'move' && !opts.mapOnly){
+      await downloadMarginMoveInfographic(summary);
+      return;
+    }
     const isGeneral = currentMetric === 'demrepnpa';
 
     // The FULL exported file needs to come out at exactly 1800x1700, not
@@ -4279,9 +4776,12 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
     // Statewide Margin Move block, which needs more height. Every other
     // tab keeps exactly the footer size it always had.
     const isMoveTab = currentMetric === 'move';
-    const moveBlockTop = 52;
-    const footerH = isMoveTab
-      ? moveBlockTop + MARGIN_MOVE_BLOCK_H + (SHOW_TURNOUT ? 42 : 0) + 40
+    // Total Turnout: its own footer (statewide turnout + counties per
+    // range), tall enough for however many ranges currently have counties.
+    const isTotalTab = currentMetric === 'total';
+    const turnoutFooter = isTotalTab ? turnoutFooterContent(activeCountiesFor('total'), summary.totalVotes) : null;
+    const footerH = isMoveTab ? marginMoveFooterHeight()
+      : isTotalTab ? turnoutFooterHeight(turnoutFooter)
       : 190 + turnoutExtraH;
     const canvas = document.createElement('canvas');
     canvas.width = mapImg.width + (chartImg ? gapPx + chartImg.width : 0);
@@ -4296,56 +4796,7 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Header
-    ctx.fillStyle = '#e9edf5';
-    ctx.font = `600 ${Math.round(24*scale)}px Inter, Arial, sans-serif`;
-    ctx.fillText(`Florida Vote Tracker 2026 \u2014 ${summary.metricTitle}`, 24*scale, 40*scale);
-
-    if(summary.statewideTie){
-      // A major party is genuinely tied with NPA statewide -- say so
-      // directly rather than reporting a misleading margin against the
-      // third party.
-      ctx.fillStyle = '#d8b466';
-      ctx.font = `600 ${Math.round(19*scale)}px Inter, Arial, sans-serif`;
-      ctx.fillText(
-        `${summary.statewideTie.partyA} and ${summary.statewideTie.partyB} are tied statewide \u2014 ${fmt(summary.statewideTie.votes)} votes each`,
-        24*scale, 74*scale
-      );
-    }else if(summary.npaLead){
-      // NPA is genuinely outleading BOTH major parties statewide -- this
-      // has to be called out explicitly, since the normal DEM-vs-REP
-      // leader line never even considers NPA as a possible leader.
-      ctx.fillStyle = '#c77dff';
-      ctx.font = `600 ${Math.round(19*scale)}px Inter, Arial, sans-serif`;
-      ctx.fillText(
-        `NPA takes the lead statewide \u2014 ${fmt(summary.npaLead.votes)} votes, +${fmt(Math.round(summary.npaLead.voteLead))} ahead (+${summary.npaLead.marginPct.toFixed(2)}%)`,
-        24*scale, 74*scale
-      );
-    }else{
-      const leaderFull = summary.leader === 'DEM' ? 'Democrats' : 'Republicans';
-      ctx.fillStyle = summary.leader === 'DEM' ? '#5b9bd9' : '#d4675a';
-      ctx.font = `600 ${Math.round(19*scale)}px Inter, Arial, sans-serif`;
-      ctx.fillText(
-        `${leaderFull} lead by ${fmt(Math.round(summary.voteLead))} votes (+${summary.marginPct.toFixed(2)}%)`,
-        24*scale, 74*scale
-      );
-    }
-
-    ctx.font = `${Math.round(15*scale)}px Inter, Arial, sans-serif`;
-    drawColoredLine(ctx, [
-      { text: 'Total votes: ', color: '#7c879c' },
-      { text: fmt(summary.totalVotes), color: '#80ed99' },
-      { text: ' (DEM ', color: '#7c879c' },
-      { text: fmt(summary.totalD), color: '#5b9bd9' },
-      { text: ' \u00b7 REP ', color: '#7c879c' },
-      { text: fmt(summary.totalR), color: '#d4675a' },
-      { text: ' \u00b7 NPA/Other ', color: '#7c879c' },
-      { text: fmt(summary.totalNPA), color: '#c77dff' },
-      { text: `) \u00b7 Turnout: ${summary.countiesReporting} / 67 counties reporting`, color: '#7c879c' }
-    ], 24*scale, 98*scale);
-
-    ctx.fillStyle = '#d8b466';
-    ctx.font = `600 ${Math.round(13*scale)}px IBM Plex Mono, monospace`;
-    ctx.fillText(summary.asOfText, 24*scale, 120*scale);
+    drawStatewideHeader(ctx, summary, scale, `Florida Vote Tracker 2026 \u2014 ${summary.metricTitle}`);
 
     // Map (left) + statewide bar chart (right, General Election only) --
     // separated by gapPx so they can never overlap.
@@ -4361,19 +4812,21 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
 
     // Footer
     const footerY0 = (headerH*scale) + mapImg.height;
-    ctx.fillStyle = '#151b28';
-    ctx.fillRect(0, footerY0, canvas.width, footerH*scale);
-
-    ctx.fillStyle = '#e9edf5';
-    ctx.font = `600 ${Math.round(15*scale)}px Inter, Arial, sans-serif`;
-    ctx.fillText(
-      `Margin move: ${summary.marginMoveCount} counties with a rating change \u00b7 Counties updated: ${summary.countiesUpdated}`,
-      24*scale, footerY0 + 30*scale
-    );
-
     if(isMoveTab){
-      drawMarginMoveBlock(ctx, computeStatewideMarginInfo(), 24*scale, footerY0 + moveBlockTop*scale, canvas.width - 48*scale, scale);
+      drawMarginMoveFooter(ctx, summary, footerY0, canvas.width, scale);
+    }else if(isTotalTab){
+      drawTurnoutFooter(ctx, turnoutFooter, footerY0, canvas.width, scale);
     }else{
+      ctx.fillStyle = '#151b28';
+      ctx.fillRect(0, footerY0, canvas.width, footerH*scale);
+
+      ctx.fillStyle = '#e9edf5';
+      ctx.font = `600 ${Math.round(15*scale)}px Inter, Arial, sans-serif`;
+      ctx.fillText(
+        `Margin move: ${summary.marginMoveCount} counties with a rating change \u00b7 Counties updated: ${summary.countiesUpdated}`,
+        24*scale, footerY0 + 30*scale
+      );
+
       ctx.fillStyle = '#d8b466';
       ctx.font = `600 ${Math.round(14*scale)}px Inter, Arial, sans-serif`;
       ctx.fillText('Top 3 counties by votes added:', 24*scale, footerY0 + 58*scale);
@@ -4390,37 +4843,18 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
       }else{
         ctx.fillText('No additional votes at this time.', 24*scale, footerY0 + 82*scale);
       }
+
+      if(SHOW_TURNOUT){
+        // Positioned dynamically below however many top-3 lines actually
+        // got drawn above (1 to 3, or 1 for "No additional votes"), so it
+        // never collides with that block regardless of how many counties
+        // had new votes this run.
+        const top3LineCount = summary.top3.length ? summary.top3.length : 1;
+        drawStatewideTurnoutBar(ctx, summary, footerY0 + (82 + top3LineCount*22 + 18)*scale, canvas.width, scale);
+      }
+
+      drawSourceCredit(ctx, 24*scale, footerY0 + footerH*scale - 16*scale, scale);
     }
-
-    if(SHOW_TURNOUT){
-      // Positioned dynamically below however many top-3 lines actually
-      // got drawn above (1 to 3, or 1 for "No additional votes"), so it
-      // never collides with that block regardless of how many counties
-      // had new votes this run.
-      const top3LineCount = summary.top3.length ? summary.top3.length : 1;
-      const turnoutY = isMoveTab
-        ? footerY0 + (moveBlockTop + MARGIN_MOVE_BLOCK_H + 26)*scale
-        : footerY0 + (82 + top3LineCount*22 + 18)*scale;
-      const registered = statewideRegisteredTotal();
-      const frac = turnoutFraction(summary.totalVotes, registered);
-
-      ctx.fillStyle = '#7c879c';
-      ctx.font = `600 ${Math.round(13*scale)}px IBM Plex Mono, monospace`;
-      ctx.fillText('STATEWIDE TURNOUT (EST.)', 24*scale, turnoutY);
-      ctx.fillStyle = '#80ed99';
-      ctx.font = `700 ${Math.round(14*scale)}px IBM Plex Mono, monospace`;
-      ctx.fillText(formatTurnoutPct(frac), 250*scale, turnoutY);
-
-      const barY = turnoutY + 7*scale;
-      const barW = canvas.width - 48*scale;
-      const barH = 10*scale;
-      ctx.fillStyle = '#333d4f';
-      ctx.fillRect(24*scale, barY, barW, barH);
-      ctx.fillStyle = '#80ed99';
-      ctx.fillRect(24*scale, barY, barW*frac, barH);
-    }
-
-    drawSourceCredit(ctx, 24*scale, footerY0 + footerH*scale - 16*scale, scale);
 
     const finalUrl = canvas.toDataURL('image/png');
     const a = document.createElement('a');
@@ -4435,7 +4869,9 @@ document.getElementById('downloadMapPngBtn').addEventListener('click', async () 
     btn.textContent = originalText;
     btn.disabled = false;
   }
-});
+}
+document.getElementById('downloadMapPngBtn').addEventListener('click', e => exportStatewidePng(e.currentTarget));
+document.getElementById('downloadMapOnlyBtn').addEventListener('click', e => exportStatewidePng(e.currentTarget, { mapOnly:true }));
 
 // ==================== Build Your Own Map ====================
 // (SIM_REG and the turnout helpers that used to sit here were moved up

@@ -1437,8 +1437,10 @@ function activeNpaMargin(c){
 // activeNpaMargin() (raw until a lever is moved, slider-adjusted after)
 // instead of the plain DEM-vs-REP margin — used by "D vs R vs NPA".
 // Thresholds match the Python script: <.03 Toss Up, <.08 Lean, <.15 Likely, else Safe.
-function categoryForNpaMargin(c){
-  const margin = activeNpaMargin(c);
+// A margin -> its rating label: under 3 points is a Toss Up (exactly even
+// is a Tie), under 8 Lean, under 15 Likely, beyond that Safe, each with the
+// leader's letter ("Lean D", "Safe R").
+function ratingLabelForMargin(margin){
   const abs = Math.abs(margin);
   if(abs < 0.03) return margin === 0 ? 'Tie' : 'Toss Up';
   const leader = margin > 0 ? 'D' : 'R';
@@ -1447,6 +1449,51 @@ function categoryForNpaMargin(c){
   else if(abs < 0.15) level = 'Likely';
   else level = 'Safe';
   return level + ' ' + leader;
+}
+function categoryForNpaMargin(c){
+  return ratingLabelForMargin(activeNpaMargin(c));
+}
+
+// ------------------------------------------------------------
+// WHAT COUNTS AS "THE RATING CHANGED" (the Margin Move map's yellow)
+// ------------------------------------------------------------
+// The rating the General Election tab shows for a county, worked out from
+// its raw vote counts and NOT affected by the NPA-shift sliders: pending if
+// it has no votes, "NPA/Other Lead" / "3-Way Tie" when those apply, and
+// otherwise the tier of the margin that counts NPA voters in the total,
+// (DEM - REP) / (DEM + REP + NPA).
+function generalElectionRating(c){
+  if(isCountyPending(c)) return 'Not Updated';
+  return npaOtherLeadCategoryFor(c) || ratingLabelForMargin(c.marginNpaAdj);
+}
+// The same county as it stood just BEFORE the latest update: its totals
+// minus the votes that update added.
+function countyBeforeLatestUpdate(c){
+  const dem = Math.max(0, c.dem - c.demNew);
+  const rep = Math.max(0, c.rep - c.repNew);
+  const npa = Math.max(0, c.npa - c.npaNew);
+  const ind = Math.max(0, c.ind - c.indNew);
+  const other = Math.max(0, c.other - c.otherOnlyNew);
+  const base = dem + rep + npa;
+  return { dem, rep, npa, ind, other, total: c.total - c.totalNew, marginNpaAdj: base ? (dem - rep) / base : 0 };
+}
+// Sets ratingChanged / ratingMove on a LIVE county record by comparing its
+// rating before and after the latest update, the way the General Election
+// tab would show them ("Lean D -> Likely D"). This replaces the flag the
+// Python script writes: the script rates on the two-party margin
+// (DEM vs REP only), so a county could change rating on the General
+// Election tab without the script noticing, and the script flagged changes
+// that tab never shows (21 missed and 30 spurious across 11 updates).
+// A county's first appearance isn't a move (nothing before it to compare
+// to). Files from before the "New" vote columns existed keep the script's
+// flag, since there's nothing to recompute from.
+function applyGeneralElectionRatingChange(c){
+  if(!c.hasNewColumns) return;
+  const before = countyBeforeLatestUpdate(c);
+  if(before.total <= 0 || c.total <= 0){ c.ratingChanged = false; c.ratingMove = ''; return; }
+  const was = generalElectionRating(before), now = generalElectionRating(c);
+  c.ratingChanged = was !== now;
+  c.ratingMove = c.ratingChanged ? `${was} \u2192 ${now}` : '';
 }
 
 // ------------------------------------------------------------
@@ -2009,6 +2056,13 @@ function buildCountyRecords(rows){
     const repNew = num(pick(row,['REP New']));
     const otherNew = num(pick(row,['IND New'])) + num(pick(row,['NPA New'])) + num(pick(row,['OTHER New']));
     const totalNew = num(pick(row,['Total New','TOTAL NEW','New Total','Total_New']));
+    // The same new-vote columns, kept apart (otherNew above lumps IND, NPA
+    // and OTHER together) so a county's rating BEFORE the latest update can
+    // be worked out exactly. hasNewColumns: false for old files without them.
+    const npaNew = num(pick(row,['NPA New']));
+    const indNew = num(pick(row,['IND New']));
+    const otherOnlyNew = num(pick(row,['OTHER New']));
+    const hasNewColumns = row['DEM New'] !== undefined && row['REP New'] !== undefined && row['NPA New'] !== undefined;
     const diff = Math.abs(dem - rep);
     // The CSV's "Timestamp" column (as opposed to "Last Updated") is
     // written fresh on every single run, regardless of whether any
@@ -2023,6 +2077,7 @@ function buildCountyRecords(rows){
       marginPct: signedMargin, marginNpaAdj, leader, rating,
       marginMove, ratingChanged, ratingMove,
       demNew, repNew, otherNew, totalNew,
+      npaNew, indNew, otherOnlyNew, hasNewColumns,
       lastUpdated: pick(row,['Last Updated']) || '',
       runTimestamp
     };
@@ -2035,6 +2090,7 @@ function buildCountyRecords(rows){
 function buildCounties(rows){
   const scraped = buildCountyRecords(rows);
   if(scraped.length === 0) return; // no usable data at all; keep whatever's already loaded
+  scraped.forEach(applyGeneralElectionRatingChange);
   // Any county missing from this run's CSV (its site failed to scrape, or
   // simply hasn't reported yet) defaults to 0 / "Not Updated" instead of
   // vanishing from the live map/table entirely.
@@ -2458,6 +2514,34 @@ function tooltipText(list){
         `\u{1F7E3} NPA ${fmt(c.npa)} \u2192 \u{1F535}${fmt(Math.round(npaDem))} D / \u{1F534}${fmt(Math.round(npaRep))} R<br>` +
         `\u{1F7E2} Total ${fmt(c.total)}<br>` +
         `Adjusted margin: ${marginLabel(margin)}`;
+    });
+  }
+  if(currentMetric === 'move' || currentMetric === 'updated'){
+    // The Margin Move map highlights a county when its rating CHANGED as the
+    // General Election tab shows it, and this hover (also used on Counties
+    // Updated) prints that "Lean D -> Likely D" move, so it shows that same
+    // rating and margin. Without this the line above the move could read
+    // "Rating: Safe R" right over "Lean R -> Likely R" (the scraper's
+    // two-party rating beside the General Election tab's move).
+    return list.map(c => {
+      if(isCountyPending(c)){
+        return `<b>${c.county}</b><br>` +
+          `Rating: Not Updated<br>` +
+          `This county's site hasn't posted new results yet \u2014 showing 0 votes for now.`;
+      }
+      const combined = npaOtherTotal(c);
+      const lines = partyLeadLines([
+        { label:'DEM', count:c.dem, pct:c.demShare },
+        { label:'REP', count:c.rep, pct:c.repShare },
+        { label:'NPA/Other', count:combined, pct:c.total ? combined / c.total : 0 }
+      ]);
+      return `<b>${c.county}</b><br>` +
+        `Rating: ${generalElectionRating(c)}<br>` +
+        `${lines}<br>` +
+        `\u{1F7E2} Total ${fmt(c.total)}<br>` +
+        `Margin ${(c.marginNpaAdj>=0?'+':'')}${pct(c.marginNpaAdj)}` +
+        (c.ratingChanged ? `<br><i>${c.ratingMove}</i>` : '') +
+        (c.totalNew ? `<br>New votes this hour: +${fmt(c.totalNew)}` : '');
     });
   }
   return list.map(c => {

@@ -403,6 +403,45 @@
   .grid{ display:grid; grid-template-columns:1.15fr 1fr; gap:18px; align-items:start; }
   @media (max-width:920px){ .grid{ grid-template-columns:1fr; } }
 
+  /* Total Turnout's "Votes counted" panel: the left column under the map, beside the
+     tall text box. While it's showing, the grid is laid out explicitly (map top-left, the
+     table + text box spanning both rows on the right, this panel bottom-left). */
+  .grid.with-votes-per-day > .panel:nth-child(1){ grid-column:1; grid-row:1; }
+  .grid.with-votes-per-day > .panel:nth-child(2){ grid-column:2; grid-row:1 / span 2; }
+  .grid.with-votes-per-day > #votesPerDayPanel{ grid-column:1; grid-row:2; }
+  @media (max-width:920px){
+    /* single column: map, then the table + text box, then this panel (DOM order). The id
+       rule above would otherwise pin it to row 2, between the map and the table. */
+    .grid.with-votes-per-day > .panel:nth-child(n),
+    .grid.with-votes-per-day > #votesPerDayPanel{ grid-column:1; grid-row:auto; }
+  }
+  .vpd-sub{ font-family:var(--mono); font-size:10.5px; color:var(--muted-2); line-height:1.5; margin:-4px 0 12px; }
+  .vpd-controls{ display:flex; flex-wrap:wrap; gap:10px 14px; margin-bottom:12px; }
+  .vpd-controls label{ font-family:var(--mono); font-size:10.5px; color:var(--muted); display:flex; flex-direction:column; gap:4px; }
+  .vpd-controls select{
+    font-family:var(--mono); font-size:11.5px; color:var(--text); background:var(--panel-2);
+    border:1px solid var(--border); border-radius:7px; padding:6px 10px; cursor:pointer; min-width:132px;
+  }
+  .vpd-summary{ font-family:var(--mono); font-size:11.5px; color:var(--muted); line-height:1.6; margin-bottom:10px; padding:9px 11px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px; }
+  .vpd-summary b{ color:var(--text); }
+  .vpd-list{ max-height:400px; overflow-y:auto; padding-right:4px; }
+  /* By day of the week is at most seven rows, so it shows them all instead of scrolling. */
+  .vpd-list.show-all{ max-height:none; overflow-y:visible; }
+  .vpd-row{ padding:9px 2px 10px; border-bottom:1px dashed var(--border); }
+  .vpd-row:last-child{ border-bottom:none; }
+  .vpd-main{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+  .vpd-date{ font-weight:600; color:var(--text); font-size:13px; }
+  .vpd-votes{ font-family:var(--mono); font-size:12px; color:var(--muted); white-space:nowrap; }
+  .vpd-votes b{ color:var(--total-green); font-size:13px; }
+  .vpd-row.neg .vpd-votes b{ color:var(--rep); }
+  .vpd-tag{ font-family:var(--mono); font-size:9.5px; color:#0a0e17; background:var(--gold, #d8b466); border-radius:4px; padding:1px 5px; margin-left:6px; vertical-align:1px; }
+  .vpd-bar{ height:5px; background:var(--panel-2); border-radius:3px; margin:6px 0 5px; overflow:hidden; }
+  .vpd-bar span{ display:block; height:100%; background:var(--total-green); border-radius:3px; opacity:.85; }
+  .vpd-row.neg .vpd-bar span{ background:var(--rep); }
+  .vpd-row.in-progress .vpd-bar span{ opacity:.45; }
+  .vpd-detail{ font-family:var(--mono); font-size:10.5px; color:var(--muted-2); line-height:1.5; }
+  .vpd-row.empty .vpd-votes b{ color:var(--muted-2); }
+  .vpd-note{ font-family:var(--mono); font-size:10px; color:var(--muted-2); line-height:1.5; margin-top:10px; }
   .panel{ background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px; }
   .panel h2{ font-family:var(--serif); font-weight:500; font-size:15px; margin-bottom:10px; color:var(--text); }
   #map{ width:100%; height:560px; }
@@ -893,7 +932,7 @@
     <button class="sim-btn" id="downloadMapOnlyBtn" style="display:none;">Download Map</button>
   </div>
 
-  <div class="grid">
+  <div class="grid" id="liveGrid">
     <div class="panel">
       <div class="map-header-row">
         <h2 id="mapTitle">Rating by county</h2>
@@ -1063,6 +1102,36 @@
         <div class="tweet-card-viewport" id="tweetCardViewport"></div>
         <div class="tweet-card-dots" id="tweetCardDots"></div>
       </div>
+    </div>
+
+    <!-- Total Turnout only: how many votes each day / week / weekday has added, to see the pace of the count.
+         Sits in the left column under the map (the grid places it there while it is showing). -->
+    <div class="panel vpd-panel" id="votesPerDayPanel" style="display:none;">
+      <h2>Votes counted</h2>
+      <div class="vpd-sub">Every update logged in a day (or week) added together, to show how fast ballots are being counted and what the next update might bring.</div>
+      <div class="vpd-controls">
+        <label>Group by
+          <select id="vpdView">
+            <option value="day">By day</option>
+            <option value="week">By week (Mon&ndash;Sun)</option>
+            <option value="weekday">By day of the week</option>
+          </select>
+        </label>
+        <label>Update time
+          <select id="vpdTime"><option value="all">All times</option></select>
+        </label>
+        <label>Day
+          <select id="vpdDay">
+            <option value="all">Every day</option>
+            <option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option>
+            <option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option>
+            <option value="0">Sunday</option>
+          </select>
+        </label>
+      </div>
+      <div class="vpd-summary" id="vpdSummary"></div>
+      <div class="vpd-list" id="vpdList"></div>
+      <div class="vpd-note" id="vpdNote"></div>
     </div>
   </div>
 
@@ -2715,6 +2784,11 @@ async function renderMap(){
   document.getElementById('mapTitle').textContent = m.title;
   document.getElementById('npaSliderWrap').style.display = (currentMetric === 'demrepnpa') ? 'block' : 'none';
   document.getElementById('turnoutSliderWrap').style.display = (currentMetric === 'total') ? 'block' : 'none';
+  // Total Turnout also shows the "Votes counted" panel, under the map.
+  const showVotesPerDay = currentMetric === 'total';
+  document.getElementById('votesPerDayPanel').style.display = showVotesPerDay ? 'block' : 'none';
+  document.getElementById('liveGrid').classList.toggle('with-votes-per-day', showVotesPerDay);
+  if(showVotesPerDay && votesPerDayStale && !votesPerDayFetching) renderVotesPerDay();
   document.getElementById('marginTrackerWrap').style.display = (currentMetric === 'move') ? 'block' : 'none';
   if(currentMetric === 'move'){
     renderMarginTracker();
@@ -2870,6 +2944,265 @@ function renderTable(){
     tr.addEventListener('click', () => openCountyGeneralElectionPage(tr.dataset.county));
   });
 }
+
+// ============================================================
+// VOTES COUNTED PER DAY / WEEK (Total Turnout tab)
+// ============================================================
+// Shows how many votes each update added, added up by day, by week
+// (Monday-Sunday) or by day of the week, with optional filters for the
+// time of day an update was logged and the weekday -- so you can see the
+// pace of the count and judge what the next update, day or week might
+// bring. It reads statewide_history.csv (one row per logged update, with
+// the running total), so an update's votes are the change in that total.
+//
+// (var, not let: render() reaches this before the lines below have run.)
+var votesPerDayUpdates = [];       // [{ time:Date, total, added }], oldest first
+var votesPerDayStale = true;       // needs a (re)load before it can be shown
+var votesPerDayFetching = false;
+var votesPerDayFailed = false;
+var votesPerDayCallId = 0;
+var votesPerDayView = 'day';       // 'day' | 'week' | 'weekday'
+var votesPerDayHour = 'all';       // 'all' or an hour 0-23 as text
+var votesPerDayWeekday = 'all';    // 'all' or 0 (Sun) - 6 (Sat) as text
+
+// One record per logged update of the CURRENT election period (the
+// primary's rows are left out, as the other history charts do): when it
+// was logged, the running total after it, and how many votes it added.
+// The first update's "added" is its whole total (the count started at
+// zero). A later update can be NEGATIVE if a county corrected its count.
+function votesAddedPerUpdate(rows){
+  const parsed = (rows || [])
+    .map(r => ({ r, time: parseHistoryTimestamp(pick(r, ['Timestamp'])) }))
+    .filter(x => x.time)
+    .sort((a, b) => a.time - b.time);
+  const totals = parsed.map(x =>
+    num(pick(x.r, ['Total'])) || (num(pick(x.r, ['DEM'])) + num(pick(x.r, ['REP'])) + num(pick(x.r, ['NPA/Other']))));
+  const start = findCurrentPeriodStart(totals);
+  const out = [];
+  for(let i = start; i < parsed.length; i++){
+    out.push({ time: parsed[i].time, total: totals[i], added: i === start ? totals[i] : totals[i] - totals[i - 1] });
+  }
+  return out;
+}
+
+// The calendar date it is in Florida right now (the history's times are
+// Florida times), so "today" is judged by Florida's clock wherever the
+// page is open.
+function easternDateParts(now){
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone:'America/New_York', year:'numeric', month:'numeric', day:'numeric' })
+    .formatToParts(now || new Date());
+  const get = t => parseInt(parts.find(p => p.type === t).value, 10);
+  return { y: get('year'), m: get('month'), d: get('day') };
+}
+function vpdDayKey(y, m, d){ return y * 10000 + m * 100 + d; }
+function vpdKeyOfDate(date){ return vpdDayKey(date.getFullYear(), date.getMonth() + 1, date.getDate()); }
+function vpdStartOfDay(date){ return new Date(date.getFullYear(), date.getMonth(), date.getDate()); }
+function vpdAddDays(date, n){ return new Date(date.getFullYear(), date.getMonth(), date.getDate() + n); }
+// Monday of the week a date falls in.
+function vpdWeekStart(date){ return vpdAddDays(vpdStartOfDay(date), -((date.getDay() + 6) % 7)); }
+
+// Adds the updates up by day, week or weekday.
+//   options.view     'day' | 'week' | 'weekday'
+//   options.hour     only count updates logged in this hour of the day (0-23), or null
+//   options.weekday  only count updates on this weekday (0 = Sunday ... 6), or null
+//   options.today    {y, m, d}: the current date; that day (and its week) is "in progress"
+// Every calendar day from the first update to the last is included, so a
+// day with no updates shows as 0 instead of disappearing. Days and weeks
+// that aren't finished (today, this week, a week that began before the
+// data did) are marked and left out of the averages. Pure function.
+function groupVotesAdded(updates, options){
+  const o = options || {};
+  const view = o.view || 'day';
+  const hour = o.hour === undefined ? null : o.hour;
+  const weekday = o.weekday === undefined ? null : o.weekday;
+  const todayKey = o.today ? vpdDayKey(o.today.y, o.today.m, o.today.d) : Infinity;
+  if(!updates.length) return { rows: [], summary: null };
+
+  const counts = u => (hour === null || u.time.getHours() === hour) && (weekday === null || u.time.getDay() === weekday);
+
+  const firstDay = vpdStartOfDay(updates[0].time);
+  const lastDay = vpdStartOfDay(updates[updates.length - 1].time);
+  const days = [], byKey = {};
+  for(let d = firstDay; d <= lastDay; d = vpdAddDays(d, 1)){
+    const rec = { date: d, key: vpdKeyOfDate(d), weekday: d.getDay(), votes: 0, updates: [] };
+    days.push(rec); byKey[rec.key] = rec;
+  }
+  updates.forEach(u => {
+    if(!counts(u)) return;
+    const rec = byKey[vpdKeyOfDate(u.time)];
+    rec.votes += u.added;
+    rec.updates.push(u);
+  });
+  const kept = weekday === null ? days : days.filter(d => d.weekday === weekday);
+
+  let rows;
+  if(view === 'week'){
+    const weeks = new Map();
+    kept.forEach(d => {
+      const start = vpdWeekStart(d.date), key = vpdKeyOfDate(start);
+      if(!weeks.has(key)) weeks.set(key, { start, end: vpdAddDays(start, 6), votes: 0, updateCount: 0, dayCount: 0 });
+      const w = weeks.get(key);
+      w.votes += d.votes; w.updateCount += d.updates.length; w.dayCount++;
+    });
+    rows = [...weeks.values()].map(w => {
+      const inProgress = vpdKeyOfDate(w.start) <= todayKey && todayKey <= vpdKeyOfDate(w.end);
+      const startsBeforeData = w.start < firstDay;
+      return { kind: 'week', start: w.start, end: w.end, votes: w.votes, updateCount: w.updateCount, dayCount: w.dayCount,
+               inProgress, partialStart: startsBeforeData, complete: !inProgress && !startsBeforeData && vpdKeyOfDate(w.end) < todayKey };
+    }).reverse();
+  }else if(view === 'weekday'){
+    const order = weekday === null ? [1, 2, 3, 4, 5, 6, 0] : [weekday];
+    rows = order.map(wd => {
+      const mine = kept.filter(d => d.weekday === wd);
+      const done = mine.filter(d => d.key < todayKey);
+      const sumDone = done.reduce((a, d) => a + d.votes, 0);
+      return { kind: 'weekday', weekday: wd, votes: mine.reduce((a, d) => a + d.votes, 0),
+               updateCount: mine.reduce((a, d) => a + d.updates.length, 0),
+               occurrences: mine.length, completeOccurrences: done.length,
+               avg: done.length ? sumDone / done.length : null,
+               includesToday: mine.some(d => d.key >= todayKey), complete: true };
+    });
+  }else{
+    rows = kept.slice().reverse().map(d => ({
+      kind: 'day', date: d.date, votes: d.votes, updates: d.updates, updateCount: d.updates.length,
+      inProgress: d.key === todayKey, complete: d.key < todayKey
+    }));
+  }
+
+  const total = rows.reduce((a, r) => a + r.votes, 0);
+  const updateCount = rows.reduce((a, r) => a + r.updateCount, 0);
+  const done = view === 'weekday' ? [] : rows.filter(r => r.complete);
+  const summary = {
+    total, updateCount,
+    avg: done.length ? done.reduce((a, r) => a + r.votes, 0) / done.length : null,
+    avgOver: done.length,
+    unit: view === 'week' ? 'week' : 'day'
+  };
+  return { rows, summary };
+}
+
+// ---- drawing ----
+function vpdClockTime(date){
+  const h = date.getHours();
+  return `${h % 12 || 12}:${String(date.getMinutes()).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+}
+function vpdHourLabel(h){ return `${h % 12 || 12} ${h >= 12 ? 'PM' : 'AM'}`; }
+function vpdShortDate(date){ return date.toLocaleDateString('en-US', { month:'short', day:'numeric' }); }
+function vpdSigned(n){ return (n < 0 ? '-' : '+') + fmt(Math.abs(n)); }
+function vpdPlural(n, one, many){ return `${fmt(n)} ${n === 1 ? one : many || one + 's'}`; }
+const VPD_WEEKDAYS = () => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+// The "Update time" choices come from the updates actually logged (by the
+// hour of day they were logged), with how many there were of each.
+function syncVpdTimeOptions(){
+  const sel = document.getElementById('vpdTime');
+  if(!sel) return;
+  const byHour = {};
+  votesPerDayUpdates.forEach(u => { const h = u.time.getHours(); byHour[h] = (byHour[h] || 0) + 1; });
+  const hours = Object.keys(byHour).map(Number).sort((a, b) => a - b);
+  if(votesPerDayHour !== 'all' && !hours.includes(parseInt(votesPerDayHour, 10))) votesPerDayHour = 'all';
+  sel.innerHTML = '<option value="all">All times</option>' +
+    hours.map(h => `<option value="${h}">${vpdHourLabel(h)} (${vpdPlural(byHour[h], 'update')})</option>`).join('');
+  sel.value = votesPerDayHour;
+}
+
+function drawVotesPerDay(){
+  const listEl = document.getElementById('vpdList');
+  const sumEl = document.getElementById('vpdSummary');
+  const noteEl = document.getElementById('vpdNote');
+  if(!listEl) return;
+
+  if(!votesPerDayUpdates.length){
+    sumEl.style.display = 'none';
+    noteEl.textContent = '';
+    listEl.innerHTML = votesPerDayFailed
+      ? '<div class="county-detail-note">Couldn\'t load the update history just now. It will try again on the next refresh.</div>'
+      : '<div class="county-detail-note">No updates logged yet. Once results start coming in, the votes counted per day will build here.</div>';
+    return;
+  }
+  syncVpdTimeOptions();
+
+  const hour = votesPerDayHour === 'all' ? null : parseInt(votesPerDayHour, 10);
+  const weekday = votesPerDayWeekday === 'all' ? null : parseInt(votesPerDayWeekday, 10);
+  const { rows, summary } = groupVotesAdded(votesPerDayUpdates, { view: votesPerDayView, hour, weekday, today: easternDateParts() });
+  const filtering = hour !== null || weekday !== null;
+  const names = VPD_WEEKDAYS();
+  listEl.classList.toggle('show-all', votesPerDayView === 'weekday');
+
+  // summary line
+  let sum = `Counted in this view: <b>${fmt(summary.total)}</b> votes &middot; <b>${fmt(summary.updateCount)}</b> ${summary.updateCount === 1 ? 'update' : 'updates'}`;
+  if(summary.avg !== null){
+    sum += ` &middot; Average per complete ${summary.unit}: <b>${fmt(Math.round(summary.avg))}</b> <span>(${summary.avgOver} ${summary.unit}${summary.avgOver === 1 ? '' : 's'})</span>`;
+  }
+  sumEl.style.display = '';
+  sumEl.innerHTML = sum;
+
+  // rows, each with a bar sized against the biggest in view
+  const biggest = Math.max(1, ...rows.map(r => Math.abs(r.votes)));
+  listEl.innerHTML = rows.map(r => {
+    let label, detail, tag = '';
+    if(r.kind === 'day'){
+      label = r.date.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+      if(r.inProgress) tag = '<span class="vpd-tag">so far</span>';
+      detail = r.updateCount
+        ? `${r.inProgress ? 'So far today &middot; ' : ''}${vpdPlural(r.updateCount, 'update')}: ` +
+          r.updates.map(u => `${vpdClockTime(u.time)} ${vpdSigned(u.added)}`).join(' &middot; ')
+        : (filtering ? 'No matching update' : 'No updates');
+    }else if(r.kind === 'week'){
+      label = `${vpdShortDate(r.start)} \u2013 ${vpdShortDate(r.end)}`;
+      if(r.inProgress) tag = '<span class="vpd-tag">so far</span>';
+      detail = `${vpdPlural(r.updateCount, 'update')} over ${vpdPlural(r.dayCount, 'day')}` +
+        (r.inProgress ? ' &middot; week still in progress' : '') +
+        (r.partialStart ? ' &middot; partial week (tracking began mid-week)' : '');
+    }else{
+      const name = names[r.weekday];
+      label = name;
+      detail = (r.avg !== null ? `Average ${fmt(Math.round(r.avg))} per ${name} &middot; ` : '') +
+        `${vpdPlural(r.occurrences, name)}, ${vpdPlural(r.updateCount, 'update')}` +
+        (r.includesToday ? ' &middot; today\'s count so far isn\'t in the average' : '');
+    }
+    const width = r.votes === 0 ? 0 : Math.max(2, Math.round(Math.abs(r.votes) / biggest * 100));
+    return `<div class="vpd-row${r.votes < 0 ? ' neg' : ''}${r.inProgress ? ' in-progress' : ''}${r.updateCount === 0 ? ' empty' : ''}">
+      <div class="vpd-main"><span class="vpd-date">${label}${tag}</span><span class="vpd-votes">Votes Counted: <b>${fmt(r.votes)}</b></span></div>
+      <div class="vpd-bar"><span style="width:${width}%"></span></div>
+      <div class="vpd-detail">${detail}</div>
+    </div>`;
+  }).join('') || '<div class="county-detail-note">Nothing matches those filters.</div>';
+
+  noteEl.textContent = 'Each update is counted on the day it was logged (Florida time). Weeks run Monday to Sunday. Days and weeks still in progress are marked "so far" and left out of the averages.';
+}
+
+// Loads the update history (when the panel is on screen) and draws it.
+// Called after every data refresh and when the Total Turnout tab opens;
+// only the most recently STARTED request's result is ever used.
+async function renderVotesPerDay(){
+  if(!document.getElementById('votesPerDayPanel')) return;
+  if(currentMetric !== 'total'){ votesPerDayStale = true; return; }
+  const callId = ++votesPerDayCallId;
+  votesPerDayFetching = true;
+  let rows = null;
+  try{ rows = await fetchCSV(STATEWIDE_HISTORY_PATH); }catch(e){ rows = null; }
+  if(callId !== votesPerDayCallId) return;
+  votesPerDayFetching = false;
+  if(rows){
+    votesPerDayUpdates = votesAddedPerUpdate(rows);
+    votesPerDayStale = false;
+    votesPerDayFailed = false;
+  }else{
+    // A failed refresh keeps whatever was last shown; the first-ever failure says so.
+    votesPerDayFailed = true;
+  }
+  drawVotesPerDay();
+}
+
+['vpdView', 'vpdTime', 'vpdDay'].forEach(id => {
+  document.getElementById(id).addEventListener('change', e => {
+    if(id === 'vpdView') votesPerDayView = e.target.value;
+    else if(id === 'vpdTime') votesPerDayHour = e.target.value;
+    else votesPerDayWeekday = e.target.value;
+    drawVotesPerDay();
+  });
+});
 
 // New: table of counties that received votes this update hour, broken
 // down by party, plus a top-3 "largest updates" callout — mirrors the
@@ -3724,6 +4057,7 @@ function render(){
   // so this refreshes on every render() call -- including every
   // auto-refresh tick -- rather than being fetched once and cached.
   renderStatewideHistoryCharts();
+  renderVotesPerDay();
 }
 
 document.getElementById('refreshBtn').addEventListener('click', () => loadLatestCSV(true));

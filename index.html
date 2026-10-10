@@ -3939,10 +3939,18 @@ ${countiesReporting} of 67 counties have votes.`;
     ? topDrops.map((c, i) => {
         // Each county's party lines are ranked on THAT county's own
         // drop, not copied from the statewide order.
+        //
+        // Each also carries its share of that county's drop, worked out
+        // exactly like the statewide "Latest Drop" percentages (a party's
+        // new votes divided by the drop's new votes: DEM + REP + OTHER)
+        // and formatted with the same helper, so a county's drop can be
+        // compared fairly with the statewide drop and with other counties.
+        const countyDropTotal = c.demNew + c.repNew + c.otherNew;
+        const share = n => countyDropTotal ? n / countyDropTotal : 0;
         const countyLines = orderedPartyLines([
-          { v: c.demNew,   line: `\u{1F535} DEM: ${sign(c.demNew)}` },
-          { v: c.repNew,   line: `\u{1F534} REP: ${sign(c.repNew)}` },
-          { v: c.otherNew, line: `\u{1F7E3} OTHER: ${sign(c.otherNew)}` }
+          { v: c.demNew,   line: `\u{1F535} DEM: ${sign(c.demNew)} (${formatPctTweet(share(c.demNew))})` },
+          { v: c.repNew,   line: `\u{1F534} REP: ${sign(c.repNew)} (${formatPctTweet(share(c.repNew))})` },
+          { v: c.otherNew, line: `\u{1F7E3} OTHER: ${sign(c.otherNew)} (${formatPctTweet(share(c.otherNew))})` }
         ]);
         return `${medals[i]} ${winnerEmojiFor(c)} ${c.county} County
 ${countyLines}

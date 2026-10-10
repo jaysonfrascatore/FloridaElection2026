@@ -7,13 +7,13 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 10th, 2026 at 11:02am Eastern Time
+Updated at October 10th, 2026 at 4:33pm Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-4
+7
 
 Unchanged Counties:
 True
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-210,924
+215,350
 
 REP:
-175,934
+180,187
 
 OTHER:
-103,310
+105,630
 
 TOTAL:
-490,168
+501,167
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 34,990 votes statewide.
+🔵 Democrats lead by 35,163 votes statewide.
 
 Margin Change:
-+0.00% toward Democrats
+-0.08% toward Republicans
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +39
-🔴 REP: +20
-🟣 OTHER: +27
-🟢 TOTAL: +86
+🔵 DEM: +4,426
+🔴 REP: +4,253
+🟣 OTHER: +2,320
+🟢 TOTAL: +10,999
 
 REJECTED COUNTY UPDATES
 =================================
@@ -72,46 +72,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️11 AM Florida EV & VBM Update
+🗳️4 PM Florida EV & VBM Update
 
-New votes have been cast in 4 counties over the last hour, with the largest update coming from Palm Beach County.
+New votes have been cast in 7 counties over the last hour, with the largest update coming from Lee County.
 
-🔵 DEM: +39
-🔴 REP: +20
-🟣 OTHER: +27
-🟢 TOTAL: +86
+🔵 DEM: +4,426
+🔴 REP: +4,253
+🟣 OTHER: +2,320
+🟢 TOTAL: +10,999
 
-🔵 Democrats lead by 34,990 votes statewide.
+🔵 Democrats lead by 35,163 votes statewide.
 
-🔴 Margin Change: +0.00% toward Democrats
+🔴 Margin Change: -0.08% toward Republicans
 
 Largest County Updates
 
 
-🥇Palm Beach County
+🥇Lee County
 
-🔵 DEM: +27
-🔴 REP: +10
-🟣 OTHER: +18
-🟢 TOTAL: +55
-
-
-
-🥈Volusia County
-
-🔵 DEM: +6
-🔴 REP: +6
-🟣 OTHER: +4
-🟢 TOTAL: +16
+🔵 DEM: +1,372
+🔴 REP: +2,251
+🟣 OTHER: +1,101
+🟢 TOTAL: +4,724
 
 
 
-🥉Broward County
+🥈Palm Beach County
 
-🔵 DEM: +4
-🔴 REP: +2
-🟣 OTHER: +4
-🟢 TOTAL: +10
+🔵 DEM: +1,704
+🔴 REP: +914
+🟣 OTHER: +690
+🟢 TOTAL: +3,308
+
+
+
+🥉Polk County
+
+🔵 DEM: +486
+🔴 REP: +579
+🟣 OTHER: +203
+🟢 TOTAL: +1,268
 
 
 

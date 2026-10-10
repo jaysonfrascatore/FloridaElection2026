@@ -1,0 +1,118 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Election ID:
+FL-2026-General
+
+Run Time:
+Updated at October 10th, 2026 at 4:33pm Eastern Time
+
+Counties Loaded:
+67 / 67
+
+Updated Counties:
+7
+
+Unchanged Counties:
+True
+
+Rejected County Updates:
+0
+
+STATEWIDE TOTALS
+=================================
+
+DEM:
+215,350
+
+REP:
+180,187
+
+OTHER:
+105,630
+
+TOTAL:
+501,167
+
+STATEWIDE SUMMARY
+=================================
+
+🔵 Democrats lead by 35,163 votes statewide.
+
+Margin Change:
+-0.08% toward Republicans
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +4,426
+🔴 REP: +4,253
+🟣 OTHER: +2,320
+🟢 TOTAL: +10,999
+
+REJECTED COUNTY UPDATES
+=================================
+
+
+No county updates were rejected.
+
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+No rating changes detected.
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️4 PM Florida EV & VBM Update
+
+New votes have been cast in 7 counties over the last hour, with the largest update coming from Lee County.
+
+🔵 DEM: +4,426
+🔴 REP: +4,253
+🟣 OTHER: +2,320
+🟢 TOTAL: +10,999
+
+🔵 Democrats lead by 35,163 votes statewide.
+
+🔴 Margin Change: -0.08% toward Republicans
+
+Largest County Updates
+
+
+🥇Lee County
+
+🔵 DEM: +1,372
+🔴 REP: +2,251
+🟣 OTHER: +1,101
+🟢 TOTAL: +4,724
+
+
+
+🥈Palm Beach County
+
+🔵 DEM: +1,704
+🔴 REP: +914
+🟣 OTHER: +690
+🟢 TOTAL: +3,308
+
+
+
+🥉Polk County
+
+🔵 DEM: +486
+🔴 REP: +579
+🟣 OTHER: +203
+🟢 TOTAL: +1,268
+
+
+
+#Florida #EarlyVoting #VoteByMail

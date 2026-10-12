@@ -1,0 +1,141 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Election ID:
+FL-2026-General
+
+Run Time:
+Updated at October 12th, 2026 at 11:02am Eastern Time
+
+Counties Loaded:
+67 / 67
+
+Updated Counties:
+37
+
+Unchanged Counties:
+True
+
+Rejected County Updates:
+0
+
+STATEWIDE TOTALS
+=================================
+
+DEM:
+218,944
+
+REP:
+183,100
+
+OTHER:
+107,123
+
+TOTAL:
+509,167
+
+STATEWIDE SUMMARY
+=================================
+
+🔵 Democrats lead by 35,844 votes statewide.
+
+Margin Change:
++0.00% toward Democrats
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +3,487
+🔴 REP: +2,905
+🟣 OTHER: +1,480
+🟢 TOTAL: +7,872
+
+REJECTED COUNTY UPDATES
+=================================
+
+
+No county updates were rejected.
+
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+Franklin
+
+Toss Up R → Lean R
+
+Margin Move:
+-0.011
+
+
+
+Hernando
+
+Toss Up D → Lean D
+
+Margin Move:
++0.007
+
+
+
+Liberty
+
+Likely R → Lean R
+
+Margin Move:
++0.021
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️11 AM Florida EV & VBM Update
+
+New votes have been cast in 37 counties over the last hour, with the largest update coming from Hillsborough County.
+
+🔵 DEM: +3,487
+🔴 REP: +2,905
+🟣 OTHER: +1,480
+🟢 TOTAL: +7,872
+
+🔵 Democrats lead by 35,844 votes statewide.
+
+🔴 Margin Change: +0.00% toward Democrats
+
+Largest County Updates
+
+
+🥇Hillsborough County
+
+🔵 DEM: +943
+🔴 REP: +690
+🟣 OTHER: +438
+🟢 TOTAL: +2,071
+
+
+
+🥈Charlotte County
+
+🔵 DEM: +419
+🔴 REP: +588
+🟣 OTHER: +293
+🟢 TOTAL: +1,300
+
+
+
+🥉Duval County
+
+🔵 DEM: +631
+🔴 REP: +396
+🟣 OTHER: +158
+🟢 TOTAL: +1,185
+
+
+
+#Florida #EarlyVoting #VoteByMail

@@ -7,13 +7,13 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 11th, 2026 at 3:11pm Eastern Time
+Updated at October 12th, 2026 at 11:02am Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-0
+37
 
 Unchanged Counties:
 True
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-215,457
+218,944
 
 REP:
-180,195
+183,100
 
 OTHER:
-105,643
+107,123
 
 TOTAL:
-501,295
+509,167
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 35,262 votes statewide.
+🔵 Democrats lead by 35,844 votes statewide.
 
 Margin Change:
-No change
++0.00% toward Democrats
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +0
-🔴 REP: +0
-🟣 OTHER: +0
-🟢 TOTAL: +0
+🔵 DEM: +3,487
+🔴 REP: +2,905
+🟣 OTHER: +1,480
+🟢 TOTAL: +7,872
 
 REJECTED COUNTY UPDATES
 =================================
@@ -64,7 +64,30 @@ RATING / FORECAST CHANGES
 =================================
 
 
-No rating changes detected.
+Franklin
+
+Toss Up R → Lean R
+
+Margin Move:
+-0.011
+
+
+
+Hernando
+
+Toss Up D → Lean D
+
+Margin Move:
++0.007
+
+
+
+Liberty
+
+Likely R → Lean R
+
+Margin Move:
++0.021
 
 
 
@@ -72,20 +95,47 @@ TWEET DRAFT
 =================================
 
 
-🗳️3 PM Florida EV & VBM Update
+🗳️11 AM Florida EV & VBM Update
 
-New votes have been cast in 0 counties over the last hour, with the largest update coming from No county County.
+New votes have been cast in 37 counties over the last hour, with the largest update coming from Hillsborough County.
 
-🔵 DEM: +0
-🔴 REP: +0
-🟣 OTHER: +0
-🟢 TOTAL: +0
+🔵 DEM: +3,487
+🔴 REP: +2,905
+🟣 OTHER: +1,480
+🟢 TOTAL: +7,872
 
-🔵 Democrats lead by 35,262 votes statewide.
+🔵 Democrats lead by 35,844 votes statewide.
 
-🔴 Margin Change: No change
+🔴 Margin Change: +0.00% toward Democrats
 
 Largest County Updates
+
+
+🥇Hillsborough County
+
+🔵 DEM: +943
+🔴 REP: +690
+🟣 OTHER: +438
+🟢 TOTAL: +2,071
+
+
+
+🥈Charlotte County
+
+🔵 DEM: +419
+🔴 REP: +588
+🟣 OTHER: +293
+🟢 TOTAL: +1,300
+
+
+
+🥉Duval County
+
+🔵 DEM: +631
+🔴 REP: +396
+🟣 OTHER: +158
+🟢 TOTAL: +1,185
+
 
 
 #Florida #EarlyVoting #VoteByMail

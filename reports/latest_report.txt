@@ -7,16 +7,16 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 12th, 2026 at 3:00pm Eastern Time
+Updated at October 12th, 2026 at 7:02pm Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-51
+39
 
 Unchanged Counties:
-False
+True
 
 Rejected County Updates:
 0
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-224,957
+226,837
 
 REP:
-188,602
+189,765
 
 OTHER:
-110,174
+110,915
 
 TOTAL:
-523,733
+527,517
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 36,355 votes statewide.
+🔵 Democrats lead by 37,072 votes statewide.
 
 Margin Change:
--0.06% toward Republicans
++0.05% toward Democrats
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +6,013
-🔴 REP: +5,502
-🟣 OTHER: +3,051
-🟢 TOTAL: +14,566
+🔵 DEM: +1,880
+🔴 REP: +1,163
+🟣 OTHER: +741
+🟢 TOTAL: +3,784
 
 REJECTED COUNTY UPDATES
 =================================
@@ -64,75 +64,21 @@ RATING / FORECAST CHANGES
 =================================
 
 
-Brevard
-
-Toss Up R → Toss Up D
-
-Margin Move:
-+0.016
-
-
-
 Charlotte
-
-Likely R → Safe R
-
-Margin Move:
--0.001
-
-
-
-Franklin
-
-Lean R → Toss Up D
-
-Margin Move:
-+0.051
-
-
-
-Hardee
 
 Safe R → Likely R
 
 Margin Move:
-+0.048
++0.000
 
 
 
-Hendry
+Wakulla
 
-Lean D → Toss Up D
-
-Margin Move:
--0.042
-
-
-
-Liberty
-
-Lean R → Toss Up R
+Likely R → Safe R
 
 Margin Move:
-+0.048
-
-
-
-Pinellas
-
-Toss Up R → Toss Up D
-
-Margin Move:
-+0.010
-
-
-
-Volusia
-
-Toss Up D → Toss Up R
-
-Margin Move:
--0.009
+-0.002
 
 
 
@@ -140,46 +86,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️3 PM Florida EV & VBM Update
+🗳️7 PM Florida EV & VBM Update
 
-New votes have been cast in 51 counties over the last hour, with the largest update coming from Volusia County.
+New votes have been cast in 39 counties over the last hour, with the largest update coming from St. Lucie County.
 
-🔵 DEM: +6,013
-🔴 REP: +5,502
-🟣 OTHER: +3,051
-🟢 TOTAL: +14,566
+🔵 DEM: +1,880
+🔴 REP: +1,163
+🟣 OTHER: +741
+🟢 TOTAL: +3,784
 
-🔵 Democrats lead by 36,355 votes statewide.
+🔵 Democrats lead by 37,072 votes statewide.
 
-🔴 Margin Change: -0.06% toward Republicans
+🔴 Margin Change: +0.05% toward Democrats
 
 Largest County Updates
 
 
-🥇Volusia County
+🥇St. Lucie County
 
-🔵 DEM: +1,572
-🔴 REP: +1,705
-🟣 OTHER: +957
-🟢 TOTAL: +4,234
-
-
-
-🥈Hillsborough County
-
-🔵 DEM: +1,206
-🔴 REP: +985
-🟣 OTHER: +695
-🟢 TOTAL: +2,886
+🔵 DEM: +271
+🔴 REP: +109
+🟣 OTHER: +99
+🟢 TOTAL: +479
 
 
 
-🥉Pasco County
+🥈Lee County
 
-🔵 DEM: +482
-🔴 REP: +441
-🟣 OTHER: +241
-🟢 TOTAL: +1,164
+🔵 DEM: +188
+🔴 REP: +124
+🟣 OTHER: +75
+🟢 TOTAL: +387
+
+
+
+🥉Pinellas County
+
+🔵 DEM: +195
+🔴 REP: +102
+🟣 OTHER: +71
+🟢 TOTAL: +368
 
 
 

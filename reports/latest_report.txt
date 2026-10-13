@@ -7,16 +7,16 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 12th, 2026 at 7:02pm Eastern Time
+Updated at October 13th, 2026 at 11:00am Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-39
+45
 
 Unchanged Counties:
-True
+False
 
 Rejected County Updates:
 0
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-226,837
+232,157
 
 REP:
-189,765
+195,184
 
 OTHER:
-110,915
+113,915
 
 TOTAL:
-527,517
+541,256
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 37,072 votes statewide.
+🔵 Democrats lead by 36,973 votes statewide.
 
 Margin Change:
-+0.05% toward Democrats
+-0.12% toward Republicans
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +1,880
-🔴 REP: +1,163
-🟣 OTHER: +741
-🟢 TOTAL: +3,784
+🔵 DEM: +5,320
+🔴 REP: +5,419
+🟣 OTHER: +3,000
+🟢 TOTAL: +13,739
 
 REJECTED COUNTY UPDATES
 =================================
@@ -66,19 +66,28 @@ RATING / FORECAST CHANGES
 
 Charlotte
 
+Likely R → Safe R
+
+Margin Move:
+-0.007
+
+
+
+Taylor
+
 Safe R → Likely R
 
 Margin Move:
-+0.000
++0.012
 
 
 
 Wakulla
 
-Likely R → Safe R
+Safe R → Likely R
 
 Margin Move:
--0.002
++0.004
 
 
 
@@ -86,46 +95,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️7 PM Florida EV & VBM Update
+🗳️11 AM Florida EV & VBM Update
 
-New votes have been cast in 39 counties over the last hour, with the largest update coming from St. Lucie County.
+New votes have been cast in 45 counties over the last hour, with the largest update coming from Miami-Dade County.
 
-🔵 DEM: +1,880
-🔴 REP: +1,163
-🟣 OTHER: +741
-🟢 TOTAL: +3,784
+🔵 DEM: +5,320
+🔴 REP: +5,419
+🟣 OTHER: +3,000
+🟢 TOTAL: +13,739
 
-🔵 Democrats lead by 37,072 votes statewide.
+🔵 Democrats lead by 36,973 votes statewide.
 
-🔴 Margin Change: +0.05% toward Democrats
+🔴 Margin Change: -0.12% toward Republicans
 
 Largest County Updates
 
 
-🥇St. Lucie County
+🥇Miami-Dade County
 
-🔵 DEM: +271
-🔴 REP: +109
-🟣 OTHER: +99
-🟢 TOTAL: +479
+🔵 DEM: +2,022
+🔴 REP: +1,387
+🟣 OTHER: +1,162
+🟢 TOTAL: +4,571
 
 
 
 🥈Lee County
 
-🔵 DEM: +188
-🔴 REP: +124
-🟣 OTHER: +75
-🟢 TOTAL: +387
+🔵 DEM: +872
+🔴 REP: +1,675
+🟣 OTHER: +691
+🟢 TOTAL: +3,238
 
 
 
-🥉Pinellas County
+🥉Brevard County
 
-🔵 DEM: +195
-🔴 REP: +102
-🟣 OTHER: +71
-🟢 TOTAL: +368
+🔵 DEM: +840
+🔴 REP: +854
+🟣 OTHER: +445
+🟢 TOTAL: +2,139
 
 
 

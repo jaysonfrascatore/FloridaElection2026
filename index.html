@@ -7549,6 +7549,17 @@ document.getElementById('marginLineShowAllToggle').addEventListener('change', e 
   }
 });
 
+// Y-range for the vote-share charts: fitted to the lowest and highest
+// percentage actually plotted (with a little breathing room), clamped to
+// 0-100. Set explicitly so a double-click reset returns to this fit.
+function pctChartRange(seriesList){
+  let lo = Infinity, hi = -Infinity;
+  seriesList.forEach(a => (a || []).forEach(v => { if(isFinite(v)){ if(v < lo) lo = v; if(v > hi) hi = v; } }));
+  if(!isFinite(lo)) return [0, 100];
+  const pad = Math.max(1, (hi - lo) * 0.08);
+  return [Math.max(0, lo - pad), Math.min(100, hi + pad)];
+}
+
 const COUNTY_DETAIL_CHART_LAYOUT_BASE = {
   paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
   font:{family:'IBM Plex Mono, monospace', size:11, color:'#7c879c'},
@@ -7927,7 +7938,7 @@ async function renderCountyDetailCharts(countyRows){
 
   await Plotly.newPlot(shareEl, shareTraces, {
     ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
-    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:[0,100], autorange:false, fixedrange:true, tickmode:'array', tickvals:[0,20,40,60,80,100], ticksuffix:'%'}
+    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:pctChartRange([demPct, repPct, npaOtherPct]), autorange:false, ticksuffix:'%'}
   }, {displayModeBar:false, responsive:true});
   attachSortedHoverTooltip(shareEl, fmtShareHoverValue, ratingLookup);
 }
@@ -8231,7 +8242,7 @@ async function renderStatewideHistoryCharts(){
 
   Plotly.newPlot(shareEl, shareTraces, {
     ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
-    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:[0,100], autorange:false, fixedrange:true, tickmode:'array', tickvals:[0,20,40,60,80,100], ticksuffix:'%'}
+    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:pctChartRange([demPct, repPct, npaOtherPct]), autorange:false, ticksuffix:'%'}
   }, {displayModeBar:false, responsive:true});
   attachSortedHoverTooltip(shareEl, fmtShareHoverValue);
 }

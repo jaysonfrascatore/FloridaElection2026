@@ -1,0 +1,177 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Election ID:
+FL-2026-General
+
+Run Time:
+Updated at October 13th, 2026 at 3:03pm Eastern Time
+
+Counties Loaded:
+67 / 67
+
+Updated Counties:
+56
+
+Unchanged Counties:
+False
+
+Rejected County Updates:
+0
+
+STATEWIDE TOTALS
+=================================
+
+DEM:
+257,374
+
+REP:
+218,403
+
+OTHER:
+126,970
+
+TOTAL:
+602,747
+
+STATEWIDE SUMMARY
+=================================
+
+🔵 Democrats lead by 38,971 votes statewide.
+
+Margin Change:
+-0.23% toward Republicans
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +25,217
+🔴 REP: +23,219
+🟣 OTHER: +13,055
+🟢 TOTAL: +61,491
+
+REJECTED COUNTY UPDATES
+=================================
+
+
+No county updates were rejected.
+
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+Brevard
+
+Toss Up D → Toss Up R
+
+Margin Move:
+-0.006
+
+
+
+Hamilton
+
+Lean R → Likely R
+
+Margin Move:
+-0.052
+
+
+
+Hendry
+
+Toss Up D → Lean D
+
+Margin Move:
++0.017
+
+
+
+Hernando
+
+Lean D → Toss Up D
+
+Margin Move:
+-0.014
+
+
+
+Indian River
+
+Lean R → Likely R
+
+Margin Move:
+-0.016
+
+
+
+Liberty
+
+Toss Up R → Toss Up D
+
+Margin Move:
++0.040
+
+
+
+Monroe
+
+Toss Up D → Lean D
+
+Margin Move:
++0.016
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️3 PM Florida EV & VBM Update
+
+New votes have been cast in 56 counties over the last hour, with the largest update coming from Pinellas County.
+
+🔵 DEM: +25,217
+🔴 REP: +23,219
+🟣 OTHER: +13,055
+🟢 TOTAL: +61,491
+
+🔵 Democrats lead by 38,971 votes statewide.
+
+🔴 Margin Change: -0.23% toward Republicans
+
+Largest County Updates
+
+
+🥇Pinellas County
+
+🔵 DEM: +4,162
+🔴 REP: +4,009
+🟣 OTHER: +2,270
+🟢 TOTAL: +10,441
+
+
+
+🥈Sarasota County
+
+🔵 DEM: +1,952
+🔴 REP: +1,887
+🟣 OTHER: +933
+🟢 TOTAL: +4,772
+
+
+
+🥉Broward County
+
+🔵 DEM: +2,584
+🔴 REP: +1,030
+🟣 OTHER: +985
+🟢 TOTAL: +4,599
+
+
+
+#Florida #EarlyVoting #VoteByMail

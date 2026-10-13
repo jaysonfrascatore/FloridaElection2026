@@ -1,0 +1,159 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Election ID:
+FL-2026-General
+
+Run Time:
+Updated at October 13th, 2026 at 7:00pm Eastern Time
+
+Counties Loaded:
+67 / 67
+
+Updated Counties:
+52
+
+Unchanged Counties:
+False
+
+Rejected County Updates:
+0
+
+STATEWIDE TOTALS
+=================================
+
+DEM:
+262,745
+
+REP:
+221,950
+
+OTHER:
+129,304
+
+TOTAL:
+613,999
+
+STATEWIDE SUMMARY
+=================================
+
+🔵 Democrats lead by 40,795 votes statewide.
+
+Margin Change:
++0.11% toward Democrats
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +5,371
+🔴 REP: +3,547
+🟣 OTHER: +2,334
+🟢 TOTAL: +11,252
+
+REJECTED COUNTY UPDATES
+=================================
+
+
+No county updates were rejected.
+
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+Charlotte
+
+Safe R → Likely R
+
+Margin Move:
++0.003
+
+
+
+DeSoto
+
+Lean D → Lean R
+
+Margin Move:
+-0.102
+
+
+
+Indian River
+
+Likely R → Lean R
+
+Margin Move:
++0.005
+
+
+
+Jackson
+
+Lean D → Toss Up R
+
+Margin Move:
+-0.062
+
+
+
+Monroe
+
+Lean D → Toss Up D
+
+Margin Move:
+-0.013
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️7 PM Florida EV & VBM Update
+
+New votes have been cast in 52 counties over the last hour, with the largest update coming from Hillsborough County.
+
+🔵 DEM: +5,371
+🔴 REP: +3,547
+🟣 OTHER: +2,334
+🟢 TOTAL: +11,252
+
+🔵 Democrats lead by 40,795 votes statewide.
+
+🔴 Margin Change: +0.11% toward Democrats
+
+Largest County Updates
+
+
+🥇Hillsborough County
+
+🔵 DEM: +815
+🔴 REP: +709
+🟣 OTHER: +454
+🟢 TOTAL: +1,978
+
+
+
+🥈Polk County
+
+🔵 DEM: +638
+🔴 REP: +666
+🟣 OTHER: +278
+🟢 TOTAL: +1,582
+
+
+
+🥉Pinellas County
+
+🔵 DEM: +520
+🔴 REP: +643
+🟣 OTHER: +387
+🟢 TOTAL: +1,550
+
+
+
+#Florida #EarlyVoting #VoteByMail

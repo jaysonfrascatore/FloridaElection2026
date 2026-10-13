@@ -7,13 +7,13 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 13th, 2026 at 3:03pm Eastern Time
+Updated at October 13th, 2026 at 7:00pm Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-56
+52
 
 Unchanged Counties:
 False
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-257,374
+262,745
 
 REP:
-218,403
+221,950
 
 OTHER:
-126,970
+129,304
 
 TOTAL:
-602,747
+613,999
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 38,971 votes statewide.
+🔵 Democrats lead by 40,795 votes statewide.
 
 Margin Change:
--0.23% toward Republicans
++0.11% toward Democrats
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +25,217
-🔴 REP: +23,219
-🟣 OTHER: +13,055
-🟢 TOTAL: +61,491
+🔵 DEM: +5,371
+🔴 REP: +3,547
+🟣 OTHER: +2,334
+🟢 TOTAL: +11,252
 
 REJECTED COUNTY UPDATES
 =================================
@@ -64,66 +64,48 @@ RATING / FORECAST CHANGES
 =================================
 
 
-Brevard
+Charlotte
 
-Toss Up D → Toss Up R
-
-Margin Move:
--0.006
-
-
-
-Hamilton
-
-Lean R → Likely R
+Safe R → Likely R
 
 Margin Move:
--0.052
++0.003
 
 
 
-Hendry
+DeSoto
 
-Toss Up D → Lean D
-
-Margin Move:
-+0.017
-
-
-
-Hernando
-
-Lean D → Toss Up D
+Lean D → Lean R
 
 Margin Move:
--0.014
+-0.102
 
 
 
 Indian River
 
-Lean R → Likely R
+Likely R → Lean R
 
 Margin Move:
--0.016
++0.005
 
 
 
-Liberty
+Jackson
 
-Toss Up R → Toss Up D
+Lean D → Toss Up R
 
 Margin Move:
-+0.040
+-0.062
 
 
 
 Monroe
 
-Toss Up D → Lean D
+Lean D → Toss Up D
 
 Margin Move:
-+0.016
+-0.013
 
 
 
@@ -131,46 +113,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️3 PM Florida EV & VBM Update
+🗳️7 PM Florida EV & VBM Update
 
-New votes have been cast in 56 counties over the last hour, with the largest update coming from Pinellas County.
+New votes have been cast in 52 counties over the last hour, with the largest update coming from Hillsborough County.
 
-🔵 DEM: +25,217
-🔴 REP: +23,219
-🟣 OTHER: +13,055
-🟢 TOTAL: +61,491
+🔵 DEM: +5,371
+🔴 REP: +3,547
+🟣 OTHER: +2,334
+🟢 TOTAL: +11,252
 
-🔵 Democrats lead by 38,971 votes statewide.
+🔵 Democrats lead by 40,795 votes statewide.
 
-🔴 Margin Change: -0.23% toward Republicans
+🔴 Margin Change: +0.11% toward Democrats
 
 Largest County Updates
 
 
-🥇Pinellas County
+🥇Hillsborough County
 
-🔵 DEM: +4,162
-🔴 REP: +4,009
-🟣 OTHER: +2,270
-🟢 TOTAL: +10,441
-
-
-
-🥈Sarasota County
-
-🔵 DEM: +1,952
-🔴 REP: +1,887
-🟣 OTHER: +933
-🟢 TOTAL: +4,772
+🔵 DEM: +815
+🔴 REP: +709
+🟣 OTHER: +454
+🟢 TOTAL: +1,978
 
 
 
-🥉Broward County
+🥈Polk County
 
-🔵 DEM: +2,584
-🔴 REP: +1,030
-🟣 OTHER: +985
-🟢 TOTAL: +4,599
+🔵 DEM: +638
+🔴 REP: +666
+🟣 OTHER: +278
+🟢 TOTAL: +1,582
+
+
+
+🥉Pinellas County
+
+🔵 DEM: +520
+🔴 REP: +643
+🟣 OTHER: +387
+🟢 TOTAL: +1,550
 
 
 

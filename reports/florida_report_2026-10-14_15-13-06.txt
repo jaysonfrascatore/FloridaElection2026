@@ -1,0 +1,177 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Election ID:
+FL-2026-General
+
+Run Time:
+Updated at October 14th, 2026 at 3:13pm Eastern Time
+
+Counties Loaded:
+67 / 67
+
+Updated Counties:
+56
+
+Unchanged Counties:
+False
+
+Rejected County Updates:
+0
+
+STATEWIDE TOTALS
+=================================
+
+DEM:
+283,772
+
+REP:
+240,221
+
+OTHER:
+139,788
+
+TOTAL:
+663,781
+
+STATEWIDE SUMMARY
+=================================
+
+🔵 Democrats lead by 43,551 votes statewide.
+
+Margin Change:
++0.03% toward Democrats
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +13,564
+🔴 REP: +11,213
+🟣 OTHER: +7,148
+🟢 TOTAL: +31,925
+
+REJECTED COUNTY UPDATES
+=================================
+
+
+No county updates were rejected.
+
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+Brevard
+
+Toss Up D → Toss Up R
+
+Margin Move:
+-0.012
+
+
+
+Charlotte
+
+Safe R → Likely R
+
+Margin Move:
++0.004
+
+
+
+Escambia
+
+Lean R → Toss Up R
+
+Margin Move:
++0.004
+
+
+
+Franklin
+
+Toss Up D → Toss Up R
+
+Margin Move:
+-0.023
+
+
+
+Jackson
+
+Toss Up D → Toss Up R
+
+Margin Move:
+-0.005
+
+
+
+Liberty
+
+Toss Up R → Lean R
+
+Margin Move:
+-0.015
+
+
+
+Volusia
+
+Toss Up R → Toss Up D
+
+Margin Move:
++0.005
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️3 PM Florida EV & VBM Update
+
+New votes have been cast in 56 counties over the last hour, with the largest update coming from Miami-Dade County.
+
+🔵 DEM: +13,564
+🔴 REP: +11,213
+🟣 OTHER: +7,148
+🟢 TOTAL: +31,925
+
+🔵 Democrats lead by 43,551 votes statewide.
+
+🔴 Margin Change: +0.03% toward Democrats
+
+Largest County Updates
+
+
+🥇Miami-Dade County
+
+🔵 DEM: +2,601
+🔴 REP: +2,020
+🟣 OTHER: +1,783
+🟢 TOTAL: +6,404
+
+
+
+🥈Hillsborough County
+
+🔵 DEM: +1,483
+🔴 REP: +1,163
+🟣 OTHER: +791
+🟢 TOTAL: +3,437
+
+
+
+🥉Orange County
+
+🔵 DEM: +1,392
+🔴 REP: +906
+🟣 OTHER: +723
+🟢 TOTAL: +3,021
+
+
+
+#Florida #EarlyVoting #VoteByMail

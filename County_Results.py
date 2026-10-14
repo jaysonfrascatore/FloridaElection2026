@@ -122,6 +122,15 @@ def resolve_election_id(today):
 
 COUNTY_DROP_SANITY_THRESHOLD = 5000
 
+# PERCENT-DROP guardrail: a county that loses this share (or more) of its
+# previous accepted total in one run is almost certainly a bad read of the
+# county's site (Bay County once "removed" 99.9% of its votes by accident).
+# The run's numbers for that county are thrown out and the previous accepted
+# row is kept. This applies to every county EXCEPT the big ones listed in
+# COUNTY_SPIKE_OVERRIDES below, which keep their existing rules only.
+# (A print-only alert fires for ANY county at/above this share, big or small.)
+COUNTY_DROP_PCT_THRESHOLD = 0.90
+
 COUNTY_SPIKE_ABS_THRESHOLD = 50000
 COUNTY_SPIKE_PCT_THRESHOLD = 0.25
 
@@ -1899,9 +1908,49 @@ if previous is not None:
             spike_pct_threshold = COUNTY_SPIKE_PCT_THRESHOLD
 
 
+        # Alert (print only, applies to every county): the scrape is trying
+        # to remove 90%+ of what the county had before.
+        if (
+            previous_total > 0
+            and
+            (votes_removed / previous_total) >= COUNTY_DROP_PCT_THRESHOLD
+        ):
+
+            print(
+                "\n🚨 ALERT: "
+                f"{row['County']} ({county_code}) is trying to REMOVE "
+                f"{votes_removed / previous_total:.1%} of its votes "
+                f"({previous_total:,.0f} -> {scraped_total:,.0f})."
+            )
+
+            if county_code in COUNTY_SPIKE_OVERRIDES:
+
+                print(
+                    "   (Big-county exemption: the percent-drop rule is "
+                    "not applied; only the existing guardrails are.)"
+                )
+
+
         if votes_removed > COUNTY_DROP_SANITY_THRESHOLD:
 
             reject_reason = "drop"
+
+
+        elif (
+
+            county_code not in COUNTY_SPIKE_OVERRIDES
+
+            and
+
+            previous_total > 0
+
+            and
+
+            (votes_removed / previous_total) >= COUNTY_DROP_PCT_THRESHOLD
+
+        ):
+
+            reject_reason = "drop_pct"
 
 
         elif (
@@ -1969,6 +2018,19 @@ if previous is not None:
                 print(
                     f"  Drop threshold: "
                     f"{COUNTY_DROP_SANITY_THRESHOLD:,}"
+                )
+
+            elif reject_reason == "drop_pct":
+
+                print(
+                    f"  Votes removed: "
+                    f"{votes_removed:,.0f} "
+                    f"({votes_removed / previous_total:.1%} of previous total)"
+                )
+
+                print(
+                    f"  Percent-drop threshold: "
+                    f"{COUNTY_DROP_PCT_THRESHOLD:.0%}"
                 )
 
             else:

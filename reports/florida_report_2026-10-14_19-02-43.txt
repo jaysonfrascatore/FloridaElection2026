@@ -1,0 +1,123 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Election ID:
+FL-2026-General
+
+Run Time:
+Updated at October 14th, 2026 at 7:02pm Eastern Time
+
+Counties Loaded:
+67 / 67
+
+Updated Counties:
+46
+
+Unchanged Counties:
+False
+
+Rejected County Updates:
+0
+
+STATEWIDE TOTALS
+=================================
+
+DEM:
+286,865
+
+REP:
+241,892
+
+OTHER:
+140,871
+
+TOTAL:
+669,628
+
+STATEWIDE SUMMARY
+=================================
+
+🔵 Democrats lead by 44,973 votes statewide.
+
+Margin Change:
++0.10% toward Democrats
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +3,093
+🔴 REP: +1,671
+🟣 OTHER: +1,083
+🟢 TOTAL: +5,847
+
+REJECTED COUNTY UPDATES
+=================================
+
+
+No county updates were rejected.
+
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+Hardee
+
+Likely R → Safe R
+
+Margin Move:
+-0.031
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️7 PM Florida EV & VBM Update
+
+New votes have been cast in 46 counties over the last hour, with the largest update coming from Broward County.
+
+🔵 DEM: +3,093
+🔴 REP: +1,671
+🟣 OTHER: +1,083
+🟢 TOTAL: +5,847
+
+🔵 Democrats lead by 44,973 votes statewide.
+
+🔴 Margin Change: +0.10% toward Democrats
+
+Largest County Updates
+
+
+🥇Broward County
+
+🔵 DEM: +1,005
+🔴 REP: +237
+🟣 OTHER: +303
+🟢 TOTAL: +1,545
+
+
+
+🥈Palm Beach County
+
+🔵 DEM: +629
+🔴 REP: +152
+🟣 OTHER: +146
+🟢 TOTAL: +927
+
+
+
+🥉St. Lucie County
+
+🔵 DEM: +203
+🔴 REP: +110
+🟣 OTHER: +94
+🟢 TOTAL: +407
+
+
+
+#Florida #EarlyVoting #VoteByMail

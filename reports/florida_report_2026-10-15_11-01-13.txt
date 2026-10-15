@@ -1,0 +1,123 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Election ID:
+FL-2026-General
+
+Run Time:
+Updated at October 15th, 2026 at 11:01am Eastern Time
+
+Counties Loaded:
+67 / 67
+
+Updated Counties:
+48
+
+Unchanged Counties:
+False
+
+Rejected County Updates:
+0
+
+STATEWIDE TOTALS
+=================================
+
+DEM:
+290,712
+
+REP:
+246,631
+
+OTHER:
+143,260
+
+TOTAL:
+680,603
+
+STATEWIDE SUMMARY
+=================================
+
+🔵 Democrats lead by 44,081 votes statewide.
+
+Margin Change:
+-0.15% toward Republicans
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +3,847
+🔴 REP: +4,739
+🟣 OTHER: +2,389
+🟢 TOTAL: +10,975
+
+REJECTED COUNTY UPDATES
+=================================
+
+
+No county updates were rejected.
+
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+Brevard
+
+Toss Up R → Toss Up D
+
+Margin Move:
++0.012
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️11 AM Florida EV & VBM Update
+
+New votes have been cast in 48 counties over the last hour, with the largest update coming from Lee County.
+
+🔵 DEM: +3,847
+🔴 REP: +4,739
+🟣 OTHER: +2,389
+🟢 TOTAL: +10,975
+
+🔵 Democrats lead by 44,081 votes statewide.
+
+🔴 Margin Change: -0.15% toward Republicans
+
+Largest County Updates
+
+
+🥇Lee County
+
+🔵 DEM: +981
+🔴 REP: +1,626
+🟣 OTHER: +732
+🟢 TOTAL: +3,339
+
+
+
+🥈Collier County
+
+🔵 DEM: +512
+🔴 REP: +1,084
+🟣 OTHER: +432
+🟢 TOTAL: +2,028
+
+
+
+🥉Charlotte County
+
+🔵 DEM: +415
+🔴 REP: +555
+🟣 OTHER: +304
+🟢 TOTAL: +1,274
+
+
+
+#Florida #EarlyVoting #VoteByMail

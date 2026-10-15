@@ -7,13 +7,13 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 14th, 2026 at 7:02pm Eastern Time
+Updated at October 15th, 2026 at 11:01am Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-46
+48
 
 Unchanged Counties:
 False
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-286,865
+290,712
 
 REP:
-241,892
+246,631
 
 OTHER:
-140,871
+143,260
 
 TOTAL:
-669,628
+680,603
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 44,973 votes statewide.
+🔵 Democrats lead by 44,081 votes statewide.
 
 Margin Change:
-+0.10% toward Democrats
+-0.15% toward Republicans
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +3,093
-🔴 REP: +1,671
-🟣 OTHER: +1,083
-🟢 TOTAL: +5,847
+🔵 DEM: +3,847
+🔴 REP: +4,739
+🟣 OTHER: +2,389
+🟢 TOTAL: +10,975
 
 REJECTED COUNTY UPDATES
 =================================
@@ -64,12 +64,12 @@ RATING / FORECAST CHANGES
 =================================
 
 
-Hardee
+Brevard
 
-Likely R → Safe R
+Toss Up R → Toss Up D
 
 Margin Move:
--0.031
++0.012
 
 
 
@@ -77,46 +77,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️7 PM Florida EV & VBM Update
+🗳️11 AM Florida EV & VBM Update
 
-New votes have been cast in 46 counties over the last hour, with the largest update coming from Broward County.
+New votes have been cast in 48 counties over the last hour, with the largest update coming from Lee County.
 
-🔵 DEM: +3,093
-🔴 REP: +1,671
-🟣 OTHER: +1,083
-🟢 TOTAL: +5,847
+🔵 DEM: +3,847
+🔴 REP: +4,739
+🟣 OTHER: +2,389
+🟢 TOTAL: +10,975
 
-🔵 Democrats lead by 44,973 votes statewide.
+🔵 Democrats lead by 44,081 votes statewide.
 
-🔴 Margin Change: +0.10% toward Democrats
+🔴 Margin Change: -0.15% toward Republicans
 
 Largest County Updates
 
 
-🥇Broward County
+🥇Lee County
 
-🔵 DEM: +1,005
-🔴 REP: +237
-🟣 OTHER: +303
-🟢 TOTAL: +1,545
-
-
-
-🥈Palm Beach County
-
-🔵 DEM: +629
-🔴 REP: +152
-🟣 OTHER: +146
-🟢 TOTAL: +927
+🔵 DEM: +981
+🔴 REP: +1,626
+🟣 OTHER: +732
+🟢 TOTAL: +3,339
 
 
 
-🥉St. Lucie County
+🥈Collier County
 
-🔵 DEM: +203
-🔴 REP: +110
-🟣 OTHER: +94
-🟢 TOTAL: +407
+🔵 DEM: +512
+🔴 REP: +1,084
+🟣 OTHER: +432
+🟢 TOTAL: +2,028
+
+
+
+🥉Charlotte County
+
+🔵 DEM: +415
+🔴 REP: +555
+🟣 OTHER: +304
+🟢 TOTAL: +1,274
 
 
 

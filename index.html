@@ -253,6 +253,16 @@
   .an-blurb p{ font-size:13.5px; line-height:1.65; color:var(--text); margin:0 0 10px; }
   .an-blurb p:last-child{ margin-bottom:0; }
   .an-blurb b.d{ color:var(--dem); } .an-blurb b.r{ color:var(--rep); }
+  .an-compare, .an-npa{ margin:18px 0; }
+  .an-compare table{ width:100%; border-collapse:collapse; font-size:12.5px; margin-top:10px; }
+  .an-compare th{ text-align:right; font-family:var(--mono); font-size:10.5px; color:var(--muted); font-weight:500; padding:6px 10px; border-bottom:1px solid var(--border); }
+  .an-compare td{ text-align:right; padding:8px 10px; border-bottom:1px solid var(--border); font-family:var(--mono); }
+  .an-compare th:first-child, .an-compare td:first-child{ text-align:left; font-family:inherit; white-space:nowrap; }
+  .an-compare tr.now td{ background:rgba(127,240,196,.07); font-weight:600; }
+  .an-npa-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:14px; margin-top:12px; }
+  .an-npa-card{ padding:12px 14px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px; font-size:12.5px; line-height:1.6; }
+  .an-npa-card .big{ font-family:var(--mono); font-size:17px; margin:4px 0 8px; }
+  .an-npa-card ul{ margin:8px 0 0; padding-left:18px; color:var(--muted); font-size:11.5px; }
   .an-assume{ margin:18px 0; }
   .an-assume-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px 26px; margin-top:12px; }
   .an-ctl label{ display:flex; justify-content:space-between; gap:10px; font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:6px; }
@@ -1433,6 +1443,8 @@
     </div>
     <div class="segmented" id="anViewSelect">
       <button data-view="forecast" class="active">Projected final result</button>
+      <button data-view="vs24">Change from 2024</button>
+      <button data-view="vs22">Change from 2022</button>
       <button data-view="current">Current General Election results</button>
       <button data-view="turnout">Projected final turnout</button>
     </div>
@@ -1454,7 +1466,7 @@
       <div class="table-wrap">
         <table id="anTable">
           <thead><tr>
-            <th>County</th><th>Rating</th><th>Margin</th><th>DEM</th><th>REP</th><th>Other</th><th>Total</th><th>Turnout</th><th>Now</th>
+            <th>County</th><th>Rating</th><th>Margin</th><th>DEM</th><th>REP</th><th>Other</th><th>Total</th><th>Turnout</th><th>vs 2024</th><th>vs 2022</th><th>Now</th>
           </tr></thead>
           <tbody id="anTableBody"></tbody>
         </table>
@@ -1462,55 +1474,20 @@
     </div>
   </div>
 
-  <div class="panel an-assume">
-    <h2>Forecast assumptions <span class="an-mint" style="font-size:12px; font-family:var(--mono);">&mdash; adjust any of these</span></h2>
-    <div class="an-assume-grid">
-      <div class="an-ctl">
-        <label>Turnout starting point <span id="anScenarioVal"></span></label>
-        <select id="anScenario">
-          <option value="low"></option><option value="mid"></option><option value="high"></option>
-        </select>
-        <div class="an-hint">County turnout rates from the 2018 and 2022 governor's races and the 2024 presidential race, measured against today's voter rolls.</div>
-      </div>
-      <div class="an-ctl">
-        <label>Turnout dial <span id="anTurnoutAdjVal">no change</span></label>
-        <input type="range" id="anTurnoutAdj" min="-5" max="10" step="0.5" value="0">
-        <div class="an-hint">Adds or removes points of statewide turnout, spread across every county.</div>
-      </div>
-      <div class="an-ctl">
-        <label>Late-vote lean <span id="anTiltVal">Even</span></label>
-        <input type="range" id="anTilt" min="-10" max="10" step="1" value="0">
-        <div class="an-hint">Moves this many points of the <i>remaining</i> ballots between Democrats/NPA and Republicans (right = more Republican).</div>
-      </div>
-      <div class="an-ctl">
-        <label>Statewide margin override <span id="anOverrideVal">model</span></label>
-        <input type="number" id="anOverride" step="0.5" placeholder="e.g. -7.5 for R+7.5 (blank = model)">
-        <div class="an-hint">Two-party margin points for the race selected above. Leave blank to let the polls and fundamentals decide.</div>
-      </div>
-      <div class="an-ctl">
-        <label>Democrats voting for their nominee <span id="anDLoyalVal"></span></label>
-        <input type="range" id="anDLoyal" min="75" max="100" step="1" value="92">
-      </div>
-      <div class="an-ctl">
-        <label>Republicans voting for their nominee <span id="anRLoyalVal"></span></label>
-        <input type="range" id="anRLoyal" min="75" max="100" step="1" value="88">
-      </div>
-    </div>
-    <div class="an-check" id="anCheck"></div>
-    <button class="sim-btn an-reset" id="anResetBtn">Reset assumptions</button>
-  </div>
+  <div class="panel an-compare" id="anCompare"></div>
+
+  <div class="panel an-npa" id="anNpa"></div>
 
   <div id="anRaces"></div>
 
   <div class="panel an-method" id="anMethod">
     <h3>How this forecast is built</h3>
     <ul>
-      <li><b>Where the votes come from.</b> Each county's expected ballots are its average turnout in the 2018 governor's, 2022 governor's and 2024 presidential races, measured against today's voter rolls (third-party votes assumed to be about 1% of each past race). The turnout dial and scenario above move that up or down. A county can never be projected below the votes already counted.</li>
-      <li><b>Who they vote for.</b> Each county starts from its own average two-party result in 2018, 2022 and 2024 (the same starting point as Build Your Own Forecast). One statewide shift, applied the same way the Build Your Own Forecast slider works, moves every county together until the statewide result matches the target.</li>
-      <li><b>The target.</b> A blend of the polling average and the fundamentals (the 2018/2022/2024 county average). Polls get more weight the closer Election Day gets, from about half at four months out to about 90% on Election Day. The polling average weights recent polls more (a poll loses half its weight every 14 days) and larger samples slightly more. Undecided voters are split in proportion to the two candidates.</li>
-      <li><b>NPA voters and crossover.</b> Polls already include NPA voters and Republicans or Democrats who vote across party lines. The check under the controls shows what that implies: with the loyalty levels you set, how NPA voters would have to split to produce the forecast.</li>
-      <li><b>Ballots by party.</b> Projected Democratic, Republican and NPA ballots (by registration) assume the votes still to come look like the votes counted so far, unless you move the late-vote lean.</li>
-      <li><b>What it is not.</b> A projection built from public history and polls, not a guarantee. County patterns come from the 2018/2022 governor's races and the 2024 presidential race for both contests. Voter-roll sizes are a June 2026 snapshot.</li>
+      <li><b>Final turnout.</b> Each county's expected ballots are its average turnout in the 2018 governor's, 2022 governor's and 2024 presidential races, measured against today's voter rolls. The 2026 vote already counted gets a small say (15%): a county whose early vote is running ahead of the rest of the state is nudged up, one running behind is nudged down, and the statewide total stays on the three-election blend. A county is never projected below the votes already counted.</li>
+      <li><b>Who they vote for.</b> Each county starts from its own average two-party result in 2018, 2022 and 2024. One statewide shift moves every county together until the statewide result matches the target.</li>
+      <li><b>NPA voters.</b> NPA voters have swung widely from one election to the next, so the fundamentals are adjusted for where they stand now. Polls that publish an independents' breakdown give the NPA split (recent polls count more, party-aligned sponsors count less, and the number is pulled a fifth of the way toward even because independents are a small slice of each poll). The page compares that with the NPA split the 2018/2022/2024 average implies on today's electorate (92% of Democrats and 88% of Republicans backing their nominee) and moves the fundamentals by the difference, weighted by the NPA share of the projected electorate. Republicans and Democrats who vote across party lines are built into those loyalty rates.</li>
+      <li><b>The target.</b> A blend of the polling average and the NPA-adjusted fundamentals. Polls get more weight the closer Election Day gets, from about half at four months out to about 90% on Election Day. The polling average weights recent polls more (a poll loses half its weight every 14 days), larger samples slightly more, and party-aligned sponsors less. Undecided voters are split in proportion to the two candidates.</li>
+      <li><b>What it is not.</b> A projection built from public history and polls, not a guarantee. The forecast, the polling average and the map are recalculated each time the page loads. Voter-roll sizes are a June 2026 snapshot.</li>
     </ul>
   </div>
 </div>
@@ -8668,7 +8645,34 @@ const AN_OTHER_SHARE = 0.015;                      // share of votes for candida
 const AN_PAST_TWO_PARTY_SHARE = 0.99;              // past D+R votes as a share of all votes (the history tables hold D and R only)
 const AN_POLL_HALF_LIFE_DAYS = 14;
 const AN_SPONSOR_WEIGHT = 0.6;                    // polls from party-aligned sponsors count at 60%
-const AN_DEFAULTS = { scenario:'mid', turnoutAdj:0, tilt:0, dLoyal:92, rLoyal:88 };
+// Fixed model settings (there are no dials on the page).
+const AN_TURNOUT_W = { y18:1, y22:1, y24:1 };      // weight of each past race in the turnout blend
+const AN_PACE_WEIGHT = 0.15;                       // how much a county's 2026 early pace vs. the rest of the state moves its turnout
+const AN_LOYAL = { d:0.92, r:0.88 };               // share of each party's voters who back their nominee
+const AN_NPA_HALF_LIFE_DAYS = 30;
+const AN_NPA_SHRINK = 0.8;                         // independent subsamples are small: pulled 20% toward an even split
+const AN_NPA_MAX_GAP = 0.25;
+// How independents (NPA) say they will vote, from the polls that published the subgroup.
+const AN_NPA_POLLS = {
+  governor: [
+    { pollster:'St. Pete Polls', end:'2026-10-07', dem:49, rep:33 },
+    { pollster:'Mason-Dixon (NBC6)', end:'2026-10-01', dem:47, rep:28 },
+    { pollster:'Hart Research', end:'2026-08-15', dem:48, rep:37, sponsor:'D', approx:true }
+  ],
+  senate: [
+    { pollster:'St. Pete Polls', end:'2026-10-07', dem:49, rep:36 },
+    { pollster:'Mason-Dixon (NBC6)', end:'2026-10-01', dem:41, rep:35 }
+  ]
+};
+const AN_SHIFT_CATS = [
+  { key:'R 10+',  color:'#880d1e' }, { key:'R 5–10', color:'#dd2d4a' }, { key:'R 2–5', color:'#f49cbb' },
+  { key:'Little change', color:'#b8c0cf' },
+  { key:'D 2–5',  color:'#90e0ef' }, { key:'D 5–10', color:'#00b4d8' }, { key:'D 10+', color:'#03045e' }
+];
+function anShiftKey(pts){
+  if(pts <= -10) return 'R 10+'; if(pts <= -5) return 'R 5–10'; if(pts <= -2) return 'R 2–5';
+  if(pts < 2) return 'Little change'; if(pts < 5) return 'D 2–5'; if(pts < 10) return 'D 5–10'; return 'D 10+';
+}
 
 // The polls live right here. To add one, add a line to the right race below.
 const AN_POLLS_DEFAULT = {
@@ -9089,12 +9093,7 @@ const AN_POLLS_DEFAULT = {
 };
 let anPolls = AN_POLLS_DEFAULT;
 let anPollsTried = false;
-const anState = {
-  race:'governor', view:'forecast', inited:false,
-  scenario:AN_DEFAULTS.scenario, turnoutAdj:AN_DEFAULTS.turnoutAdj, tilt:AN_DEFAULTS.tilt,
-  dLoyal:AN_DEFAULTS.dLoyal, rLoyal:AN_DEFAULTS.rLoyal,
-  override:{ governor:null, senate:null }
-};
+const anState = { race:'governor', view:'forecast', inited:false };
 let anLast = null;       // last computed model (for the map/table redraws)
 let anMapSeq = 0;
 
@@ -9114,17 +9113,6 @@ function anFmtDate(iso){
   return d.toLocaleDateString('en-US', { timeZone:'UTC', month:'short', day:'numeric' });
 }
 
-async function anLoadPollsFile(){
-  if(anPollsTried) return;
-  anPollsTried = true;
-  try{
-    const resp = await fetch('data/polls.json?t=' + Date.now(), { cache:'no-store' });
-    if(!resp.ok) return;
-    const j = await resp.json();
-    if(j && j.races && j.races.governor && j.races.senate){ anPolls = j; renderAnalysis(); }
-  }catch(e){ /* no polls file: the built-in copy stays */ }
-}
-
 // ---- polls ----
 function anPollAvg(polls, asOfWall){
   let sw = 0, sd = 0, sr = 0, n = 0, latest = null;
@@ -9140,6 +9128,20 @@ function anPollAvg(polls, asOfWall){
   const dem = sd / sw, rep = sr / sw;
   return { dem, rep, n, latest, twoParty:(dem - rep) / (dem + rep), raw:(dem - rep) / 100 };
 }
+// NPA voters: what independents say in the polls that published them.
+function anNpaAvg(race, asOfWall){
+  let sw = 0, sv = 0, n = 0;
+  (AN_NPA_POLLS[race] || []).forEach(p => {
+    const end = anIsoWall(p.end);
+    if(end > asOfWall) return;
+    const age = Math.max(0, (asOfWall - end) / AN_DAY);
+    const w = Math.pow(0.5, age / AN_NPA_HALF_LIFE_DAYS) * (p.sponsor ? AN_SPONSOR_WEIGHT : 1);
+    sw += w; sv += w * p.dem / (p.dem + p.rep); n++;
+  });
+  if(!sw) return null;
+  const raw = sv / sw;
+  return { raw, nu:0.5 + AN_NPA_SHRINK * (raw - 0.5), n };
+}
 // How much the polls count against the fundamentals, by days left.
 function anPollWeight(daysLeft){ return 0.55 + 0.35 * (1 - Math.min(daysLeft, 120) / 120); }
 
@@ -9150,30 +9152,37 @@ function anCompute(){
   COUNTIES.forEach(c => { byName[c.county] = c; });
   const regTot = names.reduce((s, n) => s + SIM_REG[n][0], 0);
 
-  // 1. expected ballots
+  // 1. expected ballots: blend of 2018 / 2022 / 2024 turnout, a small say for the 2026 early pace
   const rate = (yr, n) => ((yr[n][0] + yr[n][1]) / AN_PAST_TWO_PARTY_SHARE) / SIM_REG[n][0];
-  const r18 = {}, r22 = {}, r24 = {};
-  names.forEach(n => { r18[n] = rate(SIM_2018, n); r22[n] = rate(SIM_2022, n); r24[n] = rate(SIM_2024, n); });
-  const baseRate = {
-    low:  n => r22[n],
-    mid:  n => (r18[n] + r22[n] + r24[n]) / 3,
-    high: n => r24[n]
-  };
-  const swTurn = f => names.reduce((s, n) => s + anClamp(f(n), 0, 0.95) * SIM_REG[n][0], 0) / regTot;
-  const scenarioTurnout = { low:swTurn(baseRate.low), mid:swTurn(baseRate.mid), high:swTurn(baseRate.high) };
-  const T0 = scenarioTurnout[anState.scenario];
-  const factor = (T0 + anState.turnoutAdj / 100) / T0;
-  const E = {}, actual = {};
+  const wSum = AN_TURNOUT_W.y18 + AN_TURNOUT_W.y22 + AN_TURNOUT_W.y24;
+  const hist = {}, actual = {};
   names.forEach(n => {
+    const r = (AN_TURNOUT_W.y18 * rate(SIM_2018, n) + AN_TURNOUT_W.y22 * rate(SIM_2022, n) + AN_TURNOUT_W.y24 * rate(SIM_2024, n)) / wSum;
+    hist[n] = anClamp(r, 0, 0.95) * SIM_REG[n][0];
     const c = byName[n];
     actual[n] = c ? (c.total || 0) : 0;
-    const e = anClamp(baseRate[anState.scenario](n) * factor, 0, 0.95) * SIM_REG[n][0];
-    E[n] = Math.max(e, actual[n]);
+  });
+  const histSum = names.reduce((s, n) => s + hist[n], 0);
+  let aSum = 0, hWith = 0;
+  names.forEach(n => { if(actual[n] > 0){ aSum += actual[n]; hWith += hist[n]; } });
+  const rho = hWith > 0 ? aSum / hWith : 0;
+  const paced = {};
+  names.forEach(n => {
+    if(actual[n] > 0 && rho > 0){
+      const rel = anClamp((actual[n] / hist[n]) / rho, 0.7, 1.3);
+      paced[n] = hist[n] * (1 + AN_PACE_WEIGHT * (rel - 1));
+    }else paced[n] = hist[n];
+  });
+  const pacedSum = names.reduce((s, n) => s + paced[n], 0);
+  const E = {};
+  names.forEach(n => {
+    const e = paced[n] * (pacedSum ? histSum / pacedSum : 1);
+    E[n] = Math.max(Math.min(e, 0.95 * SIM_REG[n][0]), actual[n]);
   });
   const Esum = names.reduce((s, n) => s + E[n], 0);
   const actualSum = names.reduce((s, n) => s + actual[n], 0);
 
-  // 2. ballots by party registration (banked + remaining)
+  // 2. ballots by party registration (banked + remaining, remaining looks like banked)
   const swReg = { d:0, r:0, n:0 }, swAct = { d:0, r:0, n:0 };
   names.forEach(n => {
     const reg = SIM_REG[n][0], rs = SIM_REG[n][1] / 100, ds = SIM_REG[n][2] / 100, ns = Math.max(0, 1 - rs - ds);
@@ -9182,8 +9191,6 @@ function anCompute(){
     if(c){ swAct.d += c.dem || 0; swAct.r += c.rep || 0; swAct.n += Math.max(0, (c.total || 0) - (c.dem || 0) - (c.rep || 0)); }
   });
   const swRatio = { d: swReg.d ? swAct.d / swReg.d : 0, r: swReg.r ? swAct.r / swReg.r : 0, n: swReg.n ? swAct.n / swReg.n : 0 };
-  const tilt = anState.tilt / 100;
-  const party = {};
   const sum = { d:0, r:0, n:0 };
   names.forEach(n => {
     const c = byName[n];
@@ -9193,30 +9200,32 @@ function anCompute(){
     let mix;
     if(aT > 0){ mix = { d:aD / aT, r:aR / aT, n:aN / aT }; }
     else{
-      const reg = SIM_REG[n][0], rs = SIM_REG[n][1] / 100, ds = SIM_REG[n][2] / 100, ns = Math.max(0, 1 - rs - ds);
+      const rs = SIM_REG[n][1] / 100, ds = SIM_REG[n][2] / 100, ns = Math.max(0, 1 - rs - ds);
       const w = { d:ds * (swRatio.d || 1), r:rs * (swRatio.r || 1), n:ns * (swRatio.n || 1) };
       const t = w.d + w.r + w.n || 1;
       mix = { d:w.d / t, r:w.r / t, n:w.n / t };
     }
-    // late-vote lean: move `tilt` of the remaining mix to (or from) the Republicans
-    let rr = anClamp(mix.r + tilt, 0, 1);
-    const others = mix.d + mix.n;
-    const left = 1 - rr;
-    const mD = others > 0 ? left * mix.d / others : left / 2;
-    const mN = others > 0 ? left * mix.n / others : left / 2;
-    const B = { d:aD + rem * mD, r:aR + rem * rr, n:aN + rem * mN };
-    party[n] = B;
-    sum.d += B.d; sum.r += B.r; sum.n += B.n;
+    sum.d += aD + rem * mix.d; sum.r += aR + rem * mix.r; sum.n += aN + rem * mix.n;
   });
+  const Sall = sum.d + sum.r + sum.n;
+  const sd = sum.d / Sall, sr = sum.r / Sall, sn = sum.n / Sall;
 
-  // 3. statewide shift solved to hit a target two-party margin
+  // 3. fundamentals (2018/2022/2024 county average on this electorate), then the NPA adjustment
   const k = simGetSwingK();
-  const wMargin = s => {
+  const wMargin = sh => {
     let num = 0;
-    names.forEach(n => { const p = simSwungPct(simAverageBase(n), s, k) / 100; num += E[n] * (2 * p - 1); });
+    names.forEach(n => { const p = simSwungPct(simAverageBase(n), sh, k) / 100; num += E[n] * (2 * p - 1); });
     return num / Esum;
   };
   const fundamentals = wMargin(0);
+  const qF = (1 + fundamentals) / 2;
+  const nuHist = sn > 0 ? (qF - AN_LOYAL.d * sd - (1 - AN_LOYAL.r) * sr) / sn : NaN;
+  const fundFor = (race, asOf) => {
+    const npa = anNpaAvg(race, asOf);
+    if(!npa || !isFinite(nuHist)) return { f:fundamentals, gap:0, npa:null };
+    const gap = anClamp(npa.nu - nuHist, -AN_NPA_MAX_GAP, AN_NPA_MAX_GAP);
+    return { f:fundamentals + 2 * gap * sn, gap, npa };
+  };
   const solveShift = target => {
     let lo = -45, hi = 45;
     if(target <= wMargin(lo)) return lo;
@@ -9226,20 +9235,27 @@ function anCompute(){
   };
   const today = anTodayWall();
   const daysLeft = anDaysTo(today);
-  const targetFor = (poll, dLeft) => {
-    if(!poll) return fundamentals;
+  const targetFor = (poll, dLeft, f) => {
+    if(!poll) return f;
     const w = anPollWeight(dLeft);
-    return w * poll.twoParty + (1 - w) * fundamentals;
+    return w * poll.twoParty + (1 - w) * f;
   };
+
+  // 4. past elections, for the comparisons
+  const pastOf = yr => {
+    let D = 0, R = 0; const pm = {};
+    names.forEach(n => { D += yr[n][0]; R += yr[n][1]; pm[n] = (yr[n][0] - yr[n][1]) / ((yr[n][0] + yr[n][1]) / AN_PAST_TWO_PARTY_SHARE); });
+    const total = (D + R) / AN_PAST_TWO_PARTY_SHARE;
+    return { D, R, total, margin:(D - R) / total, turnout:total / regTot, pm };
+  };
+  const past = { y2018:pastOf(SIM_2018), y2022:pastOf(SIM_2022), y2024:pastOf(SIM_2024) };
 
   const models = {};
   ['governor', 'senate'].forEach(race => {
     const info = anPolls.races[race];
     const poll = anPollAvg(info.polls, today + AN_DAY - 1);
-    let target = targetFor(poll, daysLeft);
-    const ov = anState.override[race];
-    const overridden = ov !== null && isFinite(ov);
-    if(overridden) target = anClamp(ov / 100, -0.9, 0.9);
+    const fd = fundFor(race, today + AN_DAY - 1);
+    const target = targetFor(poll, daysLeft, fd.f);
     const shift = solveShift(target);
     const rows = names.map(n => {
       const p = simSwungPct(simAverageBase(n), shift, k) / 100;
@@ -9249,21 +9265,20 @@ function anCompute(){
       return {
         county:n, fips:FL_FIPS[n], reg:SIM_REG[n][0], E:E[n], turnout:E[n] / SIM_REG[n][0],
         p, D, R, O, margin, rating:ratingLabelForMargin(margin),
-        counted:actual[n], party:party[n], live:c || null
+        pm24:past.y2024.pm[n], pm22:past.y2022.pm[n], vs24:margin - past.y2024.pm[n], vs22:margin - past.y2022.pm[n],
+        counted:actual[n], live:c || null
       };
     });
     const sD = rows.reduce((s, r) => s + r.D, 0), sR = rows.reduce((s, r) => s + r.R, 0), sO = rows.reduce((s, r) => s + r.O, 0);
     const total = sD + sR + sO;
     const margin = (sD - sR) / total;
-    // series over time for the charts
     const series = [];
     if(info.polls.length){
       const first = Math.min(...info.polls.map(p => anIsoWall(p.end)));
       for(let day = first; day <= today; day += AN_DAY){
         const pa = anPollAvg(info.polls, day + AN_DAY - 1);
         if(!pa) continue;
-        let t = targetFor(pa, anDaysTo(day));
-        if(day === today && overridden) t = target;
+        const t = targetFor(pa, anDaysTo(day), fundFor(race, day + AN_DAY - 1).f);
         series.push({
           day, iso:anWallToIso(day),
           pollD:pa.dem, pollR:pa.rep,
@@ -9271,21 +9286,11 @@ function anCompute(){
         });
       }
     }
-    models[race] = { race, info, poll, target, overridden, shift, rows, sD, sR, sO, total, margin, series };
+    models[race] = { race, info, poll, target, shift, rows, sD, sR, sO, total, margin, series,
+      npa:fd.npa, npaGap:fd.gap, fundAdj:fd.f };
   });
 
-  return { names, E, Esum, actualSum, regTot, party:sum, scenarioTurnout, fundamentals, daysLeft, today, models };
-}
-
-// ---- the NPA / crossover check ----
-function anCrossover(m, M){
-  const S = M.party.d + M.party.r + M.party.n;
-  const q = m.sD / (m.sD + m.sR);                         // statewide two-party Democratic share
-  const lD = anState.dLoyal / 100, lR = anState.rLoyal / 100;
-  const nu = M.party.n > 0 ? (q * S - lD * M.party.d - (1 - lR) * M.party.r) / M.party.n : NaN;
-  return { q, S, nu, lD, lR,
-    dDefect:(1 - lD) * M.party.d, rDefect:(1 - lR) * M.party.r,
-    nD:M.party.d, nR:M.party.r, nN:M.party.n };
+  return { names, E, Esum, actualSum, regTot, party:sum, partyShare:{ d:sd, r:sr, n:sn }, nuHist, fundamentals, daysLeft, today, past, rho, models };
 }
 
 // ---- the daily blurb (written from the numbers) ----
@@ -9307,23 +9312,22 @@ function anBuildBlurb(M){
   const turnoutPct = M.Esum / M.regTot * 100;
   const regD = Object.keys(SIM_REG).reduce((a, n) => a + SIM_REG[n][0] * SIM_REG[n][2], 0) / M.regTot;
   const regR = Object.keys(SIM_REG).reduce((a, n) => a + SIM_REG[n][0] * SIM_REG[n][1], 0) / M.regTot;
-  const fund = M.fundamentals;
   const past = y => { const nm = Object.keys(y); const d = nm.reduce((a, n) => a + y[n][0], 0), r = nm.reduce((a, n) => a + y[n][1], 0); return (d - r) / (d + r); };
-  const x = anCrossover(anState.race === 'senate' ? s : g, M);
-  const xi = anState.race === 'senate' ? si : gi;
-  const nuTxt = isFinite(x.nu)
-    ? `With ${anState.dLoyal}% of Democrats and ${anState.rLoyal}% of Republicans voting for their nominee, NPA voters would have to split about ${(x.nu * 100).toFixed(0)}% to ${xi.dem} and ${(100 - x.nu * 100).toFixed(0)}% to ${xi.rep} to produce that result` +
-      ` (roughly ${fmt(Math.round(x.rDefect))} Republican-registered ballots not going to ${xi.rep}).`
+  const npaTxt = (m, info) => m.npa ? `${(m.npa.nu * 100).toFixed(0)}% to ${info.dem}` : null;
+  const p1 = `The forecast has ${lead(g, gi)} in the race for Governor and ${lead(s, si)} in the U.S. Senate race. For Governor, ${pollTxt(g, gi)}; for Senate, ${pollTxt(s, si)}.`;
+  const p2 = `About ${pctCounted.toFixed(1)}% of the projected vote is already counted (${fmt(M.actualSum)} of roughly ${fmt(Math.round(M.Esum))} ballots), with ${Math.round(M.daysLeft)} days until Election Day. Projected final turnout is ${turnoutPct.toFixed(1)}% of registered voters, against ${(M.past.y2024.turnout * 100).toFixed(1)}% in 2024 and ${(M.past.y2022.turnout * 100).toFixed(1)}% in 2022 on today's voter rolls.`;
+  const npaLine = (g.npa && s.npa)
+    ? `Polls that break out independents have NPA voters going ${npaTxt(g, gi)} for Governor and ${npaTxt(s, si)} for Senate (two-party), better for Democrats than the 2018/2022/2024 average implies (about ${(M.nuHist * 100).toFixed(0)}%), so the fundamentals are adjusted to ${anMarginLabel(g.fundAdj)} for Governor and ${anMarginLabel(s.fundAdj)} for Senate.`
     : '';
-  const p1 = `The forecast has ${lead(g, gi)} in the race for Governor and ${lead(s, si)} in the U.S. Senate race. For Governor, ${pollTxt(g, gi)}; for Senate, ${pollTxt(s, si)}.` +
-    (g.overridden || s.overridden ? ' (A manual margin override is in use.)' : '');
-  const p2 = `About ${pctCounted.toFixed(1)}% of the projected vote is already counted (${fmt(M.actualSum)} of roughly ${fmt(Math.round(M.Esum))} ballots), with ${Math.round(M.daysLeft)} days until Election Day. Projected final turnout is ${turnoutPct.toFixed(1)}% of registered voters.`;
-  const p3 = `The fundamentals lean Republican: registered Republicans outnumber registered Democrats ${regR.toFixed(1)}% to ${regD.toFixed(1)}%, and the county average of the last three statewide results is ${anMarginLabel(fund)} on a two-party basis (2018 governor ${anMarginLabel(past(SIM_2018))}, 2022 governor ${anMarginLabel(past(SIM_2022))}, 2024 president ${anMarginLabel(past(SIM_2024))}). ` +
-    `Midterms have also tended to be harder for the party holding the White House, which is context rather than an input to the numbers here. ${nuTxt}`;
-  return `<div class="an-date">${today}</div><h2>Today's read</h2><p>${p1}</p><p>${p2}</p><p>${p3}</p>`;
+  const p3 = `Registered Republicans outnumber registered Democrats ${regR.toFixed(1)}% to ${regD.toFixed(1)}%, and the county average of the last three statewide results is ${anMarginLabel(M.fundamentals)} on a two-party basis (2018 governor ${anMarginLabel(past(SIM_2018))}, 2022 governor ${anMarginLabel(past(SIM_2022))}, 2024 president ${anMarginLabel(past(SIM_2024))}). ${npaLine}`;
+  const sh24 = g.margin - M.past.y2024.margin, sh22 = g.margin - M.past.y2022.margin;
+  const dir = v => `${Math.abs(v * 100).toFixed(1)} points ${v >= 0 ? 'more Democratic' : 'more Republican'}`;
+  const p4 = `Compared with the past: the Governor forecast is ${dir(sh24)} than the 2024 presidential result and ${dir(sh22)} than the 2022 governor's race. Midterms have also tended to be harder for the party holding the White House, which is context rather than an input to the numbers here.`;
+  return `<div class="an-date">${today}</div><h2>Today's read</h2><p>${p1}</p><p>${p2}</p><p>${p3}</p><p>${p4}</p>`;
 }
 
 // ---- drawing ----
+function anShiftLabel(v){ const pts = Math.abs(v) * 100; return parseFloat(pts.toFixed(1)) === 0 ? '0.0' : (v > 0 ? 'D+' : 'R+') + pts.toFixed(1); }
 function anSetText(id, t){ const el = document.getElementById(id); if(el) el.textContent = t; }
 
 function anRenderHero(m, M){
@@ -9369,6 +9373,8 @@ function anRenderTable(m){
       <td class="num-npa">${fmt(Math.round(r.O))}</td>
       <td class="num-total">${fmt(Math.round(r.E))}</td>
       <td>${(r.turnout * 100).toFixed(1)}%</td>
+      <td class="${r.vs24 >= 0 ? 'num-d' : 'num-r'}">${anShiftLabel(r.vs24)}</td>
+      <td class="${r.vs22 >= 0 ? 'num-d' : 'num-r'}">${anShiftLabel(r.vs22)}</td>
       <td>${now}</td>
     </tr>`;
   }).join('');
@@ -9387,6 +9393,18 @@ async function anRenderMap(m){
       `\u{1F7E2} Projected total votes: ${fmt(Math.round(r.E))}<br>Counted so far: ${fmt(r.counted)} (${r.E ? (r.counted / r.E * 100).toFixed(0) : 0}% of projected)<br>Registered voters: ${fmt(r.reg)}`);
     title = 'Projected final turnout (% of registered voters)';
     legendHtml = turnoutSideLegendHtml();
+  }else if(view === 'vs24' || view === 'vs22'){
+    const is24 = view === 'vs24', lab = is24 ? '2024 president' : '2022 governor';
+    cats = AN_SHIFT_CATS;
+    z = m.rows.map(r => cats.findIndex(c => c.key === anShiftKey((is24 ? r.vs24 : r.vs22) * 100)) + 0.5);
+    text = m.rows.map(r => {
+      const v = is24 ? r.vs24 : r.vs22, pm = is24 ? r.pm24 : r.pm22;
+      return `<b>${r.county}</b><br><b>Projected ${anMarginLabel(r.margin)} vs ${lab} ${anMarginLabel(pm)}</b><br>` +
+        `Shift: ${anShiftLabel(v)} points (${v >= 0 ? 'more Democratic' : 'more Republican'})`;
+    });
+    title = `Projected final margin compared with ${lab} (${m.info.title}, shift in points)`;
+    legendHtml = `<div class="side-legend-title">Shift vs ${is24 ? '2024' : '2022'}</div>` +
+      AN_SHIFT_CATS.slice().reverse().map(c => `<div class="side-legend-row"><span class="sq" style="background:${c.color}"></span><span class="lbl">${c.key === 'Little change' ? 'Little change' : (c.key[0] === 'D' ? 'More Democratic ' : 'More Republican ') + c.key.slice(2)}</span></div>`).join('');
   }else if(view === 'current'){
     cats = NPA_DISPLAY_CATS;
     z = m.rows.map(r => cats.findIndex(c => c.key === (r.live ? categoryForNpaDisplay(r.live) : 'Not Updated')) + 0.5);
@@ -9552,36 +9570,40 @@ function anEnsureRaceSections(){
     </div>`).join('');
 }
 
-function anSyncControls(M){
-  const sel = document.getElementById('anScenario');
-  const lab = { low:'2022 turnout', mid:'2018/2022/2024 average', high:'2024 turnout' };
-  [...sel.options].forEach(o => { o.textContent = `${lab[o.value]} · ${(M.scenarioTurnout[o.value] * 100).toFixed(1)}% statewide`; });
-  sel.value = anState.scenario;
-  anSetText('anScenarioVal', '');
-  const adj = anState.turnoutAdj;
-  anSetText('anTurnoutAdjVal', adj === 0 ? 'no change' : `${adj > 0 ? '+' : ''}${adj} pts`);
-  const t = anState.tilt;
-  anSetText('anTiltVal', t === 0 ? 'Even' : `${Math.abs(t)} pts ${t > 0 ? 'more Republican' : 'more Democratic'}`);
-  const ov = anState.override[anState.race];
-  anSetText('anOverrideVal', ov === null ? 'model' : `${ov > 0 ? 'D+' : (ov < 0 ? 'R+' : '')}${Math.abs(ov)}`);
-  anSetText('anDLoyalVal', anState.dLoyal + '%');
-  anSetText('anRLoyalVal', anState.rLoyal + '%');
-  const ovEl = document.getElementById('anOverride');
-  if(document.activeElement !== ovEl) ovEl.value = ov === null ? '' : ov;
+function anRenderCompare(m, M){
+  const info = m.info;
+  const row = (label, margin, D, R, total, turnout, cls) => `<tr class="${cls || ''}"><td>${label}</td>` +
+    `<td class="${margin > 0 ? 'num-d' : 'num-r'}">${anMarginLabel(margin)}</td><td class="num-d">${fmt(Math.round(D))}</td><td class="num-r">${fmt(Math.round(R))}</td>` +
+    `<td>${fmt(Math.round(total))}</td><td>${(turnout * 100).toFixed(1)}%</td></tr>`;
+  const p = M.past;
+  document.getElementById('anCompare').innerHTML =
+    `<h2>How it compares with 2024, 2022 and 2018</h2>` +
+    `<div class="table-hint">${info.title} forecast next to the statewide results of past elections. Turnout is measured against today's voter rolls.</div>` +
+    `<table><thead><tr><th>Election</th><th>Margin</th><th>DEM</th><th>REP</th><th>Total votes</th><th>Turnout</th></tr></thead><tbody>` +
+    row(`2026 forecast (${info.dem} vs ${info.rep})`, m.margin, m.sD, m.sR, M.Esum, M.Esum / M.regTot, 'now') +
+    row('2024 president (Harris vs Trump)', p.y2024.margin, p.y2024.D, p.y2024.R, p.y2024.total, p.y2024.turnout) +
+    row('2022 governor (Crist vs DeSantis)', p.y2022.margin, p.y2022.D, p.y2022.R, p.y2022.total, p.y2022.turnout) +
+    row('2018 governor (Gillum vs DeSantis)', p.y2018.margin, p.y2018.D, p.y2018.R, p.y2018.total, p.y2018.turnout) +
+    `</tbody></table>`;
 }
 
-function anRenderCheck(m, M){
-  const x = anCrossover(m, M);
-  const info = m.info;
-  if(!isFinite(x.nu)){ document.getElementById('anCheck').innerHTML = ''; return; }
-  const nuPct = x.nu * 100;
-  const plaus = nuPct >= 30 && nuPct <= 70;
-  document.getElementById('anCheck').innerHTML =
-    `<b class="an-mint">NPA and crossover check</b> — ${info.title}<br>` +
-    `Projected ballots by registration: <span class="num-d">${fmt(Math.round(x.nD))} Democratic</span> · <span class="num-r">${fmt(Math.round(x.nR))} Republican</span> · <span class="num-npa">${fmt(Math.round(x.nN))} NPA/other</span>.<br>` +
-    `If ${anState.dLoyal}% of Democrats vote for ${info.dem} (about ${fmt(Math.round(x.dDefect))} ballots go elsewhere) and ${anState.rLoyal}% of Republicans vote for ${info.rep} ` +
-    `(about ${fmt(Math.round(x.rDefect))} ballots go elsewhere), NPA voters would have to split <b>${nuPct.toFixed(0)}% ${info.dem} / ${(100 - nuPct).toFixed(0)}% ${info.rep}</b> to produce this forecast.` +
-    (plaus ? '' : `<br><span class="warn">That NPA split is outside the usual range, so the loyalty levels (or the forecast margin) may need another look.</span>`);
+function anRenderNpa(M){
+  const card = race => {
+    const m = M.models[race], info = m.info;
+    const n = AN_NPA_POLLS[race];
+    if(!m.npa) return `<div class="an-npa-card"><b>${info.title}</b><br>No NPA breakdowns yet; the fundamentals are unadjusted.</div>`;
+    const poll = m.npa.nu * 100, hist = M.nuHist * 100;
+    const list = n.map(p => `<li>${p.pollster} (${anFmtDate(p.end)}${p.approx ? ', approx.' : ''}${p.sponsor ? ', ' + p.sponsor + '-aligned' : ''}): ${info.dem} ${p.dem}% · ${info.rep} ${p.rep}%</li>`).join('');
+    return `<div class="an-npa-card"><b>${info.title}: ${info.dem} vs ${info.rep}</b>` +
+      `<div class="big">NPA voters: <span class="num-d">${poll.toFixed(0)}% ${info.dem}</span> / <span class="num-r">${(100 - poll).toFixed(0)}% ${info.rep}</span></div>` +
+      `The 2018/2022/2024 average, run on today's electorate, implies about ${hist.toFixed(0)}% ${info.dem}. That ${poll >= hist ? 'better' : 'worse'} showing for ${info.dem} among NPA voters (${(Math.abs(m.npaGap) * 100).toFixed(1)} points of the NPA vote, and NPA voters are ${(M.partyShare.n * 100).toFixed(0)}% of projected ballots) moves the fundamentals from ${anMarginLabel(M.fundamentals)} to <b>${anMarginLabel(m.fundAdj)}</b>.` +
+      `<ul>${list}</ul></div>`;
+  };
+  document.getElementById('anNpa').innerHTML =
+    `<h2>NPA voters</h2><div class="table-hint">NPA voters have swung hard from one election to the next, so their current lean is built into the fundamentals. Projected ballots: ` +
+    `<span class="num-d">${fmt(Math.round(M.party.d))} Democratic</span> · <span class="num-r">${fmt(Math.round(M.party.r))} Republican</span> · <span class="num-npa">${fmt(Math.round(M.party.n))} NPA/other</span> (by registration). ` +
+    `Assumes ${Math.round(AN_LOYAL.d * 100)}% of Democrats and ${Math.round(AN_LOYAL.r * 100)}% of Republicans back their nominee, so crossover voting is included.</div>` +
+    `<div class="an-npa-grid">${card('governor')}${card('senate')}</div>`;
 }
 
 async function renderAnalysis(){
@@ -9590,11 +9612,11 @@ async function renderAnalysis(){
   const M = anCompute();
   anLast = M;
   const m = M.models[anState.race];
-  anSyncControls(M);
   anRenderHero(m, M);
   document.getElementById('anBlurb').innerHTML = anBuildBlurb(M);
   anRenderTable(m);
-  anRenderCheck(m, M);
+  anRenderCompare(m, M);
+  anRenderNpa(M);
   ['governor', 'senate'].forEach(race => {
     const mm = M.models[race];
     anSetText('anRaceTitle_' + race, `${mm.info.title}: ${mm.info.dem} (D) vs ${mm.info.rep} (R)`);
@@ -9620,24 +9642,6 @@ function initAnalysis(){
   anState.inited = true;
   document.querySelectorAll('#anRaceSelect button').forEach(b => b.addEventListener('click', () => { anState.race = b.dataset.race; anQueueRender(); }));
   document.querySelectorAll('#anViewSelect button').forEach(b => b.addEventListener('click', () => { anState.view = b.dataset.view; anQueueRender(); }));
-  document.getElementById('anScenario').addEventListener('change', e => { anState.scenario = e.target.value; anQueueRender(); });
-  document.getElementById('anTurnoutAdj').addEventListener('input', e => { anState.turnoutAdj = parseFloat(e.target.value); anQueueRender(); });
-  document.getElementById('anTilt').addEventListener('input', e => { anState.tilt = parseFloat(e.target.value); anQueueRender(); });
-  document.getElementById('anDLoyal').addEventListener('input', e => { anState.dLoyal = parseFloat(e.target.value); anQueueRender(); });
-  document.getElementById('anRLoyal').addEventListener('input', e => { anState.rLoyal = parseFloat(e.target.value); anQueueRender(); });
-  document.getElementById('anOverride').addEventListener('input', e => {
-    const v = parseFloat(e.target.value);
-    anState.override[anState.race] = isFinite(v) ? v : null;
-    anQueueRender();
-  });
-  document.getElementById('anResetBtn').addEventListener('click', () => {
-    Object.assign(anState, AN_DEFAULTS, { override:{ governor:null, senate:null } });
-    document.getElementById('anTurnoutAdj').value = 0;
-    document.getElementById('anTilt').value = 0;
-    document.getElementById('anDLoyal').value = AN_DEFAULTS.dLoyal;
-    document.getElementById('anRLoyal').value = AN_DEFAULTS.rLoyal;
-    anQueueRender();
-  });
 }
 
 </script>

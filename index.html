@@ -223,6 +223,22 @@
     display:flex; justify-content:space-between; align-items:center; gap:16px;
     flex-wrap:wrap; margin-bottom:14px;
   }
+
+  /* Next-update countdown: sits in the tab row, an inch (96px incl. the 16px flex gap) after the
+     last tab and an inch before the search box. */
+  .next-update{
+    flex:1 1 190px; min-width:170px; margin:0 80px; text-align:center;
+    font-family:var(--mono); line-height:1.15; display:none;
+  }
+  .next-update.on{ display:block; }
+  .next-update .nu-label{ font-size:9.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted-2); }
+  .next-update .nu-time{ font-size:19px; font-weight:700; letter-spacing:.04em; margin-top:2px; font-variant-numeric:tabular-nums; }
+  .next-update.nu-red .nu-time{ color:var(--rep); }
+  .next-update.nu-yellow .nu-time{ color:#d8b466; }
+  .next-update.nu-green .nu-time{ color:var(--total-green); }
+  .next-update.nu-green .nu-time.nu-prep{ font-size:16px; letter-spacing:.02em; }
+  @media (max-width:1499px){ .next-update{ margin:0 12px; } }
+  @media (max-width:760px){ .next-update{ flex:1 1 100%; margin:0; } }
   .mode-tabs{
     display:flex; gap:8px; margin-bottom:18px; border-bottom:1px solid var(--border);
   }
@@ -923,6 +939,10 @@
       <button data-metric="move">Margin move</button>
       <button data-metric="updated">Counties Updated</button>
       <button data-metric="dropwinner">Drop Winners</button>
+    </div>
+    <div class="next-update" id="nextUpdateClock" aria-live="off">
+      <div class="nu-label" id="nuLabel">Next update</div>
+      <div class="nu-time" id="nuTime">&mdash;</div>
     </div>
     <div class="search-box">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#7c879c" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -2156,6 +2176,81 @@ function buildCountyRecords(rows){
   return out;
 }
 
+
+// ============================================================
+// NEXT-UPDATE COUNTDOWN
+// ------------------------------------------------------------
+// Counts down to the next scheduled update: 11:00 AM, 3:00 PM or 7:00 PM
+// Eastern. Red while it's far off, yellow when it's getting close, green
+// when it's almost here. When the clock hits the update time it stops and
+// shows a green "Preparing Update..." and STAYS there until new data comes
+// in (the "Most recent update" time changes); then it starts counting to
+// the following slot. The next slot is always "the first slot after the
+// latest data's time", so a late scrape can never make it count backwards.
+// ============================================================
+const NEXT_UPDATE_HOURS_ET = [11, 15, 19];
+const CLOCK_RED_ABOVE_MIN = 120;      // more than this far off: red
+const CLOCK_YELLOW_ABOVE_MIN = 30;    // between this and the red cutoff: yellow; closer: green
+let clockLastRunWall = null;          // latest data time, as Eastern wall-clock ms
+let clockLastRunText = '';
+
+function easternWallNowMs(){
+  const p = {};
+  new Intl.DateTimeFormat('en-US', { timeZone:'America/New_York', hourCycle:'h23',
+    year:'numeric', month:'numeric', day:'numeric', hour:'numeric', minute:'numeric', second:'numeric'
+  }).formatToParts(new Date()).forEach(x => { p[x.type] = parseInt(x.value, 10); });
+  return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) + (Date.now() % 1000);
+}
+function nextUpdateSlotAfter(wallMs){
+  const d = new Date(wallMs);
+  const y = d.getUTCFullYear(), m = d.getUTCMonth(), day = d.getUTCDate();
+  for(let off = 0; off < 3; off++){
+    for(const h of NEXT_UPDATE_HOURS_ET){
+      const t = Date.UTC(y, m, day + off, h, 0, 0);
+      if(t > wallMs) return t;
+    }
+  }
+  return wallMs;
+}
+function setNextUpdateClockRun(runText){
+  if(!runText || runText === clockLastRunText) return;
+  const d = parseHistoryTimestamp(runText);
+  if(!d) return;
+  clockLastRunText = runText;
+  clockLastRunWall = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), 0);
+  tickNextUpdateClock();
+}
+function nextUpdateClockText(totalSec){
+  const h = Math.floor(totalSec / 3600), mi = Math.floor((totalSec % 3600) / 60), s = totalSec % 60;
+  return h + ':' + String(mi).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+function tickNextUpdateClock(){
+  const box = document.getElementById('nextUpdateClock');
+  if(!box) return;
+  if(clockLastRunWall === null){ box.classList.remove('on'); return; }
+  const target = nextUpdateSlotAfter(clockLastRunWall);
+  const diff = target - easternWallNowMs();
+  const timeEl = document.getElementById('nuTime');
+  const labelEl = document.getElementById('nuLabel');
+  box.classList.add('on');
+  box.classList.remove('nu-red', 'nu-yellow', 'nu-green');
+  if(diff <= 0){
+    box.classList.add('nu-green');
+    labelEl.textContent = 'Next update';
+    timeEl.classList.add('nu-prep');
+    timeEl.textContent = 'Preparing Update...';
+    return;
+  }
+  const sec = Math.ceil(diff / 1000);
+  const mins = sec / 60;
+  box.classList.add(mins > CLOCK_RED_ABOVE_MIN ? 'nu-red' : (mins > CLOCK_YELLOW_ABOVE_MIN ? 'nu-yellow' : 'nu-green'));
+  const slotHour = new Date(target).getUTCHours();
+  labelEl.textContent = 'Next update \u00b7 ' + ((slotHour + 11) % 12 + 1) + ':00 ' + (slotHour < 12 ? 'AM' : 'PM') + ' ET';
+  timeEl.classList.remove('nu-prep');
+  timeEl.textContent = nextUpdateClockText(sec);
+}
+setInterval(tickNextUpdateClock, 250);
+
 function buildCounties(rows){
   const scraped = buildCountyRecords(rows);
   if(scraped.length === 0) return; // no usable data at all; keep whatever's already loaded
@@ -2164,6 +2259,7 @@ function buildCounties(rows){
   // simply hasn't reported yet) defaults to 0 / "Not Updated" instead of
   // vanishing from the live map/table entirely.
   COUNTIES = fillMissingCountiesAtZero(scraped);
+  setNextUpdateClockRun(latestTimestampString(COUNTIES.map(c => c.runTimestamp)));
 }
 
 async function ensureGeojson(){
@@ -2444,6 +2540,30 @@ function turnoutSideLegendHtml(){
     ).join('');
 }
 
+// Rows of the General Election rating key, top to bottom. Colors come from
+// RATING_CATS so the key can never drift from the map.
+const RATING_KEY_ROWS = [
+  ['Safe D','Safe D'], ['Likely D','Likely D'], ['Lean D','Leans D'], ['Toss Up','Toss Up'],
+  ['Lean R','Leans R'], ['Likely R','Likely R'], ['Safe R','Safe R']
+].map(([k, label]) => ({ label, color: RATING_CATS.find(c => c.key === k).color }));
+function ratingSideLegendHtml(){
+  return `<div class="side-legend-title">County rating</div>` +
+    RATING_KEY_ROWS.map(r =>
+      `<div class="side-legend-row"><span class="sq" style="background:${r.color}"></span><span class="lbl">${r.label}</span></div>`
+    ).join('');
+}
+// Drop Winners key (screenshot): who won the latest drop. Ties use the same
+// stripe colors as the map's stripe patterns.
+const DROP_KEY_ROWS = [
+  { label:'Democrat',                color:'#00b4d8' },
+  { label:'Democrat/NPA tie',        stripe:['#5b9bd9', '#c77dff'] },
+  { label:'NPA',                     color:'#c77dff' },
+  { label:'NPA/Republican tie',      stripe:['#d4675a', '#c77dff'] },
+  { label:'Republican',              color:'#dd2d4a' },
+  { label:'Democrat/Republican tie', stripe:['#5b9bd9', '#d4675a'] },
+  { label:'3-way tie',               color:'#145a32' }
+];
+
 const METRICS = {
   // "Primary Election" — pinned to the frozen snapshot (STATIC_DVR_COUNTIES), never
   // touched by the live auto-refresh.
@@ -2452,7 +2572,7 @@ const METRICS = {
   // in as the live feed updates. Same rating-tier styling as Primary Election, but
   // the tier is decided from a margin that folds NPA into the denominator
   // alongside DEM and REP, so heavy-NPA counties can show a lighter lean.
-  demrepnpa: { title:'General Election rating by county', categorical:true, cats:NPA_DISPLAY_CATS, catFn:categoryForNpaDisplay },
+  demrepnpa: { title:'General Election rating by county', categorical:true, cats:NPA_DISPLAY_CATS, catFn:categoryForNpaDisplay, ratingKey:true },
   // Turnout as a share of registered voters, in nine color ranges (see
   // TURNOUT_BINS). The raw vote count is still in the hover, the county
   // page and the table. sideLegend: the key sits beside the map as a
@@ -2746,6 +2866,9 @@ function buildMapTrace(metric, activeCounties){
       legendHtml = '';
       sideLegendHtml = turnoutSideLegendHtml();
     }
+    // General Election: the rating key beside the map too (the chips under
+    // it stay, since they also cover Not Updated / NPA lead / ties).
+    if(m.ratingKey) sideLegendHtml = ratingSideLegendHtml();
   }else if(m.symmetric){
     const maxAbs = Math.max(0.01, ...activeCounties.map(c=>Math.abs(m.get(c))));
     const z = activeCounties.map(m.get);
@@ -5420,34 +5543,35 @@ function npaHypotheticalInfo(){
   const hypM = den ? (dC - rC)/den*100 : 0;
   return { rawM, hypM, npaD:npaSplitToDem, npaR:100-npaSplitToDem, demLoy:demLoyalty, repLoy:repLoyalty };
 }
-function drawNpaHypotheticalBlock(ctx, x, topY, scale, maxW){
+function drawNpaHypotheticalBlock(ctx, x, topY, scale, maxW, dry){
   const info = npaHypotheticalInfo();
   const sans = 'Inter, Arial, sans-serif';
   const partyColor = m => (parseFloat(Math.abs(m).toFixed(2)) === 0) ? '#e9edf5' : (m > 0 ? '#5b9bd9' : '#d4675a');
   const curTxt = formatMarginLabel(info.rawM), hypTxt = formatMarginLabel(info.hypM);
+  const put = (t, px, py) => { if(!dry) ctx.fillText(t, px, py); };
   ctx.save();
   ctx.textBaseline = 'alphabetic';
   let y = topY + 26*scale;
   ctx.font = `700 ${Math.round(26*scale)}px ${sans}`;
   let cx = x;
   ctx.fillStyle = partyColor(info.rawM);
-  ctx.fillText(curTxt, cx, y); cx += ctx.measureText(curTxt).width;
+  put(curTxt, cx, y); cx += ctx.measureText(curTxt).width;
   ctx.font = `600 ${Math.round(22*scale)}px ${sans}`;
   ctx.fillStyle = '#e9edf5';
   const arrow = ' \u2192 ';
-  ctx.fillText(arrow, cx, y); cx += ctx.measureText(arrow).width;
+  put(arrow, cx, y); cx += ctx.measureText(arrow).width;
   ctx.font = `700 ${Math.round(26*scale)}px ${sans}`;
   ctx.fillStyle = '#c77dff';
-  ctx.fillText(hypTxt, cx, y);
+  put(hypTxt, cx, y);
   const wrap = (txt, font, color, lineH) => {
     ctx.font = font; ctx.fillStyle = color;
     const words = txt.split(' '); let line = '';
     for(const w of words){
       const t = line ? line + ' ' + w : w;
-      if(line && ctx.measureText(t).width > maxW*scale){ ctx.fillText(line, x, y); y += lineH*scale; line = w; }
+      if(line && ctx.measureText(t).width > maxW*scale){ put(line, x, y); y += lineH*scale; line = w; }
       else line = t;
     }
-    if(line){ ctx.fillText(line, x, y); }
+    if(line){ put(line, x, y); }
   };
   y += 24*scale;
   wrap(`If NPA voters voted ${info.npaD.toFixed(2)}% for Democrats and ${info.npaR.toFixed(2)}% for Republicans`,
@@ -5456,6 +5580,78 @@ function drawNpaHypotheticalBlock(ctx, x, topY, scale, maxW){
   wrap(`${info.demLoy.toFixed(2)}% D and ${info.repLoy.toFixed(2)}% R party loyalty.`,
        `italic 400 ${Math.round(11.5*scale)}px ${sans}`, '#b4bccb', 15);
   ctx.restore();
+  return (y + 6*scale) - topY;     // height used
+}
+
+// ---- Key (legend) drawn onto a screenshot -----------------------------
+// Same look as the Total Turnout key: a dark rounded panel at the map's
+// lower left (open water) with one swatch + label per row. A row's swatch
+// is either a solid `color` or, for a tie, diagonal `stripe: [a, b]` bands
+// like the ones on the map itself. Returns the panel's top edge (canvas px)
+// so something can be stacked above it. Sizes are unscaled.
+function drawKeyOnCanvas(ctx, x, bottomY, scale, title, subtitle, rows){
+  const S = v => v * scale;
+  const sans = 'Inter, Arial, sans-serif';
+  const pad = 14, sq = 17, rowH = 24, gap = 12;
+  const headH = 14 + (subtitle ? 3 + 12 : 0) + 12;
+  const boxH = pad + headH + rows.length * rowH + pad - 6;
+  ctx.save();
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = `700 ${Math.round(S(16))}px ${sans}`;
+  const labelW = Math.max(...rows.map(r => ctx.measureText(r.label).width));
+  ctx.font = `700 ${Math.round(S(14))}px ${sans}`;
+  const titleW = ctx.measureText(title).width;
+  let subW = 0;
+  if(subtitle){ ctx.font = `400 ${Math.round(S(12))}px ${sans}`; subW = ctx.measureText(subtitle).width; }
+  const boxW = Math.max(S(pad * 2 + sq + gap) + labelW, S(pad * 2) + subW, S(pad * 2) + titleW);
+  const top = bottomY - S(boxH);
+  const r = S(8), bh = boxH * scale;
+  ctx.beginPath();
+  ctx.moveTo(x + r, top);
+  ctx.arcTo(x + boxW, top, x + boxW, top + bh, r);
+  ctx.arcTo(x + boxW, top + bh, x, top + bh, r);
+  ctx.arcTo(x, top + bh, x, top, r);
+  ctx.arcTo(x, top, x + boxW, top, r);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(10,14,23,0.88)';
+  ctx.fill();
+  ctx.strokeStyle = '#212a3b';
+  ctx.lineWidth = Math.max(1, S(1));
+  ctx.stroke();
+
+  ctx.fillStyle = '#e9edf5';
+  ctx.font = `700 ${Math.round(S(14))}px ${sans}`;
+  ctx.fillText(title, x + S(pad), top + S(pad + 14));
+  if(subtitle){
+    ctx.fillStyle = '#7c879c';
+    ctx.font = `400 ${Math.round(S(12))}px ${sans}`;
+    ctx.fillText(subtitle, x + S(pad), top + S(pad + 14 + 3 + 12));
+  }
+  rows.forEach((row, i) => {
+    const rowTop = top + S(pad + headH + i * rowH);
+    const sx = x + S(pad);
+    if(row.stripe){
+      ctx.save();
+      ctx.beginPath(); ctx.rect(sx, rowTop, S(sq), S(sq)); ctx.clip();
+      ctx.fillStyle = row.stripe[0]; ctx.fillRect(sx, rowTop, S(sq), S(sq));
+      ctx.translate(sx + S(sq) / 2, rowTop + S(sq) / 2);
+      ctx.rotate(Math.PI / 4);
+      ctx.fillStyle = row.stripe[1];
+      for(let k = -6; k <= 6; k++) ctx.fillRect(S(k * 6), -S(sq), S(3), S(sq * 2));
+      ctx.restore();
+    }else{
+      ctx.fillStyle = row.color;
+      ctx.fillRect(sx, rowTop, S(sq), S(sq));
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+    ctx.lineWidth = Math.max(1, S(1));
+    ctx.strokeRect(sx, rowTop, S(sq), S(sq));
+    ctx.fillStyle = '#e9edf5';
+    ctx.font = `700 ${Math.round(S(16))}px ${sans}`;
+    ctx.fillText(row.label, x + S(pad + sq + gap), rowTop + S(sq) - S(2));
+  });
+  ctx.restore();
+  return top;
 }
 
 async function exportStatewidePng(btn, opts = {}){
@@ -5550,8 +5746,19 @@ async function exportStatewidePng(btn, opts = {}){
 
     // General Election with the NPA shift slider in use: label the margin as
     // hypothetical. Not drawn otherwise, so those screenshots are unchanged.
-    if(isGeneral && shiftSliderActive){
-      drawNpaHypotheticalBlock(ctx, 20*scale, headerH*scale + 330*scale, scale, 230);
+    // Rating key at the map's lower left (all General Election screenshots).
+    // The NPA block, when shown, stacks right above it.
+    if(isGeneral){
+      const keyTop = drawKeyOnCanvas(ctx, 24*scale, headerH*scale + mapImg.height - 24*scale, scale,
+        'COUNTY RATING', '', RATING_KEY_ROWS);
+      if(shiftSliderActive){
+        const h = drawNpaHypotheticalBlock(ctx, 20*scale, 0, scale, 230, true);
+        drawNpaHypotheticalBlock(ctx, 20*scale, keyTop - 14*scale - h, scale, 230, false);
+      }
+    }
+    if(currentMetric === 'dropwinner'){
+      drawKeyOnCanvas(ctx, 24*scale, headerH*scale + mapImg.height - 24*scale, scale,
+        'WINNER OF THIS DROP', 'Most new votes in the latest update', DROP_KEY_ROWS);
     }
 
     // Footer

@@ -252,7 +252,10 @@
   .an-blurb .an-date{ font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:#7ff0c4; margin-bottom:10px; }
   .an-blurb p{ font-size:13.5px; line-height:1.65; color:var(--text); margin:0 0 10px; }
   .an-blurb p:last-child{ margin-bottom:0; }
-  .an-blurb b.d{ color:var(--dem); } .an-blurb b.r{ color:var(--rep); }
+  .an-blurb b.d, .hl-d{ color:var(--dem); } .an-blurb b.r, .hl-r{ color:var(--rep); }
+  .hl-d, .hl-r, .hl-green, .hl-gold{ font-weight:600; }
+  .hl-green{ color:var(--total-green); } .hl-gold{ color:var(--gold); }
+  .an-change{ padding:8px 12px; border-left:3px solid #7ff0c4; background:rgba(127,240,196,.06); border-radius:0 6px 6px 0; }
   .an-compare, .an-npa{ margin:18px 0; }
   .an-compare table{ width:100%; border-collapse:collapse; font-size:12.5px; margin-top:10px; }
   .an-compare th{ text-align:right; font-family:var(--mono); font-size:10.5px; color:var(--muted); font-weight:500; padding:6px 10px; border-bottom:1px solid var(--border); }
@@ -276,7 +279,7 @@
   .an-sq.sel{ outline:2px solid #e9edf5; outline-offset:2px; }
   .an-house-table tr{ cursor:pointer; }
   .an-house-table tr.sel td{ background:rgba(157,78,221,.14); }
-  .an-house-detail{ margin:18px 0; border-color:rgba(157,78,221,.4); }
+  .an-house-detail{ margin:4px 0 6px; padding:14px 16px; background:var(--panel-2); border:1px solid rgba(157,78,221,.45); border-radius:10px; }
   .an-hd-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin:12px 0; }
   .an-hd-grid .stat-card .v{ font-size:20px; }
   .an-cand{ display:flex; gap:14px; flex-wrap:wrap; margin:10px 0; }
@@ -329,7 +332,8 @@
     .an-npa-card .big{ font-size:15px; }
     .an-hd-grid{ grid-template-columns:repeat(2,1fr); }
     .an-race{ margin-top:14px; }
-    .an-compare, .an-npa, .an-house-detail{ margin:14px 0; }
+    .an-compare, .an-npa{ margin:14px 0; }
+    .an-house-detail{ padding:12px; }
     .margin-strip .leader{ font-size:15px; }
     .bar-labels{ height:auto !important; display:flex; flex-wrap:wrap; justify-content:center; gap:2px 14px; }
     .bar-labels span{ position:static !important; transform:none !important; }
@@ -1522,6 +1526,7 @@
       <button data-view="current">Current General Election results</button>
       <button data-view="turnout">Projected final turnout</button>
     </div>
+    <button class="sim-btn" id="anDownloadPngBtn" style="margin-left:auto">Download PNG</button>
   </div>
 
   <div class="panel an-blurb" id="anBlurb"></div>
@@ -1548,8 +1553,6 @@
     </div>
     <div class="panel" id="anHousePanel" style="display:none"></div>
   </div>
-
-  <div class="panel an-house-detail" id="anHouseDetail" style="display:none"></div>
 
   <div class="panel an-compare" id="anCompare"></div>
 
@@ -9379,11 +9382,11 @@ function anCompute(){
 }
 
 // ---- U.S. House: district forecasts ----
-function anHouseCompute(models, past, today){
+function anHouseCompute(models, past, today, envOverride){
   const lg = p => Math.log(p / (1 - p)), sg = x => 1 / (1 + Math.exp(-x));
   const base = AN_HOUSE.map(h => ({ h, p24:anClamp((1 + (h.m24 / 100) / AN_PAST_TWO_PARTY_SHARE) / 2, 0.01, 0.99) }));
   const mean = a => base.reduce((s, b) => s + (1 - AN_OTHER_SHARE) * (2 * sg(lg(b.p24) + a) - 1), 0) / base.length;
-  const env = (models.governor.margin + models.senate.margin) / 2 - past.y2024.margin;   // statewide swing vs 2024 (+ = toward Democrats)
+  const env = (envOverride !== undefined ? envOverride : (models.governor.margin + models.senate.margin) / 2 - past.y2024.margin);   // statewide swing vs 2024 (+ = toward Democrats)
   const target = mean(0) + env;
   let lo = -3, hi = 3;
   for(let i = 0; i < 60; i++){ const mid = (lo + hi) / 2; if(mean(mid) < target) lo = mid; else hi = mid; }
@@ -9422,15 +9425,15 @@ function anBuildBlurb(M){
   const regD = Object.keys(SIM_REG).reduce((a, n) => a + SIM_REG[n][0] * SIM_REG[n][2], 0) / M.regTot;
   const regR = Object.keys(SIM_REG).reduce((a, n) => a + SIM_REG[n][0] * SIM_REG[n][1], 0) / M.regTot;
   const past = y => { const nm = Object.keys(y); const d = nm.reduce((a, n) => a + y[n][0], 0), r = nm.reduce((a, n) => a + y[n][1], 0); return (d - r) / (d + r); };
-  const p1 = `The forecast has ${leadTxt} in the ${info.title} race: ${pollTxt}.`;
-  const p2 = `About ${pctCounted.toFixed(1)}% of the projected vote is already counted (${fmt(M.actualSum)} of roughly ${fmt(Math.round(M.Esum))} ballots), with ${Math.round(M.daysLeft)} days until Election Day. Projected final turnout is ${turnoutPct.toFixed(1)}% of registered voters, against ${(M.past.y2024.turnout * 100).toFixed(1)}% in 2024 and ${(M.past.y2022.turnout * 100).toFixed(1)}% in 2022 on today's voter rolls.`;
+  const p1 = `The forecast has ${leadTxt} in the ${info.title} race: ${pollTxt}.` + anChangeHtml(M);
+  const p2 = `About ${pctCounted.toFixed(1)}% of the projected vote is already counted (<span class="hl-gold">${fmt(M.actualSum)} counted</span> of <span class="hl-green">roughly ${fmt(Math.round(M.Esum))} ballots</span>), with ${Math.round(M.daysLeft)} days until Election Day. Projected final turnout is ${turnoutPct.toFixed(1)}% of registered voters, against ${(M.past.y2024.turnout * 100).toFixed(1)}% in 2024 and ${(M.past.y2022.turnout * 100).toFixed(1)}% in 2022 on today's voter rolls.`;
   const npaLine = m.npa
     ? `Polls that break out independents have NPA voters going ${(m.npa.nu * 100).toFixed(0)}% to ${info.dem} (two-party), ${m.npaGap >= 0 ? 'better' : 'worse'} for ${info.dem} than the 2018/2022/2024 average implies (about ${(M.nuHist * 100).toFixed(0)}%), so the fundamentals are adjusted to ${anMarginLabel(m.fundAdj)}.`
     : '';
   const p3 = `Registered Republicans outnumber registered Democrats ${regR.toFixed(1)}% to ${regD.toFixed(1)}%, and the county average of the last three statewide results is ${anMarginLabel(M.fundamentals)} on a two-party basis (2018 governor ${anMarginLabel(past(SIM_2018))}, 2022 governor ${anMarginLabel(past(SIM_2022))}, 2024 president ${anMarginLabel(past(SIM_2024))}). ${npaLine}`;
   const dir = v => `${Math.abs(v * 100).toFixed(1)} points ${v >= 0 ? 'more Democratic' : 'more Republican'}`;
   const p4 = `Compared with the past: the ${info.title} forecast is ${dir(m.margin - M.past.y2024.margin)} than the 2024 presidential result and ${dir(m.margin - M.past.y2022.margin)} than the 2022 governor's race. Midterms have also tended to be harder for the party holding the White House, which is context rather than an input to the numbers here.`;
-  return `<div class="an-date">${today}</div><h2>Today's read · ${info.title}</h2><p>${p1}</p><p>${p2}</p><p>${p3}</p><p>${p4}</p>`;
+  return anHighlight(`<div class="an-date">${today}</div><h2>Today's read · ${info.title}</h2><p>${p1}</p><p>${p2}</p><p>${p3}</p><p>${p4}</p>`);
 }
 
 
@@ -9502,8 +9505,10 @@ function anRenderHousePanel(H){
       `<td class="${r.shift >= 0 ? 'num-d' : 'num-r'}">${anShiftLabel(r.shift)}</td></tr>`;
   }).join('');
   document.getElementById('anHousePanel').innerHTML =
-    `<h2>Pick a district</h2><div class="table-hint">Each square is colored by its projected rating. Click a square, a table row or a district on the map.</div>` +
+    `<h2>Pick a district</h2><div class="table-hint">Each square is colored by its projected rating. Click a square or a district on the map and the race opens right below.</div>` +
     `<div class="an-squares" id="anSquares">${squares}</div>` +
+    `<div class="an-house-detail" id="anHouseDetail"></div>` +
+    `<div class="table-hint" style="margin:14px 0 6px">All 28 districts</div>` +
     `<div class="table-wrap" style="max-height:420px"><table class="an-house-table"><thead><tr><th>District</th><th>Nominees</th><th class="an-hm">Rating</th><th>Forecast</th><th class="an-hm">2024</th><th>Shift</th></tr></thead><tbody id="anHouseBody">${rows}</tbody></table></div>`;
   const pick = e => { const t = e.target.closest('[data-d]'); if(t){ anState.district = +t.dataset.d; anQueueRender(); } };
   document.getElementById('anSquares').onclick = pick;
@@ -9593,7 +9598,7 @@ function anBuildHouseBlurb(M){
     (flipsD.length ? `That is enough to put ${flipsD.length === 1 ? 'one district' : flipsD.length + ' districts'} on the Democratic side that Donald Trump carried in 2024: ${list(flipsD)}. ` : 'No district that Donald Trump carried in 2024 flips to the Democrats. ') +
     (flipsR.length ? `${list(flipsR)} would flip the other way.` : '');
   const p3 = `The closest races are ${list(close)}. Only FL-08 and FL-09 have public polls, so most ratings rest on the district's partisan lean and the statewide swing.`;
-  return `<div class="an-date">${today}</div><h2>Today's read · U.S. House</h2><p>${p1}</p><p>${p2}</p><p>${p3}</p>`;
+  return anHighlight(`<div class="an-date">${today}</div><h2>Today's read · U.S. House</h2><p>${p1}</p><p>${anChangeHtml(M)}</p><p>${p2}</p><p>${p3}</p>`);
 }
 
 function anRenderTable(m){
@@ -9845,6 +9850,137 @@ function anRenderNpa(M, only){
     `<div class="an-npa-grid">${only ? card(only) : card('governor') + card('senate')}</div>`;
 }
 
+// ---- highlighting for the daily write-up ----
+function anHighlight(html){
+  return html.split(/(<[^>]+>)/).map(part => part.charAt(0) === '<' ? part : part
+    .replace(/\b([RD])\+(\d+(?:\.\d+)?)/g, (m, p) => `<span class="hl-${p.toLowerCase()}">${m}</span>`)
+    .replace(/\b(Jolly|Nixon)\b/g, '<span class="hl-d">$1</span>')
+    .replace(/\b(Donalds|Moody)\b/g, '<span class="hl-r">$1</span>')).join('');
+}
+
+// ---- "what changed" paragraph: shown only when something moved ----
+function anChangeHtml(M){
+  const k = 1 - AN_OTHER_SHARE, day7 = M.today - 7 * AN_DAY, bits = [];
+  const toward = (v, info) => v > 0 ? info.dem : info.rep;
+  const pts = v => (Math.abs(v) * 100).toFixed(1);
+  if(anState.race === 'house'){
+    const g = M.models.governor, s = M.models.senate;
+    const g7 = g.series.find(p => p.day === day7), s7 = s.series.find(p => p.day === day7);
+    if(!g7 || !s7) return '';
+    const env7 = (k * g7.t + k * s7.t) / 2 - M.past.y2024.margin;
+    const H7 = anHouseCompute(M.models, M.past, day7, env7);
+    const moved = M.house.rows.filter((r, i) => r.rating !== H7.rows[i].rating);
+    if(M.house.seats.R !== H7.seats.R) bits.push(`Republicans are now projected to win ${M.house.seats.R} seats, ${M.house.seats.R > H7.seats.R ? 'up' : 'down'} from ${H7.seats.R} a week ago.`);
+    moved.slice(0, 4).forEach(r => {
+      const old = H7.rows.find(x => x.d === r.d);
+      bits.push(`${anDistLabel(r.d)} moved from ${old.rating} to ${r.rating} (${anMarginLabel(r.margin)}).`);
+    });
+    if(moved.length > 4) bits.push(`${moved.length - 4} other districts also changed rating.`);
+  }else{
+    const m = M.models[anState.race], info = m.info, S = m.series;
+    const last = S[S.length - 1], s7 = S.find(p => p.day === day7);
+    if(s7){
+      const f0 = s7.t * k, f1 = last.t * k, dF = f1 - f0;
+      const p0 = (s7.pollD - s7.pollR) / 100, p1 = (last.pollD - last.pollR) / 100, dP = p1 - p0;
+      if(Math.abs(dF) >= 0.01) bits.push(`Over the past week the forecast moved ${pts(dF)} points toward ${toward(dF, info)} (from ${anMarginLabel(f0)} to ${anMarginLabel(f1)}).`);
+      if(Math.abs(dP) >= 0.01) bits.push(`The polling average moved ${pts(dP)} points toward ${toward(dP, info)} (from ${anMarginLabel(p0)} to ${anMarginLabel(p1)}).`);
+      const r0 = ratingLabelForMargin(f0), r1 = ratingLabelForMargin(f1);
+      if(r0 !== r1) bits.push(`The race rating changed from ${r0} to ${r1}.`);
+    }
+    const fresh = info.polls.filter(p => anIsoWall(p.end) >= M.today - 2 * AN_DAY);
+    if(fresh.length) bits.push(`New ${fresh.length === 1 ? 'poll' : 'polls'}: ` + fresh.slice(0, 3).map(p => `${p.pollster} (${anMarginLabel((p.dem - p.rep) / 100)})`).join(', ') + '.');
+  }
+  return bits.length ? `<p class="an-change"><b>What changed:</b> ${bits.join(' ')}</p>` : '';
+}
+
+// ---- Download PNG (map + forecast summary, clearly marked as a forecast) ----
+async function anExportPng(){
+  const btn = document.getElementById('anDownloadPngBtn');
+  const label = btn.textContent;
+  btn.textContent = 'Rendering…'; btn.disabled = true;
+  try{
+    const M = anLast, race = anState.race, isHouse = race === 'house';
+    const m = M.models[isHouse ? 'governor' : race], info = m.info, H = M.house;
+    const W = 900, S = 2, mapW = isHouse ? 560 : 900, mapH = isHouse ? 560 : 500;
+    const mapUrl = await Plotly.toImage('anMap', { format:'png', width:mapW, height:mapH, scale:S });
+    const img = new Image();
+    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = mapUrl; });
+    const rowsLeg = [...document.querySelectorAll('#anSideLegend .side-legend-row')].map(r => ({
+      color:r.querySelector('.sq').style.background, text:r.querySelector('.lbl').textContent }));
+    const legTitle = (document.querySelector('#anSideLegend .side-legend-title') || {}).textContent || '';
+    const headerH = 214, legendH = 54, footerH = 96;
+    const cv = document.createElement('canvas');
+    cv.width = W * S; cv.height = (headerH + mapH + legendH + footerH) * S;
+    const ctx = cv.getContext('2d');
+    ctx.fillStyle = '#0a0e17'; ctx.fillRect(0, 0, cv.width, cv.height);
+    const T = (txt, x, y, font, color) => { ctx.font = font.replace(/([\d.]+)px/, (a, n) => (n * S) + 'px'); ctx.fillStyle = color; ctx.fillText(txt, x * S, y * S); };
+    const sans = 'Inter, Arial, sans-serif', mono = 'IBM Plex Mono, monospace';
+    const stamp = new Date().toLocaleString('en-US', { timeZone:'America/New_York', month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) + ' ET';
+    const title = isHouse ? 'Florida U.S. House Forecast 2026' : `Florida ${info.title} Forecast 2026: ${info.dem} vs ${info.rep}`;
+    T(title, 24, 40, `600 25px ${sans}`, '#e9edf5');
+    // forecast banner
+    const bx = 24 * S, by = 56 * S, bw = (W - 48) * S, bh = 34 * S;
+    ctx.fillStyle = 'rgba(216,180,102,0.14)'; ctx.strokeStyle = '#d8b466'; ctx.lineWidth = 1.5 * S;
+    if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 8 * S); ctx.fill(); ctx.stroke(); } else { ctx.fillRect(bx, by, bw, bh); ctx.strokeRect(bx, by, bw, bh); }
+    T(`FORECAST, NOT A RESULT. Subject to change as polls and votes come in. As of ${stamp}`, 38, 78, `700 13.5px ${mono}`, '#d8b466');
+    if(isHouse){
+      ctx.font = `600 ${22 * S}px ${sans}`;
+      let x = 24 * S;
+      [[`Republicans ${H.seats.R}`, '#d4675a'], ['  ·  ', '#7c879c'], [`Democrats ${H.seats.D}`, '#5b9bd9'], ['   projected seats', '#7c879c']].forEach(([t, c], i) => {
+        ctx.fillStyle = c; ctx.font = (i === 3 ? `500 ${15 * S}px ` : `600 ${22 * S}px `) + sans; ctx.fillText(t, x, 118 * S); x += ctx.measureText(t).width;
+      });
+      T(`2024 presidential result on these lines: ${H.seats24.R}–${H.seats24.D} Republican · ${H.seats.toss} toss-up${H.seats.toss === 1 ? '' : 's'} · statewide swing ${anMarginLabel(H.env)} vs 2024`, 24, 148, `15px ${sans}`, '#7c879c');
+      T('New 2026 congressional map. Most districts have no public polls, so ratings rest on district lean and the statewide swing.', 24, 172, `13px ${sans}`, '#7c879c');
+    }else{
+      const lead = parseFloat((Math.abs(m.margin) * 100).toFixed(1)) === 0;
+      T(lead ? 'Projected final margin: Even' : `${m.margin > 0 ? info.dem + ' (D)' : info.rep + ' (R)'} ${anMarginLabel(m.margin)} projected`, 24, 118, `600 24px ${sans}`, anMarginColor(m.margin));
+      T(`${info.dem} ${fmt(Math.round(m.sD))} (${(m.sD / m.total * 100).toFixed(1)}%)  ·  ${info.rep} ${fmt(Math.round(m.sR))} (${(m.sR / m.total * 100).toFixed(1)}%)  ·  Rating: ${ratingLabelForMargin(m.margin)}`, 24, 148, `15px ${sans}`, '#e9edf5');
+      T(`Polling average ${m.poll ? anMarginLabel(m.poll.raw) + ' (' + m.poll.n + ' polls)' : 'n/a'}  ·  Projected turnout ${(M.Esum / M.regTot * 100).toFixed(1)}%  ·  ${fmt(Math.round(M.Esum))} projected votes  ·  ${fmt(M.actualSum)} counted so far`, 24, 172, `13px ${sans}`, '#7c879c');
+    }
+    T(document.getElementById('anMapTitle').textContent, 24, 202, `600 14px ${sans}`, '#8fa3c4');
+    ctx.drawImage(img, 0, headerH * S);
+    if(isHouse){
+      // FL-01 .. FL-28 squares beside the map, colored by rating
+      const cell = 36, gap = 5, x0 = 592, y0 = headerH + 40;
+      T('Districts', x0, headerH + 26, `600 13px ${sans}`, '#8fa3c4');
+      H.rows.forEach((r, i) => {
+        const cx = (x0 + (i % 7) * (cell + gap)) * S, cy = (y0 + Math.floor(i / 7) * (cell + gap)) * S;
+        const col = catColor(r.rating);
+        ctx.fillStyle = col; ctx.fillRect(cx, cy, cell * S, cell * S);
+        ctx.fillStyle = contrastText(col); ctx.font = `700 ${10 * S}px ${mono}`; ctx.textAlign = 'center';
+        ctx.fillText('FL-' + String(r.d).padStart(2, '0'), cx + cell * S / 2, cy + cell * S / 2 + 3.5 * S);
+        ctx.textAlign = 'left';
+      });
+      const nc = H.rows.slice().sort((a, b) => Math.abs(a.margin) - Math.abs(b.margin)).slice(0, 5);
+      T('Closest races', x0, y0 + 4 * (cell + gap) + 18, `600 13px ${sans}`, '#8fa3c4');
+      nc.forEach((r, i) => T(`${anDistLabel(r.d)}  ${anMarginLabel(r.margin)}  ${r.rating}`, x0, y0 + 4 * (cell + gap) + 40 + i * 20, `13px ${mono}`, r.margin > 0 ? '#5b9bd9' : '#d4675a'));
+    }
+    // legend row
+    let lx = 24; const ly = headerH + mapH + 30;
+    T(legTitle.toUpperCase(), lx, ly, `700 11.5px ${mono}`, '#8fa3c4'); lx += 120;
+    rowsLeg.forEach(r => {
+      ctx.fillStyle = r.color; ctx.fillRect(lx * S, (ly - 12) * S, 16 * S, 16 * S);
+      ctx.font = `${13 * S}px ${sans}`; ctx.fillStyle = '#e9edf5';
+      ctx.fillText(r.text, (lx + 22) * S, ly * S);
+      lx += 22 + ctx.measureText(r.text).width / S + 18;
+    });
+    // footer
+    const fy = headerH + mapH + legendH;
+    ctx.fillStyle = '#d8b466'; ctx.fillRect(24 * S, fy * S, 3 * S, 40 * S);
+    T('This is a forecast, not a result. It changes daily as new polls and votes come in, and it can be wrong.', 36, fy + 16, `600 13px ${sans}`, '#d8b466');
+    T('Method: polling average blended with the 2018, 2022 and 2024 county results, adjusted for how NPA voters say they will vote.', 36, fy + 36, `12px ${sans}`, '#7c879c');
+    drawSourceCredit(ctx, 24 * S, (fy + 78) * S, S);
+    const a = document.createElement('a');
+    a.href = cv.toDataURL('image/png');
+    a.download = `florida-2026-${race}-forecast-${anState.view}.png`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }catch(err){
+    alert('Could not generate the image: ' + err.message);
+  }finally{
+    btn.textContent = label; btn.disabled = false;
+  }
+}
+
 async function renderAnalysis(){
   if(currentMode !== 'analysis') return;
   anEnsureRaceSections();
@@ -9854,7 +9990,7 @@ async function renderAnalysis(){
   const isHouse = anState.race === 'house';
   const show = (id, on) => { const el = document.getElementById(id); if(el) el.style.display = on ? '' : 'none'; };
   show('anHero', !isHouse); show('anHouseHero', isHouse);
-  show('anCountyPanel', !isHouse); show('anHousePanel', isHouse); show('anHouseDetail', isHouse);
+  show('anCountyPanel', !isHouse); show('anHousePanel', isHouse);
   show('anCompare', !isHouse); show('anNpa', !isHouse); show('anRaces', !isHouse);
   show('anRace_governor', anState.race === 'governor'); show('anRace_senate', anState.race === 'senate');
   document.querySelectorAll('#anViewSelect button').forEach(b => { b.style.display = (isHouse && !['forecast', 'vs24'].includes(b.dataset.view)) ? 'none' : ''; });
@@ -9898,6 +10034,7 @@ function initAnalysis(){
   anState.inited = true;
   if(window.innerWidth <= 640){ const mt = document.getElementById('anMethod'); if(mt) mt.removeAttribute('open'); }
   document.querySelectorAll('#anRaceSelect button').forEach(b => b.addEventListener('click', () => { anState.race = b.dataset.race; anQueueRender(); }));
+  document.getElementById('anDownloadPngBtn').addEventListener('click', anExportPng);
   document.querySelectorAll('#anViewSelect button').forEach(b => b.addEventListener('click', () => { anState.view = b.dataset.view; anQueueRender(); }));
 }
 

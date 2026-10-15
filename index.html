@@ -283,6 +283,57 @@
   .an-cand > div{ flex:1 1 220px; padding:10px 14px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px; }
   .an-cand .party{ font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
   .an-cand .nm{ font-size:16px; margin-top:2px; }
+  .an-method summary{ cursor:pointer; list-style:none; }
+  .an-method summary::-webkit-details-marker{ display:none; }
+  .an-method summary h3::after{ content:' ▾'; color:var(--muted); }
+  .an-method:not([open]) summary h3::after{ content:' ▸'; }
+  .an-method:not([open]) summary h3{ margin-bottom:0; }
+  @media (max-width:640px){
+    /* Analysis tab on phones: nothing wider than the screen, fewer columns, shorter blocks */
+    #analysisDashboard .panel{ min-width:0; }
+    #anGrid{ grid-template-columns:minmax(0,1fr); gap:14px; }
+    #anGrid > .panel{ min-width:0; }
+    #analysisDashboard .table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    #anCountyPanel .table-wrap, #anHousePanel .table-wrap{ max-height:380px; overflow-y:auto; }
+    #analysisDashboard .an-hm{ display:none; }
+    #analysisDashboard table{ font-size:11.5px; }
+    #analysisDashboard th, #analysisDashboard td{ padding-left:6px; padding-right:6px; }
+    #analysisDashboard table{ min-width:0 !important; table-layout:auto !important; }
+    table.an-poll-table td, table.an-poll-table th{ white-space:normal !important; }
+    table.an-poll-table{ font-size:10.5px !important; }
+    table.an-poll-table td, table.an-poll-table th{ padding-left:3px; padding-right:3px; }
+    table.an-poll-table td:first-child{ white-space:nowrap !important; }
+    table.an-poll-table .an-pn{ word-break:break-word; }
+    #analysisDashboard table.an-poll-table{ table-layout:fixed !important; width:100% !important; }
+    table.an-poll-table th:nth-child(1){ width:15%; }
+    table.an-poll-table th:nth-child(2){ width:35%; }
+    table.an-poll-table th:nth-child(4), table.an-poll-table th:nth-child(5){ width:16%; }
+    table.an-poll-table th:nth-child(7){ width:18%; }
+    table.an-poll-table td:first-child{ width:auto !important; }
+    table.an-poll-table td, table.an-poll-table th{ overflow:visible; text-overflow:clip; }
+    #anMap{ height:270px !important; }
+    .an-compare td:first-child{ white-space:normal; min-width:92px; }
+    .an-chart{ height:230px; }
+    .an-charts{ gap:12px; }
+    #anMap{ height:340px !important; }
+    .an-blurb p{ font-size:13px; line-height:1.6; }
+    .an-controls{ gap:8px; margin-bottom:12px; }
+    #anRaceSelect{ width:100%; }
+    #anRaceSelect button{ flex:1 1 0; text-align:center; padding:9px 4px; font-size:12px; }
+    #anViewSelect{ flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+    #anViewSelect::-webkit-scrollbar{ display:none; }
+    #anViewSelect button{ flex:0 0 auto; white-space:nowrap; }
+    .an-squares{ gap:4px; }
+    .an-sq{ font-size:9.5px; padding:8px 0; }
+    .an-npa-grid{ grid-template-columns:minmax(0,1fr); }
+    .an-npa-card .big{ font-size:15px; }
+    .an-hd-grid{ grid-template-columns:repeat(2,1fr); }
+    .an-race{ margin-top:14px; }
+    .an-compare, .an-npa, .an-house-detail{ margin:14px 0; }
+    .margin-strip .leader{ font-size:15px; }
+    .bar-labels{ height:auto !important; display:flex; flex-wrap:wrap; justify-content:center; gap:2px 14px; }
+    .bar-labels span{ position:static !important; transform:none !important; }
+  }
   .an-assume{ margin:18px 0; }
   .an-assume-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px 26px; margin-top:12px; }
   .an-ctl label{ display:flex; justify-content:space-between; gap:10px; font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:6px; }
@@ -500,7 +551,7 @@
   .search-box input::placeholder{ color:var(--muted-2); }
 
   .grid{ display:grid; grid-template-columns:1.15fr 1fr; gap:18px; align-items:start; }
-  @media (max-width:920px){ .grid{ grid-template-columns:1fr; } }
+  @media (max-width:920px){ .grid{ grid-template-columns:minmax(0,1fr); } .grid > *{ min-width:0; } }
 
   /* Total Turnout's "Votes counted" panel: the left column under the map, beside the
      tall text box. While it's showing, the grid is laid out explicitly (map top-left, the
@@ -1489,7 +1540,7 @@
       <div class="table-wrap">
         <table id="anTable">
           <thead><tr>
-            <th>County</th><th>Rating</th><th>Margin</th><th>DEM</th><th>REP</th><th>Other</th><th>Total</th><th>Turnout</th><th>vs 2024</th><th>vs 2022</th><th>Now</th>
+            <th>County</th><th>Rating</th><th>Margin</th><th class="an-hm">DEM</th><th class="an-hm">REP</th><th class="an-hm">Other</th><th class="an-hm">Total</th><th class="an-hm">Turnout</th><th>vs 2024</th><th class="an-hm">vs 2022</th><th>Now</th>
           </tr></thead>
           <tbody id="anTableBody"></tbody>
         </table>
@@ -1506,8 +1557,8 @@
 
   <div id="anRaces"></div>
 
-  <div class="panel an-method" id="anMethod">
-    <h3>How this forecast is built</h3>
+  <details class="panel an-method" id="anMethod" open>
+    <summary><h3>How this forecast is built</h3></summary>
     <ul>
       <li><b>Final turnout.</b> Each county's expected ballots are its average turnout in the 2018 governor's, 2022 governor's and 2024 presidential races, measured against today's voter rolls. The 2026 vote already counted gets a small say (15%): a county whose early vote is running ahead of the rest of the state is nudged up, one running behind is nudged down, and the statewide total stays on the three-election blend. A county is never projected below the votes already counted.</li>
       <li><b>Who they vote for.</b> Each county starts from its own average two-party result in 2018, 2022 and 2024. One statewide shift moves every county together until the statewide result matches the target.</li>
@@ -1516,7 +1567,7 @@
       <li><b>U.S. House.</b> Each district starts from the 2024 presidential result on the new map the legislature passed in May 2026. The same statewide swing as the Governor and Senate forecasts (their average, compared with 2024) is applied to every district, so districts that are already lopsided move less. Districts with public polls (FL-08, FL-09) give those polls a quarter of the weight. There is no incumbency adjustment, and most districts have no polling at all, so the House ratings are lean-based estimates rather than poll-driven forecasts.</li>
       <li><b>What it is not.</b> A projection built from public history and polls, not a guarantee. The forecast, the polling average and the map are recalculated each time the page loads. Voter-roll sizes are a June 2026 snapshot.</li>
     </ul>
-  </div>
+  </details>
 </div>
 
 <script>
@@ -9445,15 +9496,15 @@ function anRenderHousePanel(H){
     const col = catColor(r.rating);
     return `<tr class="${r.d === sel ? 'sel' : ''}" data-d="${r.d}"><td class="county-name">${anDistLabel(r.d)}</td>` +
       `<td style="line-height:1.35"><div class="num-d">${r.dem}</div><div class="num-r">${r.rep || '—'}</div></td>` +
-      `<td><span class="chip" style="background:${col};color:${contrastText(col)}">${r.rating}</span></td>` +
+      `<td class="an-hm"><span class="chip" style="background:${col};color:${contrastText(col)}">${r.rating}</span></td>` +
       `<td class="${r.margin >= 0 ? 'num-d' : 'num-r'}">${anMarginLabel(r.margin)}</td>` +
-      `<td class="${r.m24 >= 0 ? 'num-d' : 'num-r'}">${anMarginLabel(r.m24)}</td>` +
+      `<td class="an-hm ${r.m24 >= 0 ? 'num-d' : 'num-r'}">${anMarginLabel(r.m24)}</td>` +
       `<td class="${r.shift >= 0 ? 'num-d' : 'num-r'}">${anShiftLabel(r.shift)}</td></tr>`;
   }).join('');
   document.getElementById('anHousePanel').innerHTML =
     `<h2>Pick a district</h2><div class="table-hint">Each square is colored by its projected rating. Click a square, a table row or a district on the map.</div>` +
     `<div class="an-squares" id="anSquares">${squares}</div>` +
-    `<div class="table-wrap" style="max-height:420px"><table class="an-house-table"><thead><tr><th>District</th><th>Nominees</th><th>Rating</th><th>Forecast</th><th>2024</th><th>Shift</th></tr></thead><tbody id="anHouseBody">${rows}</tbody></table></div>`;
+    `<div class="table-wrap" style="max-height:420px"><table class="an-house-table"><thead><tr><th>District</th><th>Nominees</th><th class="an-hm">Rating</th><th>Forecast</th><th class="an-hm">2024</th><th>Shift</th></tr></thead><tbody id="anHouseBody">${rows}</tbody></table></div>`;
   const pick = e => { const t = e.target.closest('[data-d]'); if(t){ anState.district = +t.dataset.d; anQueueRender(); } };
   document.getElementById('anSquares').onclick = pick;
   document.getElementById('anHouseBody').onclick = pick;
@@ -9469,11 +9520,11 @@ function anRenderHouseDetail(H){
   const oth = r.oth.length ? `<div class="table-hint" style="margin-top:6px">Also on the ballot: ${r.oth.join(' · ')}</div>` : '';
   const pollRows = (r.polls || []).slice().sort((a, b) => a.end < b.end ? 1 : -1).map(p => {
     const mg = (p.dem - p.rep) / 100;
-    return `<tr><td>${anFmtDate(p.start)} – ${anFmtDate(p.end)}</td><td>${p.pollster}</td><td>${p.n ? fmt(p.n) + ' ' : ''}${p.pop || ''}</td>` +
+    return `<tr><td><span class="an-hm">${anFmtDate(p.start)} – </span>${anFmtDate(p.end)}</td><td>${p.pollster}</td><td class="an-hm">${p.n ? fmt(p.n) + ' ' : ''}${p.pop || ''}</td>` +
       `<td class="num-d">${p.dem}%</td><td class="num-r">${p.rep}%</td><td class="${mg > 0 ? 'num-d' : (mg < 0 ? 'num-r' : '')}">${anMarginLabel(mg)}</td></tr>`;
   }).join('');
   const polls = pollRows
-    ? `<div class="table-hint" style="margin-top:14px">District polls (they carry ${Math.round(AN_HOUSE_POLL_WEIGHT * 100)}% of this forecast; party-sponsored polls count at ${Math.round(AN_SPONSOR_WEIGHT * 100)}% of normal weight)</div><div class="table-wrap"><table class="an-poll-table"><thead><tr><th>Dates</th><th>Pollster</th><th>Sample</th><th>${r.dem.split(' ').slice(-1)[0]} (D)</th><th>${(r.rep || '—').split(' ').slice(-1)[0]} (R)</th><th>Margin</th></tr></thead><tbody>${pollRows}</tbody></table></div>`
+    ? `<div class="table-hint" style="margin-top:14px">District polls (they carry ${Math.round(AN_HOUSE_POLL_WEIGHT * 100)}% of this forecast; party-sponsored polls count at ${Math.round(AN_SPONSOR_WEIGHT * 100)}% of normal weight)</div><div class="table-wrap"><table class="an-poll-table"><thead><tr><th>Dates</th><th>Pollster</th><th class="an-hm">Sample</th><th>${r.dem.split(' ').slice(-1)[0]} (D)</th><th>${(r.rep || '—').split(' ').slice(-1)[0]} (R)</th><th>Margin</th></tr></thead><tbody>${pollRows}</tbody></table></div>`
     : `<div class="table-hint" style="margin-top:14px">No public polls of this district. The forecast comes from the district's 2024 result and the statewide swing.</div>`;
   document.getElementById('anHouseDetail').innerHTML =
     `<div class="an-race-head"><h2>${anDistLabel(r.d)}: ${r.dem} (D) vs ${r.rep || 'no Republican'} (R)</h2>` +
@@ -9556,13 +9607,13 @@ function anRenderTable(m){
       <td class="county-name">${r.county}</td>
       <td><span class="chip" style="background:${col};color:${contrastText(col)}">${r.rating}</span></td>
       <td class="${r.margin >= 0 ? 'num-d' : 'num-r'}">${anMarginLabel(r.margin)}</td>
-      <td class="num-d">${fmt(Math.round(r.D))}</td>
-      <td class="num-r">${fmt(Math.round(r.R))}</td>
-      <td class="num-npa">${fmt(Math.round(r.O))}</td>
-      <td class="num-total">${fmt(Math.round(r.E))}</td>
-      <td>${(r.turnout * 100).toFixed(1)}%</td>
+      <td class="num-d an-hm">${fmt(Math.round(r.D))}</td>
+      <td class="num-r an-hm">${fmt(Math.round(r.R))}</td>
+      <td class="num-npa an-hm">${fmt(Math.round(r.O))}</td>
+      <td class="num-total an-hm">${fmt(Math.round(r.E))}</td>
+      <td class="an-hm">${(r.turnout * 100).toFixed(1)}%</td>
       <td class="${r.vs24 >= 0 ? 'num-d' : 'num-r'}">${anShiftLabel(r.vs24)}</td>
-      <td class="${r.vs22 >= 0 ? 'num-d' : 'num-r'}">${anShiftLabel(r.vs22)}</td>
+      <td class="an-hm ${r.vs22 >= 0 ? 'num-d' : 'num-r'}">${anShiftLabel(r.vs22)}</td>
       <td>${now}</td>
     </tr>`;
   }).join('');
@@ -9721,20 +9772,20 @@ function anRenderPollTable(race, m){
       `<span class="an-win ${mg > 0 ? 'D' : 'R'}">✓ ${mg > 0 ? info.dem + ' (D)' : info.rep + ' (R)'}</span>`;
     const oth = [p.other != null ? `${p.other}% other` : null, p.undecided != null ? `${p.undecided}% undecided` : null].filter(Boolean).join(' · ') || '—';
     return `<tr>
-      <td>${anFmtDate(p.start)} – ${anFmtDate(p.end)}</td>
-      <td>${p.source ? `<a href="${p.source}" target="_blank" rel="noopener">${p.pollster}</a>` : p.pollster}${p.sponsor ? ` <span style="opacity:.65">(${p.sponsor}-aligned)</span>` : ''}</td>
-      <td>${p.n ? fmt(p.n) + ' ' : ''}${p.pop || ''}${p.moe ? ` ±${p.moe}` : ''}</td>
+      <td><span class="an-hm">${anFmtDate(p.start)} – </span>${anFmtDate(p.end)}</td>
+      <td><div class="an-pn">${p.source ? `<a href="${p.source}" target="_blank" rel="noopener">${p.pollster}</a>` : p.pollster}${p.sponsor ? ` <span style="opacity:.65">(${p.sponsor}-aligned)</span>` : ''}</div></td>
+      <td class="an-hm">${p.n ? fmt(p.n) + ' ' : ''}${p.pop || ''}${p.moe ? ` ±${p.moe}` : ''}</td>
       <td class="num-d">${p.dem}%</td><td class="num-r">${p.rep}%</td>
-      <td style="color:var(--muted)">${oth}</td>
+      <td class="an-hm" style="color:var(--muted)">${oth}</td>
       <td class="${mg > 0 ? 'num-d' : (mg < 0 ? 'num-r' : '')}">${anMarginLabel(mg)}</td>
-      <td>${win}</td>
+      <td class="an-hm">${win}</td>
     </tr>`;
   };
-  const avgRow = (label, mg, d, r, cls) => `<tr class="an-row-avg"><td colspan="3"><b>${label}</b></td>` +
+  const avgRow = (label, mg, d, r, cls) => `<tr class="an-row-avg"><td colspan="2"><b>${label}</b></td><td class="an-hm"></td>` +
     (d == null ? '<td></td><td></td>' : `<td class="num-d">${d.toFixed(1)}%</td><td class="num-r">${r.toFixed(1)}%</td>`) +
-    `<td></td><td class="${mg > 0 ? 'num-d' : 'num-r'}"><b>${anMarginLabel(mg)}</b></td>` +
-    `<td><span class="an-win ${mg > 0 ? 'D' : 'R'}">✓ ${mg > 0 ? info.dem + ' (D)' : info.rep + ' (R)'}</span></td></tr>`;
-  const head = `<thead><tr><th>Dates</th><th>Pollster</th><th>Sample</th><th>${info.dem} (D)</th><th>${info.rep} (R)</th><th>Others</th><th>Margin</th><th>Leads</th></tr></thead>`;
+    `<td class="an-hm"></td><td class="${mg > 0 ? 'num-d' : 'num-r'}"><b>${anMarginLabel(mg)}</b></td>` +
+    `<td class="an-hm"><span class="an-win ${mg > 0 ? 'D' : 'R'}">✓ ${mg > 0 ? info.dem + ' (D)' : info.rep + ' (R)'}</span></td></tr>`;
+  const head = `<thead><tr><th>Dates</th><th>Pollster</th><th class="an-hm">Sample</th><th>${info.dem} (D)</th><th>${info.rep} (R)</th><th class="an-hm">Others</th><th>Margin</th><th class="an-hm">Leads</th></tr></thead>`;
   let rows = '';
   if(m.poll) rows += avgRow(`Polling average (${m.poll.n} polls)`, m.poll.raw, m.poll.dem, m.poll.rep);
   rows += avgRow('Forecast (projected final vote)', m.margin, null, null);
@@ -9761,18 +9812,18 @@ function anEnsureRaceSections(){
 function anRenderCompare(m, M){
   const info = m.info;
   const row = (label, margin, D, R, total, turnout, cls) => `<tr class="${cls || ''}"><td>${label}</td>` +
-    `<td class="${margin > 0 ? 'num-d' : 'num-r'}">${anMarginLabel(margin)}</td><td class="num-d">${fmt(Math.round(D))}</td><td class="num-r">${fmt(Math.round(R))}</td>` +
+    `<td class="${margin > 0 ? 'num-d' : 'num-r'}">${anMarginLabel(margin)}</td><td class="num-d an-hm">${fmt(Math.round(D))}</td><td class="num-r an-hm">${fmt(Math.round(R))}</td>` +
     `<td>${fmt(Math.round(total))}</td><td>${(turnout * 100).toFixed(1)}%</td></tr>`;
   const p = M.past;
   document.getElementById('anCompare').innerHTML =
     `<h2>How it compares with 2024, 2022 and 2018</h2>` +
     `<div class="table-hint">${info.title} forecast next to the statewide results of past elections. Turnout is measured against today's voter rolls.</div>` +
-    `<table><thead><tr><th>Election</th><th>Margin</th><th>DEM</th><th>REP</th><th>Total votes</th><th>Turnout</th></tr></thead><tbody>` +
+    `<div class="table-wrap"><table><thead><tr><th>Election</th><th>Margin</th><th class="an-hm">DEM</th><th class="an-hm">REP</th><th>Total votes</th><th>Turnout</th></tr></thead><tbody>` +
     row(`2026 forecast (${info.dem} vs ${info.rep})`, m.margin, m.sD, m.sR, M.Esum, M.Esum / M.regTot, 'now') +
     row('2024 president (Harris vs Trump)', p.y2024.margin, p.y2024.D, p.y2024.R, p.y2024.total, p.y2024.turnout) +
     row('2022 governor (Crist vs DeSantis)', p.y2022.margin, p.y2022.D, p.y2022.R, p.y2022.total, p.y2022.turnout) +
     row('2018 governor (Gillum vs DeSantis)', p.y2018.margin, p.y2018.D, p.y2018.R, p.y2018.total, p.y2018.turnout) +
-    `</tbody></table>`;
+    `</tbody></table></div>`;
 }
 
 function anRenderNpa(M, only){
@@ -9845,6 +9896,7 @@ function anQueueRender(){
 function initAnalysis(){
   if(anState.inited) return;
   anState.inited = true;
+  if(window.innerWidth <= 640){ const mt = document.getElementById('anMethod'); if(mt) mt.removeAttribute('open'); }
   document.querySelectorAll('#anRaceSelect button').forEach(b => b.addEventListener('click', () => { anState.race = b.dataset.race; anQueueRender(); }));
   document.querySelectorAll('#anViewSelect button').forEach(b => b.addEventListener('click', () => { anState.view = b.dataset.view; anQueueRender(); }));
 }

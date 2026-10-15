@@ -7,13 +7,13 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 15th, 2026 at 3:00pm Eastern Time
+Updated at October 15th, 2026 at 7:00pm Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-55
+47
 
 Unchanged Counties:
 False
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-312,504
+316,326
 
 REP:
-266,180
+268,657
 
 OTHER:
-154,463
+156,153
 
 TOTAL:
-733,147
+741,136
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 46,324 votes statewide.
+🔵 Democrats lead by 47,669 votes statewide.
 
 Margin Change:
--0.10% toward Republicans
++0.07% toward Democrats
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +21,792
-🔴 REP: +19,549
-🟣 OTHER: +11,203
-🟢 TOTAL: +52,544
+🔵 DEM: +3,822
+🔴 REP: +2,477
+🟣 OTHER: +1,690
+🟢 TOTAL: +7,989
 
 REJECTED COUNTY UPDATES
 =================================
@@ -64,57 +64,30 @@ RATING / FORECAST CHANGES
 =================================
 
 
-Brevard
-
-Toss Up D → Toss Up R
-
-Margin Move:
--0.020
-
-
-
-Franklin
-
-Toss Up R → Toss Up D
-
-Margin Move:
-+0.007
-
-
-
-Hendry
-
-Toss Up D → Toss Up R
-
-Margin Move:
--0.028
-
-
-
-Hernando
-
-Lean D → Toss Up D
-
-Margin Move:
--0.002
-
-
-
 Indian River
 
-Lean R → Likely R
+Likely R → Lean R
+
+Margin Move:
++0.003
+
+
+
+Okeechobee
+
+Likely R → Safe R
 
 Margin Move:
 -0.009
 
 
 
-Martin
+Putnam
 
 Lean R → Likely R
 
 Margin Move:
--0.009
+-0.001
 
 
 
@@ -122,46 +95,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️3 PM Florida EV & VBM Update
+🗳️7 PM Florida EV & VBM Update
 
-New votes have been cast in 55 counties over the last hour, with the largest update coming from Pinellas County.
+New votes have been cast in 47 counties over the last hour, with the largest update coming from Broward County.
 
-🔵 DEM: +21,792
-🔴 REP: +19,549
-🟣 OTHER: +11,203
-🟢 TOTAL: +52,544
+🔵 DEM: +3,822
+🔴 REP: +2,477
+🟣 OTHER: +1,690
+🟢 TOTAL: +7,989
 
-🔵 Democrats lead by 46,324 votes statewide.
+🔵 Democrats lead by 47,669 votes statewide.
 
-🔴 Margin Change: -0.10% toward Republicans
+🔴 Margin Change: +0.07% toward Democrats
 
 Largest County Updates
 
 
-🥇Pinellas County
+🥇Broward County
 
-🔵 DEM: +3,339
-🔴 REP: +3,194
-🟣 OTHER: +1,781
-🟢 TOTAL: +8,314
-
-
-
-🥈Lee County
-
-🔵 DEM: +1,782
-🔴 REP: +2,680
-🟣 OTHER: +1,258
-🟢 TOTAL: +5,720
+🔵 DEM: +1,058
+🔴 REP: +383
+🟣 OTHER: +472
+🟢 TOTAL: +1,913
 
 
 
-🥉Palm Beach County
+🥈Palm Beach County
 
-🔵 DEM: +2,581
-🔴 REP: +1,433
-🟣 OTHER: +1,172
-🟢 TOTAL: +5,186
+🔵 DEM: +519
+🔴 REP: +142
+🟣 OTHER: +173
+🟢 TOTAL: +834
+
+
+
+🥉Polk County
+
+🔵 DEM: +362
+🔴 REP: +311
+🟣 OTHER: +139
+🟢 TOTAL: +812
 
 
 

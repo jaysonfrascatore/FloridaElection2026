@@ -9355,36 +9355,33 @@ function anHouseCompute(models, past, today){
 
 // ---- the daily blurb (written from the numbers) ----
 function anBuildBlurb(M){
-  const g = M.models.governor, s = M.models.senate;
-  const gi = g.info, si = s.info;
+  const race = anState.race;
+  const m = M.models[race], info = m.info;
   const today = new Date().toLocaleDateString('en-US', { timeZone:'America/New_York', weekday:'long', month:'long', day:'numeric' });
-  const lead = (m, info) => {
-    if(parseFloat((Math.abs(m.margin) * 100).toFixed(1)) === 0) return 'a dead heat';
-    return `<b class="${m.margin > 0 ? 'd' : 'r'}">${m.margin > 0 ? info.dem : info.rep}</b> ahead by about ${(Math.abs(m.margin) * 100).toFixed(1)} points`;
-  };
-  const pollTxt = (m, info) => {
-    if(!m.poll) return 'there are no polls in the file yet';
+  const leadTxt = parseFloat((Math.abs(m.margin) * 100).toFixed(1)) === 0 ? 'a dead heat' :
+    `<b class="${m.margin > 0 ? 'd' : 'r'}">${m.margin > 0 ? info.dem : info.rep}</b> ahead by about ${(Math.abs(m.margin) * 100).toFixed(1)} points`;
+  let pollTxt = 'there are no polls in the file yet';
+  if(m.poll){
     const pm = m.poll.raw;
     const who = pm === 0 ? 'the candidates tied' : `${pm > 0 ? info.dem : info.rep} ahead by ${(Math.abs(pm) * 100).toFixed(1)} points`;
-    return `the polling average (${m.poll.n} poll${m.poll.n === 1 ? '' : 's'}) has ${who} (${m.poll.dem.toFixed(1)}% to ${m.poll.rep.toFixed(1)}%)`;
-  };
+    pollTxt = `the polling average (${m.poll.n} poll${m.poll.n === 1 ? '' : 's'}) has ${who} (${m.poll.dem.toFixed(1)}% to ${m.poll.rep.toFixed(1)}%)`;
+  }
   const pctCounted = M.Esum ? M.actualSum / M.Esum * 100 : 0;
   const turnoutPct = M.Esum / M.regTot * 100;
   const regD = Object.keys(SIM_REG).reduce((a, n) => a + SIM_REG[n][0] * SIM_REG[n][2], 0) / M.regTot;
   const regR = Object.keys(SIM_REG).reduce((a, n) => a + SIM_REG[n][0] * SIM_REG[n][1], 0) / M.regTot;
   const past = y => { const nm = Object.keys(y); const d = nm.reduce((a, n) => a + y[n][0], 0), r = nm.reduce((a, n) => a + y[n][1], 0); return (d - r) / (d + r); };
-  const npaTxt = (m, info) => m.npa ? `${(m.npa.nu * 100).toFixed(0)}% to ${info.dem}` : null;
-  const p1 = `The forecast has ${lead(g, gi)} in the race for Governor and ${lead(s, si)} in the U.S. Senate race. For Governor, ${pollTxt(g, gi)}; for Senate, ${pollTxt(s, si)}.`;
+  const p1 = `The forecast has ${leadTxt} in the ${info.title} race: ${pollTxt}.`;
   const p2 = `About ${pctCounted.toFixed(1)}% of the projected vote is already counted (${fmt(M.actualSum)} of roughly ${fmt(Math.round(M.Esum))} ballots), with ${Math.round(M.daysLeft)} days until Election Day. Projected final turnout is ${turnoutPct.toFixed(1)}% of registered voters, against ${(M.past.y2024.turnout * 100).toFixed(1)}% in 2024 and ${(M.past.y2022.turnout * 100).toFixed(1)}% in 2022 on today's voter rolls.`;
-  const npaLine = (g.npa && s.npa)
-    ? `Polls that break out independents have NPA voters going ${npaTxt(g, gi)} for Governor and ${npaTxt(s, si)} for Senate (two-party), better for Democrats than the 2018/2022/2024 average implies (about ${(M.nuHist * 100).toFixed(0)}%), so the fundamentals are adjusted to ${anMarginLabel(g.fundAdj)} for Governor and ${anMarginLabel(s.fundAdj)} for Senate.`
+  const npaLine = m.npa
+    ? `Polls that break out independents have NPA voters going ${(m.npa.nu * 100).toFixed(0)}% to ${info.dem} (two-party), ${m.npaGap >= 0 ? 'better' : 'worse'} for ${info.dem} than the 2018/2022/2024 average implies (about ${(M.nuHist * 100).toFixed(0)}%), so the fundamentals are adjusted to ${anMarginLabel(m.fundAdj)}.`
     : '';
   const p3 = `Registered Republicans outnumber registered Democrats ${regR.toFixed(1)}% to ${regD.toFixed(1)}%, and the county average of the last three statewide results is ${anMarginLabel(M.fundamentals)} on a two-party basis (2018 governor ${anMarginLabel(past(SIM_2018))}, 2022 governor ${anMarginLabel(past(SIM_2022))}, 2024 president ${anMarginLabel(past(SIM_2024))}). ${npaLine}`;
-  const sh24 = g.margin - M.past.y2024.margin, sh22 = g.margin - M.past.y2022.margin;
   const dir = v => `${Math.abs(v * 100).toFixed(1)} points ${v >= 0 ? 'more Democratic' : 'more Republican'}`;
-  const p4 = `Compared with the past: the Governor forecast is ${dir(sh24)} than the 2024 presidential result and ${dir(sh22)} than the 2022 governor's race. Midterms have also tended to be harder for the party holding the White House, which is context rather than an input to the numbers here.`;
-  return `<div class="an-date">${today}</div><h2>Today's read</h2><p>${p1}</p><p>${p2}</p><p>${p3}</p><p>${p4}</p>`;
+  const p4 = `Compared with the past: the ${info.title} forecast is ${dir(m.margin - M.past.y2024.margin)} than the 2024 presidential result and ${dir(m.margin - M.past.y2022.margin)} than the 2022 governor's race. Midterms have also tended to be harder for the party holding the White House, which is context rather than an input to the numbers here.`;
+  return `<div class="an-date">${today}</div><h2>Today's read · ${info.title}</h2><p>${p1}</p><p>${p2}</p><p>${p3}</p><p>${p4}</p>`;
 }
+
 
 // ---- drawing ----
 function anShiftLabel(v){ const pts = Math.abs(v) * 100; return parseFloat(pts.toFixed(1)) === 0 ? '0.0' : (v > 0 ? 'D+' : 'R+') + pts.toFixed(1); }
@@ -9778,7 +9775,7 @@ function anRenderCompare(m, M){
     `</tbody></table>`;
 }
 
-function anRenderNpa(M){
+function anRenderNpa(M, only){
   const card = race => {
     const m = M.models[race], info = m.info;
     const n = AN_NPA_POLLS[race];
@@ -9794,7 +9791,7 @@ function anRenderNpa(M){
     `<h2>NPA voters</h2><div class="table-hint">NPA voters have swung hard from one election to the next, so their current lean is built into the fundamentals. Projected ballots: ` +
     `<span class="num-d">${fmt(Math.round(M.party.d))} Democratic</span> · <span class="num-r">${fmt(Math.round(M.party.r))} Republican</span> · <span class="num-npa">${fmt(Math.round(M.party.n))} NPA/other</span> (by registration). ` +
     `Assumes ${Math.round(AN_LOYAL.d * 100)}% of Democrats and ${Math.round(AN_LOYAL.r * 100)}% of Republicans back their nominee, so crossover voting is included.</div>` +
-    `<div class="an-npa-grid">${card('governor')}${card('senate')}</div>`;
+    `<div class="an-npa-grid">${only ? card(only) : card('governor') + card('senate')}</div>`;
 }
 
 async function renderAnalysis(){
@@ -9808,6 +9805,7 @@ async function renderAnalysis(){
   show('anHero', !isHouse); show('anHouseHero', isHouse);
   show('anCountyPanel', !isHouse); show('anHousePanel', isHouse); show('anHouseDetail', isHouse);
   show('anCompare', !isHouse); show('anNpa', !isHouse); show('anRaces', !isHouse);
+  show('anRace_governor', anState.race === 'governor'); show('anRace_senate', anState.race === 'senate');
   document.querySelectorAll('#anViewSelect button').forEach(b => { b.style.display = (isHouse && !['forecast', 'vs24'].includes(b.dataset.view)) ? 'none' : ''; });
   if(isHouse && !['forecast', 'vs24'].includes(anState.view)) anState.view = 'forecast';
   if(isHouse){
@@ -9821,7 +9819,7 @@ async function renderAnalysis(){
     document.getElementById('anBlurb').innerHTML = anBuildBlurb(M);
     anRenderTable(m);
     anRenderCompare(m, M);
-    anRenderNpa(M);
+    anRenderNpa(M, anState.race);
   }
   ['governor', 'senate'].forEach(race => {
     const mm = M.models[race];
@@ -9834,7 +9832,7 @@ async function renderAnalysis(){
   document.querySelectorAll('#anViewSelect button').forEach(b => b.classList.toggle('active', b.dataset.view === anState.view));
   if(isHouse){ await anRenderHouseMap(M.house); return; }
   await anRenderMap(m);
-  await Promise.all(['governor', 'senate'].map(race => anDrawRace(race, M.models[race])));
+  await anDrawRace(anState.race, M.models[anState.race]);
 }
 
 let anRenderQueued = false;

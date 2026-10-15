@@ -239,6 +239,59 @@
   .next-update.nu-green .nu-time.nu-prep{ font-size:16px; letter-spacing:.02em; }
   @media (max-width:1499px){ .next-update{ margin:0 12px; } }
   @media (max-width:760px){ .next-update{ flex:1 1 100%; margin:0; } }
+
+  /* ---- Analysis tab (mint) ---- */
+  #modeAnalysisBtn{ background:rgba(127,240,196,0.14); color:#7ff0c4; }
+  #modeAnalysisBtn.active{ background:#7ff0c4; color:#0a0e17; border-bottom-color:#7ff0c4; font-weight:700; }
+  #analysisDashboard{ display:none; }
+  #analysisDashboard.active{ display:block; }
+  #analysisDashboard .an-mint{ color:#7ff0c4; }
+  .an-controls{ margin-bottom:16px; }
+  .an-blurb{ margin-bottom:18px; border-color:rgba(127,240,196,0.28); }
+  .an-blurb h2{ margin-bottom:8px; }
+  .an-blurb .an-date{ font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:#7ff0c4; margin-bottom:10px; }
+  .an-blurb p{ font-size:13.5px; line-height:1.65; color:var(--text); margin:0 0 10px; }
+  .an-blurb p:last-child{ margin-bottom:0; }
+  .an-blurb b.d{ color:var(--dem); } .an-blurb b.r{ color:var(--rep); }
+  .an-assume{ margin:18px 0; }
+  .an-assume-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px 26px; margin-top:12px; }
+  .an-ctl label{ display:flex; justify-content:space-between; gap:10px; font-family:var(--mono); font-size:11px; color:var(--muted); margin-bottom:6px; }
+  .an-ctl label span{ color:#7ff0c4; text-align:right; }
+  .an-ctl input[type=range]{ width:100%; accent-color:#7ff0c4; }
+  .an-ctl select, .an-ctl input[type=number]{
+    width:100%; background:var(--panel-2); color:var(--text); border:1px solid var(--border); border-radius:7px;
+    font-family:var(--mono); font-size:12px; padding:7px 9px;
+  }
+  .an-ctl .an-hint{ font-size:10.5px; color:var(--muted-2); margin-top:5px; line-height:1.4; }
+  .an-check{ margin-top:16px; padding:12px 14px; background:var(--panel-2); border:1px solid var(--border); border-radius:8px; font-size:12.5px; line-height:1.6; }
+  .an-check .warn{ color:#d8b466; }
+  .an-reset{ margin-top:12px; }
+  .an-race{ margin-top:22px; }
+  .an-race-head{ display:flex; justify-content:space-between; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
+  .an-race-head h2{ margin:0; }
+  .an-race-head .an-sub{ font-family:var(--mono); font-size:11.5px; color:var(--muted); }
+  .an-charts{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  @media (max-width:920px){ .an-charts{ grid-template-columns:1fr; } }
+  .an-chart-title{ font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+  .an-chart{ height:290px; }
+  .an-poll-table-wrap{ margin-top:16px; overflow-x:auto; }
+  table.an-poll-table{ min-width:640px; table-layout:auto; }
+  table.an-poll-table td, table.an-poll-table th{ white-space:nowrap; }
+  table.an-poll-table tbody tr{ cursor:default; }
+  table.an-poll-table tbody tr.an-row-avg{ background:rgba(127,240,196,0.07); }
+  table.an-poll-table a{ color:var(--text); text-decoration:underline; text-decoration-color:var(--muted-2); }
+  .an-win{ font-weight:700; }
+  .an-win.D{ color:var(--dem); } .an-win.R{ color:var(--rep); }
+  #anTable{ min-width:760px; }
+  #anTable th, #anTable td{ width:auto; }
+  #anTable tbody tr{ cursor:default; }
+  .an-method{ margin-top:22px; font-size:12px; color:var(--muted); line-height:1.65; }
+  .an-method h3{ font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#7ff0c4; margin:0 0 8px; }
+  .an-method li{ margin-bottom:5px; }
+  @keyframes anBlink{ 0%,100%{ opacity:1; } 50%{ opacity:.18; } }
+  .an-blink{ animation:anBlink 2.8s ease-in-out infinite; }
+  .an-live-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:middle; animation:anBlink 2.8s ease-in-out infinite; }
+
   .mode-tabs{
     display:flex; gap:8px; margin-bottom:18px; border-bottom:1px solid var(--border);
   }
@@ -876,6 +929,7 @@
 <div class="mode-tabs">
   <button class="mode-tab active" id="modeLiveBtn">Live Results</button>
   <button class="mode-tab" id="modeSimBtn">Build Your Own Forecast</button>
+  <button class="mode-tab" id="modeAnalysisBtn">Analysis</button>
 </div>
 
 <div class="error-msg" id="errorMsg"></div>
@@ -1344,6 +1398,121 @@
   </div>
 
   <footer>Registration figures: Republican, Democratic, and Other (NPA + minor parties) share by county, Florida Division of Elections via Neurelect, as of Jun 2026. 2018 and 2022 results: certified county-level Florida Governor's race totals. &middot; hypothetical scenario only, not a forecast</footer>
+</div>
+
+<div id="analysisDashboard">
+
+  <div class="margin-strip" id="anHero">
+    <div class="row">
+      <span class="label" id="anHeroLabel">Projected final result</span>
+      <span class="leader" id="anHeroLeader">&mdash;</span>
+    </div>
+    <div class="bar-track">
+      <div class="bar-seg bar-d" id="anBarD" style="width:48%"></div>
+      <div class="bar-seg bar-r" id="anBarR" style="width:48%"></div>
+      <div class="bar-seg bar-npa" id="anBarO" style="width:4%"></div>
+    </div>
+    <div class="bar-labels" id="anBarLabels">
+      <span class="d" id="anLabelD" style="left:24%">DEM &mdash;</span>
+      <span class="r" id="anLabelR" style="left:72%">REP &mdash;</span>
+    </div>
+    <div class="stat-cards">
+      <div class="stat-card"><div class="v" id="anStatTurnout">&mdash;</div><div class="k">Projected final turnout</div></div>
+      <div class="stat-card"><div class="v" id="anStatTotal">&mdash;</div><div class="k">Projected total votes</div></div>
+      <div class="stat-card"><div class="v" id="anStatD" style="color:var(--dem)">&mdash;</div><div class="k" id="anStatDk">Projected Democratic votes</div></div>
+      <div class="stat-card"><div class="v" id="anStatR" style="color:var(--rep)">&mdash;</div><div class="k" id="anStatRk">Projected Republican votes</div></div>
+      <div class="stat-card"><div class="v" id="anStatCounted">&mdash;</div><div class="k" id="anStatCountedK">Counted so far</div></div>
+      <div class="stat-card"><div class="v" id="anStatRating">&mdash;</div><div class="k">Statewide rating</div></div>
+    </div>
+  </div>
+
+  <div class="controls an-controls">
+    <div class="segmented" id="anRaceSelect">
+      <button data-race="governor" class="active">Governor</button>
+      <button data-race="senate">U.S. Senate</button>
+    </div>
+    <div class="segmented" id="anViewSelect">
+      <button data-view="forecast" class="active">Projected final result</button>
+      <button data-view="current">Current General Election results</button>
+      <button data-view="turnout">Projected final turnout</button>
+    </div>
+  </div>
+
+  <div class="panel an-blurb" id="anBlurb"></div>
+
+  <div class="grid" id="anGrid">
+    <div class="panel">
+      <div class="map-header-row"><h2 id="anMapTitle">Projected final result</h2></div>
+      <div style="position:relative;">
+        <div id="anMap" style="height:580px;"></div>
+        <div class="map-side-legend" id="anSideLegend"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Projected county results</h2>
+      <div class="table-hint" id="anTableHint">What each county is projected to look like when every vote is counted.</div>
+      <div class="table-wrap">
+        <table id="anTable">
+          <thead><tr>
+            <th>County</th><th>Rating</th><th>Margin</th><th>DEM</th><th>REP</th><th>Other</th><th>Total</th><th>Turnout</th><th>Now</th>
+          </tr></thead>
+          <tbody id="anTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel an-assume">
+    <h2>Forecast assumptions <span class="an-mint" style="font-size:12px; font-family:var(--mono);">&mdash; adjust any of these</span></h2>
+    <div class="an-assume-grid">
+      <div class="an-ctl">
+        <label>Turnout starting point <span id="anScenarioVal"></span></label>
+        <select id="anScenario">
+          <option value="low"></option><option value="mid"></option><option value="high"></option>
+        </select>
+        <div class="an-hint">County turnout rates from the 2018 and 2022 governor's races and the 2024 presidential race, measured against today's voter rolls.</div>
+      </div>
+      <div class="an-ctl">
+        <label>Turnout dial <span id="anTurnoutAdjVal">no change</span></label>
+        <input type="range" id="anTurnoutAdj" min="-5" max="10" step="0.5" value="0">
+        <div class="an-hint">Adds or removes points of statewide turnout, spread across every county.</div>
+      </div>
+      <div class="an-ctl">
+        <label>Late-vote lean <span id="anTiltVal">Even</span></label>
+        <input type="range" id="anTilt" min="-10" max="10" step="1" value="0">
+        <div class="an-hint">Moves this many points of the <i>remaining</i> ballots between Democrats/NPA and Republicans (right = more Republican).</div>
+      </div>
+      <div class="an-ctl">
+        <label>Statewide margin override <span id="anOverrideVal">model</span></label>
+        <input type="number" id="anOverride" step="0.5" placeholder="e.g. -7.5 for R+7.5 (blank = model)">
+        <div class="an-hint">Two-party margin points for the race selected above. Leave blank to let the polls and fundamentals decide.</div>
+      </div>
+      <div class="an-ctl">
+        <label>Democrats voting for their nominee <span id="anDLoyalVal"></span></label>
+        <input type="range" id="anDLoyal" min="75" max="100" step="1" value="92">
+      </div>
+      <div class="an-ctl">
+        <label>Republicans voting for their nominee <span id="anRLoyalVal"></span></label>
+        <input type="range" id="anRLoyal" min="75" max="100" step="1" value="88">
+      </div>
+    </div>
+    <div class="an-check" id="anCheck"></div>
+    <button class="sim-btn an-reset" id="anResetBtn">Reset assumptions</button>
+  </div>
+
+  <div id="anRaces"></div>
+
+  <div class="panel an-method" id="anMethod">
+    <h3>How this forecast is built</h3>
+    <ul>
+      <li><b>Where the votes come from.</b> Each county's expected ballots are its average turnout in the 2018 governor's, 2022 governor's and 2024 presidential races, measured against today's voter rolls (third-party votes assumed to be about 1% of each past race). The turnout dial and scenario above move that up or down. A county can never be projected below the votes already counted.</li>
+      <li><b>Who they vote for.</b> Each county starts from its own average two-party result in 2018, 2022 and 2024 (the same starting point as Build Your Own Forecast). One statewide shift, applied the same way the Build Your Own Forecast slider works, moves every county together until the statewide result matches the target.</li>
+      <li><b>The target.</b> A blend of the polling average and the fundamentals (the 2018/2022/2024 county average). Polls get more weight the closer Election Day gets, from about half at four months out to about 90% on Election Day. The polling average weights recent polls more (a poll loses half its weight every 14 days) and larger samples slightly more. Undecided voters are split in proportion to the two candidates.</li>
+      <li><b>NPA voters and crossover.</b> Polls already include NPA voters and Republicans or Democrats who vote across party lines. The check under the controls shows what that implies: with the loyalty levels you set, how NPA voters would have to split to produce the forecast.</li>
+      <li><b>Ballots by party.</b> Projected Democratic, Republican and NPA ballots (by registration) assume the votes still to come look like the votes counted so far, unless you move the late-vote lean.</li>
+      <li><b>What it is not.</b> A projection built from public history and polls, not a guarantee. County patterns come from the 2018/2022 governor's races and the 2024 presidential race for both contests. Voter-roll sizes are a June 2026 snapshot.</li>
+    </ul>
+  </div>
 </div>
 
 <script>
@@ -2087,6 +2256,7 @@ async function loadLatestCSV(isManualRefresh){
       render();
     }else{
       updateFooterNote();
+      if(currentMode === 'analysis' && typeof renderAnalysis === 'function') renderAnalysis();
     }
   }catch(e){
     // No live feed yet (or the refresh failed) — keep showing whatever's
@@ -6651,7 +6821,17 @@ function switchMode(mode){
   currentMode = mode;
   document.getElementById('modeLiveBtn').classList.toggle('active', mode==='live');
   document.getElementById('modeSimBtn').classList.toggle('active', mode==='sim');
-  if(mode === 'sim'){
+  document.getElementById('modeAnalysisBtn').classList.toggle('active', mode==='analysis');
+  if(mode !== 'analysis') document.getElementById('analysisDashboard').classList.remove('active');
+  if(mode === 'analysis'){
+    document.getElementById('dashboard').classList.remove('active');
+    document.getElementById('simDashboard').classList.remove('active');
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('errorMsg').style.display = 'none';
+    document.getElementById('analysisDashboard').classList.add('active');
+    initAnalysis();
+    requestAnimationFrame(() => { renderAnalysis(); });
+  }else if(mode === 'sim'){
     document.getElementById('dashboard').classList.remove('active');
     document.getElementById('emptyState').style.display = 'none';
     document.getElementById('errorMsg').style.display = 'none';
@@ -6670,6 +6850,7 @@ function switchMode(mode){
 }
 document.getElementById('modeLiveBtn').addEventListener('click', () => switchMode('live'));
 document.getElementById('modeSimBtn').addEventListener('click', () => switchMode('sim'));
+document.getElementById('modeAnalysisBtn').addEventListener('click', () => switchMode('analysis'));
 
 document.getElementById('simTurnoutSlider').addEventListener('input', e => {
   simTurnoutPct = parseFloat(e.target.value);
@@ -8471,6 +8652,994 @@ function attachCountyDetailClickHandler(){
     if(c) openCountyZoom(c.county);
   });
 }
+
+// ============================================================
+// ANALYSIS TAB -- forecast of the final result
+// ------------------------------------------------------------
+// Reads the same history Build Your Own Forecast already holds (SIM_2018,
+// SIM_2022, SIM_2024, SIM_REG) plus a polls file, and projects every
+// county's final turnout and final Democratic / Republican vote. The
+// methodology is spelled out on the page itself (#anMethod).
+// ============================================================
+const AN_MINT = '#7ff0c4';
+const AN_DAY = 86400000;
+const AN_ELECTION_UTC = Date.UTC(2026, 10, 3);     // Nov 3, 2026
+const AN_OTHER_SHARE = 0.015;                      // share of votes for candidates other than the two major-party nominees
+const AN_PAST_TWO_PARTY_SHARE = 0.99;              // past D+R votes as a share of all votes (the history tables hold D and R only)
+const AN_POLL_HALF_LIFE_DAYS = 14;
+const AN_SPONSOR_WEIGHT = 0.6;                    // polls from party-aligned sponsors count at 60%
+const AN_DEFAULTS = { scenario:'mid', turnoutAdj:0, tilt:0, dLoyal:92, rLoyal:88 };
+
+// The polls live right here. To add one, add a line to the right race below.
+const AN_POLLS_DEFAULT = {
+ "updated": "2026-10-15",
+ "note": "sponsor: \"R\" or \"D\" marks polls released by a party-aligned sponsor; they count at reduced weight. Dates for some governor polls are release dates.",
+ "races": {
+  "governor": {
+   "title": "Governor",
+   "dem": "Jolly",
+   "rep": "Donalds",
+   "polls": [
+    {
+     "pollster": "St. Pete Polls (Florida Politics)",
+     "start": "2026-10-05",
+     "end": "2026-10-07",
+     "n": 836,
+     "pop": "LV",
+     "dem": 45,
+     "rep": 45,
+     "other": 3.9,
+     "undecided": 6.9,
+     "moe": 3,
+     "source": "https://cbs12.com/news/local/florida-polls-show-republicans-lead-democrats-in-governor-senate-races-still-close"
+    },
+    {
+     "pollster": "YouGov",
+     "start": "2026-09-28",
+     "end": "2026-10-05",
+     "n": 3813,
+     "pop": "LV",
+     "dem": 45,
+     "rep": 47,
+     "other": 1,
+     "undecided": 7,
+     "moe": 3,
+     "source": "https://cbs12.com/news/local/florida-polls-show-republicans-lead-democrats-in-governor-senate-races-still-close"
+    },
+    {
+     "pollster": "James Madison Institute / Targoz",
+     "start": "2026-09-28",
+     "end": "2026-10-04",
+     "n": 857,
+     "pop": "LV",
+     "dem": 42,
+     "rep": 52,
+     "other": 3,
+     "undecided": 3,
+     "moe": 3,
+     "source": "https://cbs12.com/news/local/florida-polls-show-republicans-lead-democrats-in-governor-senate-races-still-close"
+    },
+    {
+     "pollster": "Mason-Dixon (NBC6/Telemundo)",
+     "start": "2026-09-28",
+     "end": "2026-10-01",
+     "n": 625,
+     "pop": "LV",
+     "dem": 41,
+     "rep": 48,
+     "other": 1,
+     "undecided": 10,
+     "moe": 4,
+     "source": "https://cbs12.com/news/local/florida-polls-show-republicans-lead-democrats-in-governor-senate-races-still-close"
+    },
+    {
+     "pollster": "Change Research",
+     "start": "2026-09-28",
+     "end": "2026-09-28",
+     "n": 1063,
+     "pop": "LV",
+     "dem": 48,
+     "rep": 46,
+     "other": 6,
+     "undecided": null,
+     "moe": null,
+     "sponsor": "D",
+     "source": "https://www.270towin.com/2026-governor-polls/florida"
+    },
+    {
+     "pollster": "Stetson University",
+     "start": "2026-09-24",
+     "end": "2026-09-24",
+     "n": 522,
+     "pop": "LV",
+     "dem": 39,
+     "rep": 51,
+     "other": 10,
+     "undecided": null,
+     "moe": null,
+     "source": "https://www.270towin.com/2026-governor-polls/florida"
+    },
+    {
+     "pollster": "St. Pete Polls (Florida Politics)",
+     "start": "2026-09-15",
+     "end": "2026-09-17",
+     "n": 913,
+     "pop": "LV",
+     "dem": 43.4,
+     "rep": 43.5,
+     "other": 4,
+     "undecided": 9,
+     "moe": 3.2,
+     "source": "https://newsweek.com/new-poll-shows-byron-donalds-david-jolly-deadlocked-in-florida-race-12458370"
+    },
+    {
+     "pollster": "James Madison Institute",
+     "start": "2026-08-06",
+     "end": "2026-08-06",
+     "n": 1026,
+     "pop": "LV",
+     "dem": 38,
+     "rep": 45,
+     "other": 17,
+     "undecided": null,
+     "moe": null,
+     "source": "https://www.270towin.com/2026-governor-polls/florida"
+    },
+    {
+     "pollster": "UNF PORL",
+     "start": "2026-07-08",
+     "end": "2026-07-17",
+     "n": 848,
+     "pop": "LV",
+     "dem": 41,
+     "rep": 46,
+     "other": null,
+     "undecided": null,
+     "moe": 3.8,
+     "source": "https://floridaphoenix.com/2026/07/20/moody-leads-nixon-by-8-points-vindman-by-10-in-new-poll-of-florida-senate-race-embargoed/"
+    },
+    {
+     "pollster": "Change Research",
+     "start": "2026-05-17",
+     "end": "2026-05-17",
+     "n": 1593,
+     "pop": "LV",
+     "dem": 46,
+     "rep": 42,
+     "other": 12,
+     "undecided": null,
+     "moe": null,
+     "sponsor": "D",
+     "source": "https://www.270towin.com/2026-governor-polls/florida"
+    },
+    {
+     "pollster": "Cherry Communications",
+     "start": "2026-05-15",
+     "end": "2026-05-15",
+     "n": 604,
+     "pop": "LV",
+     "dem": 39,
+     "rep": 47,
+     "other": 14,
+     "undecided": null,
+     "moe": null,
+     "sponsor": "R",
+     "source": "https://www.270towin.com/2026-governor-polls/florida"
+    },
+    {
+     "pollster": "Stetson University",
+     "start": "2026-04-24",
+     "end": "2026-04-24",
+     "n": 848,
+     "pop": "LV",
+     "dem": 40,
+     "rep": 47,
+     "other": 13,
+     "undecided": null,
+     "moe": null,
+     "source": "https://www.270towin.com/2026-governor-polls/florida"
+    },
+    {
+     "pollster": "Echelon Insights",
+     "start": "2026-04-21",
+     "end": "2026-04-21",
+     "n": 406,
+     "pop": "LV",
+     "dem": 43,
+     "rep": 49,
+     "other": 8,
+     "undecided": null,
+     "moe": null,
+     "source": "https://www.270towin.com/2026-governor-polls/florida"
+    },
+    {
+     "pollster": "Edge Research / MDW",
+     "start": "2026-04-13",
+     "end": "2026-04-13",
+     "n": 1834,
+     "pop": "LV",
+     "dem": 41,
+     "rep": 41,
+     "other": 18,
+     "undecided": null,
+     "moe": null,
+     "source": "https://www.270towin.com/2026-governor-polls/florida"
+    },
+    {
+     "pollster": "Emerson College",
+     "start": "2026-04-02",
+     "end": "2026-04-02",
+     "n": 1125,
+     "pop": "LV",
+     "dem": 39,
+     "rep": 44,
+     "other": 17,
+     "undecided": null,
+     "moe": null,
+     "source": "https://www.270towin.com/2026-governor-polls/florida"
+    },
+    {
+     "pollster": "UNF PORL",
+     "start": "2026-02-21",
+     "end": "2026-03-02",
+     "n": 786,
+     "pop": "LV",
+     "dem": 36,
+     "rep": 42,
+     "other": 3,
+     "undecided": 17,
+     "moe": 4.4,
+     "source": "https://thecapitolist.com/unf-poll-donalds-leads-jolly-in-governor-race-moody-ahead-of-vindman-for-senate/amp/"
+    },
+    {
+     "pollster": "UNF PORL",
+     "start": "2025-10-15",
+     "end": "2025-10-25",
+     "n": 728,
+     "pop": "LV",
+     "dem": 34,
+     "rep": 45,
+     "other": null,
+     "undecided": 21,
+     "moe": 4.3,
+     "source": "https://www.270towin.com/2026-governor-polls/florida"
+    }
+   ]
+  },
+  "senate": {
+   "title": "U.S. Senate",
+   "dem": "Nixon",
+   "rep": "Moody",
+   "polls": [
+    {
+     "pollster": "St. Pete Polls (Florida Politics)",
+     "start": "2026-10-05",
+     "end": "2026-10-07",
+     "n": 836,
+     "pop": "LV",
+     "dem": 45,
+     "rep": 47,
+     "other": 2.3,
+     "undecided": 6,
+     "moe": 3,
+     "source": "https://cbs12.com/news/local/florida-polls-show-republicans-lead-democrats-in-governor-senate-races-still-close"
+    },
+    {
+     "pollster": "YouGov",
+     "start": "2026-09-28",
+     "end": "2026-10-05",
+     "n": 3813,
+     "pop": "LV",
+     "dem": 44,
+     "rep": 49,
+     "other": 1,
+     "undecided": 5,
+     "moe": 3,
+     "source": "https://cbs12.com/news/local/florida-polls-show-republicans-lead-democrats-in-governor-senate-races-still-close"
+    },
+    {
+     "pollster": "James Madison Institute / Targoz",
+     "start": "2026-09-28",
+     "end": "2026-10-04",
+     "n": 857,
+     "pop": "LV",
+     "dem": 42,
+     "rep": 52,
+     "other": 2,
+     "undecided": 4,
+     "moe": 3,
+     "source": "https://cbs12.com/news/local/florida-polls-show-republicans-lead-democrats-in-governor-senate-races-still-close"
+    },
+    {
+     "pollster": "Mason-Dixon (NBC6/Telemundo)",
+     "start": "2026-09-28",
+     "end": "2026-10-01",
+     "n": 625,
+     "pop": "LV",
+     "dem": 40,
+     "rep": 50,
+     "other": 2,
+     "undecided": 8,
+     "moe": 4,
+     "source": "https://www.nbcmiami.com/elections/poll-shows-ashley-moody-leading-angie-nixon-in-floridas-u-s-senate-race/3869181/"
+    },
+    {
+     "pollster": "InsiderAdvantage",
+     "start": "2026-09-20",
+     "end": "2026-09-21",
+     "n": 600,
+     "pop": "LV",
+     "dem": 42,
+     "rep": 49,
+     "other": 2,
+     "undecided": 7,
+     "moe": 4,
+     "sponsor": "R",
+     "source": "https://en.wikipedia.org/wiki/2026_United_States_Senate_special_election_in_Florida"
+    },
+    {
+     "pollster": "Stetson University",
+     "start": "2026-09-14",
+     "end": "2026-09-21",
+     "n": 830,
+     "pop": "LV",
+     "dem": 40,
+     "rep": 51,
+     "other": 3,
+     "undecided": 5,
+     "moe": 4.3,
+     "source": "https://en.wikipedia.org/wiki/2026_United_States_Senate_special_election_in_Florida"
+    },
+    {
+     "pollster": "St. Pete Polls (Florida Politics)",
+     "start": "2026-09-15",
+     "end": "2026-09-17",
+     "n": 913,
+     "pop": "LV",
+     "dem": 44.8,
+     "rep": 45.2,
+     "other": null,
+     "undecided": null,
+     "moe": 3.2,
+     "source": "https://www.newsweek.com/ashley-moody-sounds-alarm-as-second-poll-shows-dead-heat-with-angie-nixon-12465288"
+    },
+    {
+     "pollster": "Quantus Insights",
+     "start": "2026-09-08",
+     "end": "2026-09-10",
+     "n": 733,
+     "pop": "LV",
+     "dem": 43,
+     "rep": 50,
+     "other": 3,
+     "undecided": 4,
+     "moe": 4.1,
+     "sponsor": "R",
+     "source": "https://en.wikipedia.org/wiki/2026_United_States_Senate_special_election_in_Florida"
+    },
+    {
+     "pollster": "Change Research (Freedom Project USA)",
+     "start": "2026-09-07",
+     "end": "2026-09-09",
+     "n": 1107,
+     "pop": "LV",
+     "dem": 47,
+     "rep": 47,
+     "other": 1,
+     "undecided": 5,
+     "moe": 2.8,
+     "sponsor": "D",
+     "source": "https://en.wikipedia.org/wiki/2026_United_States_Senate_special_election_in_Florida"
+    },
+    {
+     "pollster": "UNF PORL",
+     "start": "2026-07-08",
+     "end": "2026-07-17",
+     "n": 848,
+     "pop": "LV",
+     "dem": 42,
+     "rep": 50,
+     "other": 2,
+     "undecided": 6,
+     "moe": 3.8,
+     "source": "https://floridaphoenix.com/2026/07/20/moody-leads-nixon-by-8-points-vindman-by-10-in-new-poll-of-florida-senate-race-embargoed/"
+    },
+    {
+     "pollster": "Stetson University",
+     "start": "2026-03-15",
+     "end": "2026-04-13",
+     "n": 848,
+     "pop": "LV",
+     "dem": 38,
+     "rep": 51,
+     "other": null,
+     "undecided": 11,
+     "moe": 4.1,
+     "source": "https://en.wikipedia.org/wiki/2026_United_States_Senate_special_election_in_Florida"
+    },
+    {
+     "pollster": "Emerson College",
+     "start": "2026-03-29",
+     "end": "2026-03-31",
+     "n": 1125,
+     "pop": "LV",
+     "dem": 36,
+     "rep": 47,
+     "other": null,
+     "undecided": 16,
+     "moe": 2.8,
+     "source": "https://en.wikipedia.org/wiki/2026_United_States_Senate_special_election_in_Florida"
+    },
+    {
+     "pollster": "UNF PORL",
+     "start": "2026-02-21",
+     "end": "2026-03-02",
+     "n": 786,
+     "pop": "LV",
+     "dem": 38,
+     "rep": 46,
+     "other": 2,
+     "undecided": 15,
+     "moe": 4,
+     "source": "https://en.wikipedia.org/wiki/2026_United_States_Senate_special_election_in_Florida"
+    }
+   ]
+  }
+ }
+};
+let anPolls = AN_POLLS_DEFAULT;
+let anPollsTried = false;
+const anState = {
+  race:'governor', view:'forecast', inited:false,
+  scenario:AN_DEFAULTS.scenario, turnoutAdj:AN_DEFAULTS.turnoutAdj, tilt:AN_DEFAULTS.tilt,
+  dLoyal:AN_DEFAULTS.dLoyal, rLoyal:AN_DEFAULTS.rLoyal,
+  override:{ governor:null, senate:null }
+};
+let anLast = null;       // last computed model (for the map/table redraws)
+let anMapSeq = 0;
+
+function anIsoWall(iso){ const p = iso.split('-').map(Number); return Date.UTC(p[0], p[1] - 1, p[2]); }
+function anTodayWall(){ return Math.floor(easternWallNowMs() / AN_DAY) * AN_DAY; }
+function anDaysTo(wall){ return Math.max(0, (AN_ELECTION_UTC - wall) / AN_DAY); }
+function anWallToIso(wall){ return new Date(wall).toISOString().slice(0, 10); }
+function anClamp(v, lo, hi){ return Math.min(hi, Math.max(lo, v)); }
+function anMarginLabel(m){            // m is a fraction (+ = Democratic)
+  const pts = Math.abs(m) * 100;
+  if(parseFloat(pts.toFixed(1)) === 0) return 'Even';
+  return (m > 0 ? 'D+' : 'R+') + pts.toFixed(1);
+}
+function anMarginColor(m){ return parseFloat((Math.abs(m) * 100).toFixed(1)) === 0 ? '#e9edf5' : (m > 0 ? '#5b9bd9' : '#d4675a'); }
+function anFmtDate(iso){
+  const d = new Date(anIsoWall(iso));
+  return d.toLocaleDateString('en-US', { timeZone:'UTC', month:'short', day:'numeric' });
+}
+
+async function anLoadPollsFile(){
+  if(anPollsTried) return;
+  anPollsTried = true;
+  try{
+    const resp = await fetch('data/polls.json?t=' + Date.now(), { cache:'no-store' });
+    if(!resp.ok) return;
+    const j = await resp.json();
+    if(j && j.races && j.races.governor && j.races.senate){ anPolls = j; renderAnalysis(); }
+  }catch(e){ /* no polls file: the built-in copy stays */ }
+}
+
+// ---- polls ----
+function anPollAvg(polls, asOfWall){
+  let sw = 0, sd = 0, sr = 0, n = 0, latest = null;
+  polls.forEach(p => {
+    const end = anIsoWall(p.end);
+    if(end > asOfWall) return;
+    const age = Math.max(0, (asOfWall - end) / AN_DAY);
+    const w = Math.pow(0.5, age / AN_POLL_HALF_LIFE_DAYS) * Math.sqrt(Math.min(p.n || 600, 1500) / 600) * (p.sponsor ? AN_SPONSOR_WEIGHT : 1);
+    sw += w; sd += w * p.dem; sr += w * p.rep; n++;
+    if(latest === null || end > latest) latest = end;
+  });
+  if(!sw) return null;
+  const dem = sd / sw, rep = sr / sw;
+  return { dem, rep, n, latest, twoParty:(dem - rep) / (dem + rep), raw:(dem - rep) / 100 };
+}
+// How much the polls count against the fundamentals, by days left.
+function anPollWeight(daysLeft){ return 0.55 + 0.35 * (1 - Math.min(daysLeft, 120) / 120); }
+
+// ---- the forecast engine ----
+function anCompute(){
+  const names = SIM_COUNTY_NAMES;
+  const byName = {};
+  COUNTIES.forEach(c => { byName[c.county] = c; });
+  const regTot = names.reduce((s, n) => s + SIM_REG[n][0], 0);
+
+  // 1. expected ballots
+  const rate = (yr, n) => ((yr[n][0] + yr[n][1]) / AN_PAST_TWO_PARTY_SHARE) / SIM_REG[n][0];
+  const r18 = {}, r22 = {}, r24 = {};
+  names.forEach(n => { r18[n] = rate(SIM_2018, n); r22[n] = rate(SIM_2022, n); r24[n] = rate(SIM_2024, n); });
+  const baseRate = {
+    low:  n => r22[n],
+    mid:  n => (r18[n] + r22[n] + r24[n]) / 3,
+    high: n => r24[n]
+  };
+  const swTurn = f => names.reduce((s, n) => s + anClamp(f(n), 0, 0.95) * SIM_REG[n][0], 0) / regTot;
+  const scenarioTurnout = { low:swTurn(baseRate.low), mid:swTurn(baseRate.mid), high:swTurn(baseRate.high) };
+  const T0 = scenarioTurnout[anState.scenario];
+  const factor = (T0 + anState.turnoutAdj / 100) / T0;
+  const E = {}, actual = {};
+  names.forEach(n => {
+    const c = byName[n];
+    actual[n] = c ? (c.total || 0) : 0;
+    const e = anClamp(baseRate[anState.scenario](n) * factor, 0, 0.95) * SIM_REG[n][0];
+    E[n] = Math.max(e, actual[n]);
+  });
+  const Esum = names.reduce((s, n) => s + E[n], 0);
+  const actualSum = names.reduce((s, n) => s + actual[n], 0);
+
+  // 2. ballots by party registration (banked + remaining)
+  const swReg = { d:0, r:0, n:0 }, swAct = { d:0, r:0, n:0 };
+  names.forEach(n => {
+    const reg = SIM_REG[n][0], rs = SIM_REG[n][1] / 100, ds = SIM_REG[n][2] / 100, ns = Math.max(0, 1 - rs - ds);
+    swReg.d += reg * ds; swReg.r += reg * rs; swReg.n += reg * ns;
+    const c = byName[n];
+    if(c){ swAct.d += c.dem || 0; swAct.r += c.rep || 0; swAct.n += Math.max(0, (c.total || 0) - (c.dem || 0) - (c.rep || 0)); }
+  });
+  const swRatio = { d: swReg.d ? swAct.d / swReg.d : 0, r: swReg.r ? swAct.r / swReg.r : 0, n: swReg.n ? swAct.n / swReg.n : 0 };
+  const tilt = anState.tilt / 100;
+  const party = {};
+  const sum = { d:0, r:0, n:0 };
+  names.forEach(n => {
+    const c = byName[n];
+    const aD = c ? (c.dem || 0) : 0, aR = c ? (c.rep || 0) : 0, aT = actual[n];
+    const aN = Math.max(0, aT - aD - aR);
+    const rem = Math.max(0, E[n] - aT);
+    let mix;
+    if(aT > 0){ mix = { d:aD / aT, r:aR / aT, n:aN / aT }; }
+    else{
+      const reg = SIM_REG[n][0], rs = SIM_REG[n][1] / 100, ds = SIM_REG[n][2] / 100, ns = Math.max(0, 1 - rs - ds);
+      const w = { d:ds * (swRatio.d || 1), r:rs * (swRatio.r || 1), n:ns * (swRatio.n || 1) };
+      const t = w.d + w.r + w.n || 1;
+      mix = { d:w.d / t, r:w.r / t, n:w.n / t };
+    }
+    // late-vote lean: move `tilt` of the remaining mix to (or from) the Republicans
+    let rr = anClamp(mix.r + tilt, 0, 1);
+    const others = mix.d + mix.n;
+    const left = 1 - rr;
+    const mD = others > 0 ? left * mix.d / others : left / 2;
+    const mN = others > 0 ? left * mix.n / others : left / 2;
+    const B = { d:aD + rem * mD, r:aR + rem * rr, n:aN + rem * mN };
+    party[n] = B;
+    sum.d += B.d; sum.r += B.r; sum.n += B.n;
+  });
+
+  // 3. statewide shift solved to hit a target two-party margin
+  const k = simGetSwingK();
+  const wMargin = s => {
+    let num = 0;
+    names.forEach(n => { const p = simSwungPct(simAverageBase(n), s, k) / 100; num += E[n] * (2 * p - 1); });
+    return num / Esum;
+  };
+  const fundamentals = wMargin(0);
+  const solveShift = target => {
+    let lo = -45, hi = 45;
+    if(target <= wMargin(lo)) return lo;
+    if(target >= wMargin(hi)) return hi;
+    for(let i = 0; i < 60; i++){ const mid = (lo + hi) / 2; if(wMargin(mid) < target) lo = mid; else hi = mid; }
+    return (lo + hi) / 2;
+  };
+  const today = anTodayWall();
+  const daysLeft = anDaysTo(today);
+  const targetFor = (poll, dLeft) => {
+    if(!poll) return fundamentals;
+    const w = anPollWeight(dLeft);
+    return w * poll.twoParty + (1 - w) * fundamentals;
+  };
+
+  const models = {};
+  ['governor', 'senate'].forEach(race => {
+    const info = anPolls.races[race];
+    const poll = anPollAvg(info.polls, today + AN_DAY - 1);
+    let target = targetFor(poll, daysLeft);
+    const ov = anState.override[race];
+    const overridden = ov !== null && isFinite(ov);
+    if(overridden) target = anClamp(ov / 100, -0.9, 0.9);
+    const shift = solveShift(target);
+    const rows = names.map(n => {
+      const p = simSwungPct(simAverageBase(n), shift, k) / 100;
+      const D = E[n] * (1 - AN_OTHER_SHARE) * p, R = E[n] * (1 - AN_OTHER_SHARE) * (1 - p), O = E[n] * AN_OTHER_SHARE;
+      const margin = (D - R) / E[n];
+      const c = byName[n];
+      return {
+        county:n, fips:FL_FIPS[n], reg:SIM_REG[n][0], E:E[n], turnout:E[n] / SIM_REG[n][0],
+        p, D, R, O, margin, rating:ratingLabelForMargin(margin),
+        counted:actual[n], party:party[n], live:c || null
+      };
+    });
+    const sD = rows.reduce((s, r) => s + r.D, 0), sR = rows.reduce((s, r) => s + r.R, 0), sO = rows.reduce((s, r) => s + r.O, 0);
+    const total = sD + sR + sO;
+    const margin = (sD - sR) / total;
+    // series over time for the charts
+    const series = [];
+    if(info.polls.length){
+      const first = Math.min(...info.polls.map(p => anIsoWall(p.end)));
+      for(let day = first; day <= today; day += AN_DAY){
+        const pa = anPollAvg(info.polls, day + AN_DAY - 1);
+        if(!pa) continue;
+        let t = targetFor(pa, anDaysTo(day));
+        if(day === today && overridden) t = target;
+        series.push({
+          day, iso:anWallToIso(day),
+          pollD:pa.dem, pollR:pa.rep,
+          fcD:(1 - AN_OTHER_SHARE) * (1 + t) / 2 * 100, fcR:(1 - AN_OTHER_SHARE) * (1 - t) / 2 * 100, t
+        });
+      }
+    }
+    models[race] = { race, info, poll, target, overridden, shift, rows, sD, sR, sO, total, margin, series };
+  });
+
+  return { names, E, Esum, actualSum, regTot, party:sum, scenarioTurnout, fundamentals, daysLeft, today, models };
+}
+
+// ---- the NPA / crossover check ----
+function anCrossover(m, M){
+  const S = M.party.d + M.party.r + M.party.n;
+  const q = m.sD / (m.sD + m.sR);                         // statewide two-party Democratic share
+  const lD = anState.dLoyal / 100, lR = anState.rLoyal / 100;
+  const nu = M.party.n > 0 ? (q * S - lD * M.party.d - (1 - lR) * M.party.r) / M.party.n : NaN;
+  return { q, S, nu, lD, lR,
+    dDefect:(1 - lD) * M.party.d, rDefect:(1 - lR) * M.party.r,
+    nD:M.party.d, nR:M.party.r, nN:M.party.n };
+}
+
+// ---- the daily blurb (written from the numbers) ----
+function anBuildBlurb(M){
+  const g = M.models.governor, s = M.models.senate;
+  const gi = g.info, si = s.info;
+  const today = new Date().toLocaleDateString('en-US', { timeZone:'America/New_York', weekday:'long', month:'long', day:'numeric' });
+  const lead = (m, info) => {
+    if(parseFloat((Math.abs(m.margin) * 100).toFixed(1)) === 0) return 'a dead heat';
+    return `<b class="${m.margin > 0 ? 'd' : 'r'}">${m.margin > 0 ? info.dem : info.rep}</b> ahead by about ${(Math.abs(m.margin) * 100).toFixed(1)} points`;
+  };
+  const pollTxt = (m, info) => {
+    if(!m.poll) return 'there are no polls in the file yet';
+    const pm = m.poll.raw;
+    const who = pm === 0 ? 'the candidates tied' : `${pm > 0 ? info.dem : info.rep} ahead by ${(Math.abs(pm) * 100).toFixed(1)} points`;
+    return `the polling average (${m.poll.n} poll${m.poll.n === 1 ? '' : 's'}) has ${who} (${m.poll.dem.toFixed(1)}% to ${m.poll.rep.toFixed(1)}%)`;
+  };
+  const pctCounted = M.Esum ? M.actualSum / M.Esum * 100 : 0;
+  const turnoutPct = M.Esum / M.regTot * 100;
+  const regD = Object.keys(SIM_REG).reduce((a, n) => a + SIM_REG[n][0] * SIM_REG[n][2], 0) / M.regTot;
+  const regR = Object.keys(SIM_REG).reduce((a, n) => a + SIM_REG[n][0] * SIM_REG[n][1], 0) / M.regTot;
+  const fund = M.fundamentals;
+  const past = y => { const nm = Object.keys(y); const d = nm.reduce((a, n) => a + y[n][0], 0), r = nm.reduce((a, n) => a + y[n][1], 0); return (d - r) / (d + r); };
+  const x = anCrossover(anState.race === 'senate' ? s : g, M);
+  const xi = anState.race === 'senate' ? si : gi;
+  const nuTxt = isFinite(x.nu)
+    ? `With ${anState.dLoyal}% of Democrats and ${anState.rLoyal}% of Republicans voting for their nominee, NPA voters would have to split about ${(x.nu * 100).toFixed(0)}% to ${xi.dem} and ${(100 - x.nu * 100).toFixed(0)}% to ${xi.rep} to produce that result` +
+      ` (roughly ${fmt(Math.round(x.rDefect))} Republican-registered ballots not going to ${xi.rep}).`
+    : '';
+  const p1 = `The forecast has ${lead(g, gi)} in the race for Governor and ${lead(s, si)} in the U.S. Senate race. For Governor, ${pollTxt(g, gi)}; for Senate, ${pollTxt(s, si)}.` +
+    (g.overridden || s.overridden ? ' (A manual margin override is in use.)' : '');
+  const p2 = `About ${pctCounted.toFixed(1)}% of the projected vote is already counted (${fmt(M.actualSum)} of roughly ${fmt(Math.round(M.Esum))} ballots), with ${Math.round(M.daysLeft)} days until Election Day. Projected final turnout is ${turnoutPct.toFixed(1)}% of registered voters.`;
+  const p3 = `The fundamentals lean Republican: registered Republicans outnumber registered Democrats ${regR.toFixed(1)}% to ${regD.toFixed(1)}%, and the county average of the last three statewide results is ${anMarginLabel(fund)} on a two-party basis (2018 governor ${anMarginLabel(past(SIM_2018))}, 2022 governor ${anMarginLabel(past(SIM_2022))}, 2024 president ${anMarginLabel(past(SIM_2024))}). ` +
+    `Midterms have also tended to be harder for the party holding the White House, which is context rather than an input to the numbers here. ${nuTxt}`;
+  return `<div class="an-date">${today}</div><h2>Today's read</h2><p>${p1}</p><p>${p2}</p><p>${p3}</p>`;
+}
+
+// ---- drawing ----
+function anSetText(id, t){ const el = document.getElementById(id); if(el) el.textContent = t; }
+
+function anRenderHero(m, M){
+  const race = anState.race, info = m.info;
+  anSetText('anHeroLabel', `Projected final result · ${info.title} (${info.dem} vs ${info.rep})`);
+  const ld = document.getElementById('anHeroLeader');
+  const pts = Math.abs(m.margin) * 100;
+  ld.innerHTML = parseFloat(pts.toFixed(1)) === 0 ? 'Even' :
+    `<span style="color:${anMarginColor(m.margin)}">${m.margin > 0 ? info.dem + ' (D)' : info.rep + ' (R)'} +${pts.toFixed(1)}%</span> <span style="font-size:13px; color:var(--muted)">projected</span>`;
+  const dPct = m.sD / m.total * 100, rPct = m.sR / m.total * 100, oPct = m.sO / m.total * 100;
+  document.getElementById('anBarD').style.width = dPct + '%';
+  document.getElementById('anBarR').style.width = rPct + '%';
+  document.getElementById('anBarO').style.width = oPct + '%';
+  const lD = document.getElementById('anLabelD'), lR = document.getElementById('anLabelR');
+  lD.style.left = Math.min(96, Math.max(4, dPct / 2)) + '%';
+  lR.style.left = Math.min(96, Math.max(4, dPct + rPct / 2)) + '%';
+  lD.textContent = `${info.dem} ${fmt(Math.round(m.sD))} (${dPct.toFixed(1)}%)`;
+  lR.textContent = `${info.rep} ${fmt(Math.round(m.sR))} (${rPct.toFixed(1)}%)`;
+  anSetText('anStatTurnout', (M.Esum / M.regTot * 100).toFixed(1) + '%');
+  anSetText('anStatTotal', fmt(Math.round(M.Esum)));
+  anSetText('anStatD', fmt(Math.round(m.sD)));
+  anSetText('anStatDk', `Projected ${info.dem} votes`);
+  anSetText('anStatR', fmt(Math.round(m.sR)));
+  anSetText('anStatRk', `Projected ${info.rep} votes`);
+  anSetText('anStatCounted', fmt(M.actualSum));
+  anSetText('anStatCountedK', `Counted so far (${(M.Esum ? M.actualSum / M.Esum * 100 : 0).toFixed(1)}% of projected)`);
+  anSetText('anStatRating', ratingLabelForMargin(m.margin));
+}
+
+function anRenderTable(m){
+  const body = document.getElementById('anTableBody');
+  body.innerHTML = m.rows.map(r => {
+    const col = catColor(r.rating);
+    const live = r.live;
+    const liveM = live && !isCountyPending(live) ? activeNpaMargin(live) : null;
+    const now = liveM === null ? '<span style="color:var(--muted-2)">—</span>' : `<span class="${liveM >= 0 ? 'num-d' : 'num-r'}">${liveM >= 0 ? 'D+' : 'R+'}${(Math.abs(liveM) * 100).toFixed(1)}</span>`;
+    return `<tr>
+      <td class="county-name">${r.county}</td>
+      <td><span class="chip" style="background:${col};color:${contrastText(col)}">${r.rating}</span></td>
+      <td class="${r.margin >= 0 ? 'num-d' : 'num-r'}">${anMarginLabel(r.margin)}</td>
+      <td class="num-d">${fmt(Math.round(r.D))}</td>
+      <td class="num-r">${fmt(Math.round(r.R))}</td>
+      <td class="num-npa">${fmt(Math.round(r.O))}</td>
+      <td class="num-total">${fmt(Math.round(r.E))}</td>
+      <td>${(r.turnout * 100).toFixed(1)}%</td>
+      <td>${now}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function anRenderMap(m){
+  const seq = ++anMapSeq;
+  await ensureGeojson();
+  if(seq !== anMapSeq) return;
+  const view = anState.view;
+  let cats, z, text, title, legendHtml;
+  if(view === 'turnout'){
+    cats = TURNOUT_BINS;
+    z = m.rows.map(r => cats.findIndex(c => c.key === turnoutBinKeyFor(r.county, r.E)) + 0.5);
+    text = m.rows.map(r => `<b>${r.county}</b><br><b>Projected final turnout: ${(r.turnout * 100).toFixed(1)}% of registered voters</b><br>` +
+      `\u{1F7E2} Projected total votes: ${fmt(Math.round(r.E))}<br>Counted so far: ${fmt(r.counted)} (${r.E ? (r.counted / r.E * 100).toFixed(0) : 0}% of projected)<br>Registered voters: ${fmt(r.reg)}`);
+    title = 'Projected final turnout (% of registered voters)';
+    legendHtml = turnoutSideLegendHtml();
+  }else if(view === 'current'){
+    cats = NPA_DISPLAY_CATS;
+    z = m.rows.map(r => cats.findIndex(c => c.key === (r.live ? categoryForNpaDisplay(r.live) : 'Not Updated')) + 0.5);
+    text = m.rows.map(r => {
+      const c = r.live;
+      if(!c || isCountyPending(c)) return `<b>${r.county}</b><br>No votes counted yet<br>Projected final: ${anMarginLabel(r.margin)} (${r.rating})`;
+      const mg = activeNpaMargin(c);
+      return `<b>${r.county}</b><br><b>Right now: ${anMarginLabel(mg)} (${categoryForNpaDisplay(c)})</b><br>` +
+        `\u{1F535} DEM ${fmt(c.dem)} · \u{1F534} REP ${fmt(c.rep)} · \u{1F7E3} NPA/Other ${fmt(Math.max(0, c.total - c.dem - c.rep))}<br>` +
+        `\u{1F7E2} Counted: ${fmt(c.total)} (${r.E ? (c.total / r.E * 100).toFixed(0) : 0}% of projected)<br>Projected final: ${anMarginLabel(r.margin)} (${r.rating})`;
+    });
+    title = 'Current General Election results (votes counted so far)';
+    legendHtml = ratingSideLegendHtml();
+  }else{
+    cats = RATING_CATS;
+    z = m.rows.map(r => cats.findIndex(c => c.key === r.rating) + 0.5);
+    text = m.rows.map(r => {
+      const live = r.live && !isCountyPending(r.live) ? activeNpaMargin(r.live) : null;
+      return `<b>${r.county}</b><br><b>Projected: ${anMarginLabel(r.margin)} (${r.rating})</b><br>` +
+        `\u{1F535} ${m.info.dem} ${fmt(Math.round(r.D))} · \u{1F534} ${m.info.rep} ${fmt(Math.round(r.R))} · \u{1F7E3} Other ${fmt(Math.round(r.O))}<br>` +
+        `\u{1F7E2} Projected votes: ${fmt(Math.round(r.E))} (${(r.turnout * 100).toFixed(1)}% turnout)<br>` +
+        `Counted so far: ${fmt(r.counted)} (${r.E ? (r.counted / r.E * 100).toFixed(0) : 0}%)` +
+        (live === null ? '' : `<br>Right now: ${anMarginLabel(live)}`);
+    });
+    title = `Projected final result · ${m.info.title} (${m.info.dem} vs ${m.info.rep})`;
+    legendHtml = ratingSideLegendHtml();
+  }
+  anSetText('anMapTitle', title);
+  const leg = document.getElementById('anSideLegend');
+  leg.innerHTML = legendHtml; leg.classList.add('on');
+  const trace = {
+    type:'choropleth', geojson:geojsonFL, locations:m.rows.map(r => r.fips), z,
+    featureidkey:'id', zmin:0, zmax:cats.length, colorscale:stepColorscale(cats),
+    marker:{ line:{ color:'#0a0e17', width:1 } }, text, hoverinfo:'text',
+    hoverlabel:{ bgcolor:'#151b28', bordercolor:'#212a3b', font:{ family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5' } },
+    showscale:false
+  };
+  const layout = {
+    geo:{ scope:'usa', fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' },
+    paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
+    margin:{ t:10, b:10, l:10, r:10 }, font:{ family:'Inter, sans-serif' }
+  };
+  await Plotly.react('anMap', [trace], layout, { displayModeBar:false, responsive:true });
+}
+
+// Slow blink on the last point of the chosen traces (re-applied after
+// every redraw, since Plotly rebuilds those elements).
+function anBlinkEnds(el, traceIdx){
+  const apply = () => {
+    const traces = el.querySelectorAll('.scatterlayer > .trace');
+    traceIdx.forEach(i => {
+      if(!traces[i]) return;
+      traces[i].querySelectorAll('path.point').forEach(p => p.classList.add('an-blink'));
+    });
+  };
+  apply();
+  if(el.removeAllListeners) el.removeAllListeners('plotly_afterplot');
+  el.on('plotly_afterplot', apply);
+}
+
+function anChartLayout(yVals, endLabel, endY, endColor){
+  let range = pctChartRange([yVals]);
+  return {
+    ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
+    margin:{ t:12, b:40, l:50, r:96 },
+    hovermode:'x unified',
+    hoverlabel:{ bgcolor:'#151b28', bordercolor:'#7c879c', font:{ family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5' } },
+    showlegend:true, legend:{ orientation:'h', y:1.12, x:0, font:{ size:11 } },
+    xaxis:{ ...COUNTY_DETAIL_CHART_LAYOUT_BASE.xaxis, tickformat:'%b %-d', hoverformat:'%b %-d, %Y', automargin:true },
+    yaxis:{ ...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, range, autorange:false, ticksuffix:'%', title:{ text:'', font:{ size:10 } } },
+    annotations:[{ xref:'x', yref:'y', x:endLabel.x, y:endY, xanchor:'left', yanchor:'middle', xshift:10, showarrow:false,
+      text:endLabel.text, font:{ size:12, color:endColor, family:'IBM Plex Mono, monospace' } }]
+  };
+}
+
+async function anDrawRace(race, m){
+  const fcEl = document.getElementById('anFc_' + race), pollEl = document.getElementById('anPoll_' + race);
+  if(!fcEl || !pollEl) return;
+  const S = m.series;
+  if(!S.length){ fcEl.innerHTML = pollEl.innerHTML = '<div class="table-hint">No polls yet.</div>'; return; }
+  const info = m.info;
+  const last = S[S.length - 1];
+  const x = S.map(p => p.iso);
+  const lineBase = { mode:'lines', line:{ width:2.5 } };
+  const endMark = (xv, yv, color, name) => ({ x:[xv], y:[yv], mode:'markers', marker:{ size:11, color }, name, showlegend:false, hoverinfo:'skip' });
+
+  // forecast chart
+  const fcLabelM = m.margin;           // today's expected margin (all-ballot)
+  const fcTraces = [
+    { ...lineBase, x, y:S.map(p => p.fcD), name:`${info.dem} (D) forecast`, line:{ color:'#5b9bd9', width:2.5 }, hovertemplate:'%{y:.1f}%' },
+    { ...lineBase, x, y:S.map(p => p.fcR), name:`${info.rep} (R) forecast`, line:{ color:'#d4675a', width:2.5 }, hovertemplate:'%{y:.1f}%' },
+    endMark(last.iso, last.fcD, '#5b9bd9', 'D end'), endMark(last.iso, last.fcR, '#d4675a', 'R end')
+  ];
+  const fcEndY = (last.fcD + last.fcR) / 2;
+  const fcLayout = anChartLayout(S.flatMap(p => [p.fcD, p.fcR]), { x:last.iso, text:`Expected<br>${anMarginLabel(fcLabelM)}` }, fcEndY, anMarginColor(fcLabelM));
+  await Plotly.react(fcEl, fcTraces, fcLayout, { displayModeBar:false, responsive:true });
+  anBlinkEnds(fcEl, [2, 3]);
+
+  // polling chart
+  const polls = info.polls.slice().sort((a, b) => a.end < b.end ? -1 : 1);
+  const dots = (key, color, name) => ({
+    x:polls.map(p => p.end), y:polls.map(p => p[key]), mode:'markers', name,
+    marker:{ size:7, color, opacity:0.45, line:{ width:0 } },
+    text:polls.map(p => `${p.pollster} (${anFmtDate(p.start)}–${anFmtDate(p.end)})`),
+    hovertemplate:'%{y}% · %{text}<extra></extra>', showlegend:false
+  });
+  const pTraces = [
+    { ...lineBase, x, y:S.map(p => p.pollD), name:`${info.dem} (D) average`, line:{ color:'#5b9bd9', width:2.5 }, hovertemplate:'%{y:.1f}%' },
+    { ...lineBase, x, y:S.map(p => p.pollR), name:`${info.rep} (R) average`, line:{ color:'#d4675a', width:2.5 }, hovertemplate:'%{y:.1f}%' },
+    endMark(last.iso, last.pollD, '#5b9bd9', 'D end'), endMark(last.iso, last.pollR, '#d4675a', 'R end'),
+    dots('dem', '#5b9bd9', 'D polls'), dots('rep', '#d4675a', 'R polls')
+  ];
+  const pm = (last.pollD - last.pollR) / 100;
+  const pLayout = anChartLayout(S.flatMap(p => [p.pollD, p.pollR]).concat(polls.flatMap(p => [p.dem, p.rep])),
+    { x:last.iso, text:`Average<br>${anMarginLabel(pm)}` }, (last.pollD + last.pollR) / 2, anMarginColor(pm));
+  await Plotly.react(pollEl, pTraces, pLayout, { displayModeBar:false, responsive:true });
+  anBlinkEnds(pollEl, [2, 3]);
+}
+
+function anRenderPollTable(race, m){
+  const info = m.info;
+  const polls = info.polls.slice().sort((a, b) => a.end < b.end ? 1 : -1);
+  const row = p => {
+    const mg = (p.dem - p.rep) / 100;
+    const win = mg === 0 ? '<span style="color:var(--muted)">Tied</span>' :
+      `<span class="an-win ${mg > 0 ? 'D' : 'R'}">✓ ${mg > 0 ? info.dem + ' (D)' : info.rep + ' (R)'}</span>`;
+    const oth = [p.other != null ? `${p.other}% other` : null, p.undecided != null ? `${p.undecided}% undecided` : null].filter(Boolean).join(' · ') || '—';
+    return `<tr>
+      <td>${anFmtDate(p.start)} – ${anFmtDate(p.end)}</td>
+      <td>${p.source ? `<a href="${p.source}" target="_blank" rel="noopener">${p.pollster}</a>` : p.pollster}${p.sponsor ? ` <span style="opacity:.65">(${p.sponsor}-aligned)</span>` : ''}</td>
+      <td>${p.n ? fmt(p.n) + ' ' : ''}${p.pop || ''}${p.moe ? ` ±${p.moe}` : ''}</td>
+      <td class="num-d">${p.dem}%</td><td class="num-r">${p.rep}%</td>
+      <td style="color:var(--muted)">${oth}</td>
+      <td class="${mg > 0 ? 'num-d' : (mg < 0 ? 'num-r' : '')}">${anMarginLabel(mg)}</td>
+      <td>${win}</td>
+    </tr>`;
+  };
+  const avgRow = (label, mg, d, r, cls) => `<tr class="an-row-avg"><td colspan="3"><b>${label}</b></td>` +
+    (d == null ? '<td></td><td></td>' : `<td class="num-d">${d.toFixed(1)}%</td><td class="num-r">${r.toFixed(1)}%</td>`) +
+    `<td></td><td class="${mg > 0 ? 'num-d' : 'num-r'}"><b>${anMarginLabel(mg)}</b></td>` +
+    `<td><span class="an-win ${mg > 0 ? 'D' : 'R'}">✓ ${mg > 0 ? info.dem + ' (D)' : info.rep + ' (R)'}</span></td></tr>`;
+  const head = `<thead><tr><th>Dates</th><th>Pollster</th><th>Sample</th><th>${info.dem} (D)</th><th>${info.rep} (R)</th><th>Others</th><th>Margin</th><th>Leads</th></tr></thead>`;
+  let rows = '';
+  if(m.poll) rows += avgRow(`Polling average (${m.poll.n} polls)`, m.poll.raw, m.poll.dem, m.poll.rep);
+  rows += avgRow('Forecast (projected final vote)', m.margin, null, null);
+  rows += polls.map(row).join('');
+  const el = document.getElementById('anPollTable_' + race);
+  if(el) el.innerHTML = `<table class="an-poll-table">${head}<tbody>${rows}</tbody></table>`;
+}
+
+function anEnsureRaceSections(){
+  const host = document.getElementById('anRaces');
+  if(host.dataset.built) return;
+  host.dataset.built = '1';
+  host.innerHTML = ['governor', 'senate'].map(race => `
+    <div class="panel an-race" id="anRace_${race}">
+      <div class="an-race-head"><h2 id="anRaceTitle_${race}"></h2><span class="an-sub" id="anRaceSub_${race}"></span></div>
+      <div class="an-charts">
+        <div><div class="an-chart-title">Forecast over time · share of all votes</div><div class="an-chart" id="anFc_${race}"></div></div>
+        <div><div class="an-chart-title">Polling average over time</div><div class="an-chart" id="anPoll_${race}"></div></div>
+      </div>
+      <div class="an-poll-table-wrap" id="anPollTable_${race}"></div>
+    </div>`).join('');
+}
+
+function anSyncControls(M){
+  const sel = document.getElementById('anScenario');
+  const lab = { low:'2022 turnout', mid:'2018/2022/2024 average', high:'2024 turnout' };
+  [...sel.options].forEach(o => { o.textContent = `${lab[o.value]} · ${(M.scenarioTurnout[o.value] * 100).toFixed(1)}% statewide`; });
+  sel.value = anState.scenario;
+  anSetText('anScenarioVal', '');
+  const adj = anState.turnoutAdj;
+  anSetText('anTurnoutAdjVal', adj === 0 ? 'no change' : `${adj > 0 ? '+' : ''}${adj} pts`);
+  const t = anState.tilt;
+  anSetText('anTiltVal', t === 0 ? 'Even' : `${Math.abs(t)} pts ${t > 0 ? 'more Republican' : 'more Democratic'}`);
+  const ov = anState.override[anState.race];
+  anSetText('anOverrideVal', ov === null ? 'model' : `${ov > 0 ? 'D+' : (ov < 0 ? 'R+' : '')}${Math.abs(ov)}`);
+  anSetText('anDLoyalVal', anState.dLoyal + '%');
+  anSetText('anRLoyalVal', anState.rLoyal + '%');
+  const ovEl = document.getElementById('anOverride');
+  if(document.activeElement !== ovEl) ovEl.value = ov === null ? '' : ov;
+}
+
+function anRenderCheck(m, M){
+  const x = anCrossover(m, M);
+  const info = m.info;
+  if(!isFinite(x.nu)){ document.getElementById('anCheck').innerHTML = ''; return; }
+  const nuPct = x.nu * 100;
+  const plaus = nuPct >= 30 && nuPct <= 70;
+  document.getElementById('anCheck').innerHTML =
+    `<b class="an-mint">NPA and crossover check</b> — ${info.title}<br>` +
+    `Projected ballots by registration: <span class="num-d">${fmt(Math.round(x.nD))} Democratic</span> · <span class="num-r">${fmt(Math.round(x.nR))} Republican</span> · <span class="num-npa">${fmt(Math.round(x.nN))} NPA/other</span>.<br>` +
+    `If ${anState.dLoyal}% of Democrats vote for ${info.dem} (about ${fmt(Math.round(x.dDefect))} ballots go elsewhere) and ${anState.rLoyal}% of Republicans vote for ${info.rep} ` +
+    `(about ${fmt(Math.round(x.rDefect))} ballots go elsewhere), NPA voters would have to split <b>${nuPct.toFixed(0)}% ${info.dem} / ${(100 - nuPct).toFixed(0)}% ${info.rep}</b> to produce this forecast.` +
+    (plaus ? '' : `<br><span class="warn">That NPA split is outside the usual range, so the loyalty levels (or the forecast margin) may need another look.</span>`);
+}
+
+async function renderAnalysis(){
+  if(currentMode !== 'analysis') return;
+  anEnsureRaceSections();
+  const M = anCompute();
+  anLast = M;
+  const m = M.models[anState.race];
+  anSyncControls(M);
+  anRenderHero(m, M);
+  document.getElementById('anBlurb').innerHTML = anBuildBlurb(M);
+  anRenderTable(m);
+  anRenderCheck(m, M);
+  ['governor', 'senate'].forEach(race => {
+    const mm = M.models[race];
+    anSetText('anRaceTitle_' + race, `${mm.info.title}: ${mm.info.dem} (D) vs ${mm.info.rep} (R)`);
+    const pa = mm.poll ? `Polling average ${anMarginLabel(mm.poll.raw)}` : 'No polls yet';
+    anSetText('anRaceSub_' + race, `Forecast ${anMarginLabel(mm.margin)} · ${pa}`);
+    anRenderPollTable(race, mm);
+  });
+  document.querySelectorAll('#anRaceSelect button').forEach(b => b.classList.toggle('active', b.dataset.race === anState.race));
+  document.querySelectorAll('#anViewSelect button').forEach(b => b.classList.toggle('active', b.dataset.view === anState.view));
+  await anRenderMap(m);
+  await Promise.all(['governor', 'senate'].map(race => anDrawRace(race, M.models[race])));
+}
+
+let anRenderQueued = false;
+function anQueueRender(){
+  if(anRenderQueued) return;
+  anRenderQueued = true;
+  requestAnimationFrame(() => { anRenderQueued = false; renderAnalysis(); });
+}
+
+function initAnalysis(){
+  if(anState.inited) return;
+  anState.inited = true;
+  document.querySelectorAll('#anRaceSelect button').forEach(b => b.addEventListener('click', () => { anState.race = b.dataset.race; anQueueRender(); }));
+  document.querySelectorAll('#anViewSelect button').forEach(b => b.addEventListener('click', () => { anState.view = b.dataset.view; anQueueRender(); }));
+  document.getElementById('anScenario').addEventListener('change', e => { anState.scenario = e.target.value; anQueueRender(); });
+  document.getElementById('anTurnoutAdj').addEventListener('input', e => { anState.turnoutAdj = parseFloat(e.target.value); anQueueRender(); });
+  document.getElementById('anTilt').addEventListener('input', e => { anState.tilt = parseFloat(e.target.value); anQueueRender(); });
+  document.getElementById('anDLoyal').addEventListener('input', e => { anState.dLoyal = parseFloat(e.target.value); anQueueRender(); });
+  document.getElementById('anRLoyal').addEventListener('input', e => { anState.rLoyal = parseFloat(e.target.value); anQueueRender(); });
+  document.getElementById('anOverride').addEventListener('input', e => {
+    const v = parseFloat(e.target.value);
+    anState.override[anState.race] = isFinite(v) ? v : null;
+    anQueueRender();
+  });
+  document.getElementById('anResetBtn').addEventListener('click', () => {
+    Object.assign(anState, AN_DEFAULTS, { override:{ governor:null, senate:null } });
+    document.getElementById('anTurnoutAdj').value = 0;
+    document.getElementById('anTilt').value = 0;
+    document.getElementById('anDLoyal').value = AN_DEFAULTS.dLoyal;
+    document.getElementById('anRLoyal').value = AN_DEFAULTS.rLoyal;
+    anQueueRender();
+  });
+}
+
 </script>
 
 <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "fd5bb1f3f1224382a6c68221e97e0c9b"}'></script><!-- End Cloudflare Web Analytics -->

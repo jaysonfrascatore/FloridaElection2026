@@ -1,0 +1,159 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Election ID:
+FL-2026-General
+
+Run Time:
+Updated at October 16th, 2026 at 3:00pm Eastern Time
+
+Counties Loaded:
+67 / 67
+
+Updated Counties:
+59
+
+Unchanged Counties:
+False
+
+Rejected County Updates:
+0
+
+STATEWIDE TOTALS
+=================================
+
+DEM:
+342,494
+
+REP:
+293,308
+
+OTHER:
+170,630
+
+TOTAL:
+806,432
+
+STATEWIDE SUMMARY
+=================================
+
+🔵 Democrats lead by 49,186 votes statewide.
+
+Margin Change:
+-0.07% toward Republicans
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +19,585
+🔴 REP: +17,593
+🟣 OTHER: +10,726
+🟢 TOTAL: +47,904
+
+REJECTED COUNTY UPDATES
+=================================
+
+
+No county updates were rejected.
+
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+Highlands
+
+Lean D → Toss Up D
+
+Margin Move:
+-0.021
+
+
+
+Monroe
+
+Toss Up D → Toss Up R
+
+Margin Move:
+-0.012
+
+
+
+Putnam
+
+Likely R → Lean R
+
+Margin Move:
++0.003
+
+
+
+St. Johns
+
+Lean D → Toss Up D
+
+Margin Move:
+-0.003
+
+
+
+Sumter
+
+Likely R → Safe R
+
+Margin Move:
+-0.010
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️3 PM Florida EV & VBM Update
+
+New votes have been cast in 59 counties over the last hour, with the largest update coming from Miami-Dade County.
+
+🔵 DEM: +19,585
+🔴 REP: +17,593
+🟣 OTHER: +10,726
+🟢 TOTAL: +47,904
+
+🔵 Democrats lead by 49,186 votes statewide.
+
+🔴 Margin Change: -0.07% toward Republicans
+
+Largest County Updates
+
+
+🥇Miami-Dade County
+
+🔵 DEM: +2,931
+🔴 REP: +2,330
+🟣 OTHER: +2,084
+🟢 TOTAL: +7,345
+
+
+
+🥈Pinellas County
+
+🔵 DEM: +1,810
+🔴 REP: +1,824
+🟣 OTHER: +1,071
+🟢 TOTAL: +4,705
+
+
+
+🥉Palm Beach County
+
+🔵 DEM: +2,264
+🔴 REP: +1,245
+🟣 OTHER: +1,087
+🟢 TOTAL: +4,596
+
+
+
+#Florida #EarlyVoting #VoteByMail

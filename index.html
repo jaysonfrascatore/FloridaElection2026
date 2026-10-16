@@ -255,7 +255,10 @@
   .an-blurb b.d, .hl-d{ color:var(--dem); } .an-blurb b.r, .hl-r{ color:var(--rep); }
   .hl-d, .hl-r, .hl-green, .hl-gold{ font-weight:600; }
   .hl-green{ color:var(--total-green); } .hl-gold{ color:var(--gold); }
-  .an-change{ padding:8px 12px; border-left:3px solid #7ff0c4; background:rgba(127,240,196,.06); border-radius:0 6px 6px 0; }
+  .an-change{ padding:10px 14px; margin:0 0 12px; border-left:3px solid #7ff0c4; background:rgba(127,240,196,.07); border-radius:0 8px 8px 0; font-size:13px; line-height:1.6; }
+  .an-change .ch-h{ font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:#7ff0c4; margin-bottom:6px; }
+  .an-change .ch-row{ margin:3px 0; } .an-change .ch-why{ margin:8px 0 0; color:var(--muted); }
+  .an-change .arr{ color:var(--muted); padding:0 4px; }
   .an-compare, .an-npa{ margin:18px 0; }
   .an-compare table{ width:100%; border-collapse:collapse; font-size:12.5px; margin-top:10px; }
   .an-compare th{ text-align:right; font-family:var(--mono); font-size:10.5px; color:var(--muted); font-weight:500; padding:6px 10px; border-bottom:1px solid var(--border); }
@@ -9419,9 +9422,10 @@ function anCompute(){
       for(let day = first; day <= today; day += AN_DAY){
         const pa = anPollAvg(info.polls, day + AN_DAY - 1);
         if(!pa) continue;
-        const t = targetFor(pa, anDaysTo(day), fundFor(race, day + AN_DAY - 1).f);
+        const fdDay = fundFor(race, day + AN_DAY - 1).f;
+        const t = targetFor(pa, anDaysTo(day), fdDay);
         series.push({
-          day, iso:anWallToIso(day),
+          day, iso:anWallToIso(day), f:fdDay, w:anPollWeight(anDaysTo(day)),
           pollD:pa.dem, pollR:pa.rep,
           fcD:(1 - AN_OTHER_SHARE) * (1 + t) / 2 * 100, fcR:(1 - AN_OTHER_SHARE) * (1 - t) / 2 * 100, t
         });
@@ -9479,7 +9483,7 @@ function anBuildBlurb(M){
   const regD = Object.keys(SIM_REG).reduce((a, n) => a + SIM_REG[n][0] * SIM_REG[n][2], 0) / M.regTot;
   const regR = Object.keys(SIM_REG).reduce((a, n) => a + SIM_REG[n][0] * SIM_REG[n][1], 0) / M.regTot;
   const past = y => { const nm = Object.keys(y); const d = nm.reduce((a, n) => a + y[n][0], 0), r = nm.reduce((a, n) => a + y[n][1], 0); return (d - r) / (d + r); };
-  const p1 = `The forecast has ${leadTxt} in the ${info.title} race: ${pollTxt}.` + anChangeHtml(M);
+  const p1 = `The forecast has ${leadTxt} in the ${info.title} race: ${pollTxt}.`;
   const p2 = `About ${pctCounted.toFixed(1)}% of the projected vote is already counted (<span class="hl-gold">${fmt(M.actualSum)} counted</span> of <span class="hl-green">roughly ${fmt(Math.round(M.Esum))} ballots</span>), with ${Math.round(M.daysLeft)} days until Election Day. Projected final turnout is ${turnoutPct.toFixed(1)}% of registered voters, against ${(M.past.y2024.turnout * 100).toFixed(1)}% in 2024 and ${(M.past.y2022.turnout * 100).toFixed(1)}% in 2022 on today's voter rolls.`;
   const npaLine = m.npa
     ? `Polls that break out independents have NPA voters going ${(m.npa.nu * 100).toFixed(0)}% to ${info.dem} (two-party), ${m.npaGap >= 0 ? 'better' : 'worse'} for ${info.dem} than the 2018, 2022 and 2024 exit polls imply (about ${(M.nuHist * 100).toFixed(0)}%), so the fundamentals are adjusted to ${anMarginLabel(m.fundAdj)}.`
@@ -9490,7 +9494,7 @@ function anBuildBlurb(M){
   const p3 = `Registered Republicans outnumber registered Democrats ${regR.toFixed(1)}% to ${regD.toFixed(1)}%, and the county average of the last three statewide results is ${anMarginLabel(M.fundamentals)} on a two-party basis (2018 governor ${anMarginLabel(past(SIM_2018))}, 2022 governor ${anMarginLabel(past(SIM_2022))}, 2024 president ${anMarginLabel(past(SIM_2024))}). ${npaLine}${loyLine}`;
   const dir = v => `${Math.abs(v * 100).toFixed(1)} points ${v >= 0 ? 'more Democratic' : 'more Republican'}`;
   const p4 = `Compared with the past: the ${info.title} forecast is ${dir(m.margin - M.past.y2024.margin)} than the 2024 presidential result and ${dir(m.margin - M.past.y2022.margin)} than the 2022 governor's race. Midterms have also tended to be harder for the party holding the White House, which is context rather than an input to the numbers here.`;
-  return anHighlight(`<div class="an-date">${today}</div><h2>Today's read · ${info.title}</h2><p>${p1}</p><p>${p2}</p><p>${p3}</p><p>${p4}</p>`);
+  return anHighlight(`<div class="an-date">${today}</div><h2>Today's read · ${info.title}</h2><p>${p1}</p>${anChangeHtml(M)}<p>${p2}</p><p>${p3}</p><p>${p4}</p>`);
 }
 
 
@@ -9692,7 +9696,7 @@ function anBuildHouseBlurb(M){
     (flipsD.length ? `That is enough to put ${flipsD.length === 1 ? 'one district' : flipsD.length + ' districts'} on the Democratic side that Donald Trump carried in 2024: ${list(flipsD)}. ` : 'No district that Donald Trump carried in 2024 flips to the Democrats. ') +
     (flipsR.length ? `${list(flipsR)} would flip the other way.` : '');
   const p3 = `The closest races are ${list(close)}. Only FL-08 and FL-09 have public polls, so most ratings rest on the district's partisan lean and the statewide swing.`;
-  return anHighlight(`<div class="an-date">${today}</div><h2>Today's read · U.S. House</h2><p>${p1}</p><p>${anChangeHtml(M)}</p><p>${p2}</p><p>${p3}</p>`);
+  return anHighlight(`<div class="an-date">${today}</div><h2>Today's read · U.S. House</h2><p>${p1}</p>${anChangeHtml(M)}<p>${p2}</p><p>${p3}</p>`);
 }
 
 function anRenderTable(m){
@@ -9955,45 +9959,70 @@ function anHighlight(html){
 }
 
 // ---- "what changed" paragraph: shown only when something moved ----
-function anChangeHtml(M){
-  const k = 1 - AN_OTHER_SHARE, day7 = M.today - 7 * AN_DAY, bits = [];
-  const toward = (v, info) => v > 0 ? info.dem : info.rep;
-  const pts = v => (Math.abs(v) * 100).toFixed(1);
-  if(anState.race === 'house'){
-    const g = M.models.governor, s = M.models.senate;
-    const g7 = g.series.find(p => p.day === day7), s7 = s.series.find(p => p.day === day7);
-    if(!g7 || !s7) return '';
-    const gN = g.series[g.series.length - 1], sN = s.series[s.series.length - 1];
-    const env7 = (k * g7.t + k * s7.t) / 2 - M.past.y2024.margin;
-    const H7 = anHouseCompute(M.models, M.past, day7, env7);
-    const moved = M.house.rows.filter((r, i) => r.rating !== H7.rows[i].rating);
-    const seatsMoved = M.house.seats.R !== H7.seats.R || M.house.seats.toss !== H7.seats.toss;
-    if(!moved.length && !seatsMoved) return '';
-    const dEnv = M.house.env - H7.env;
-    const freshPolls = ['governor', 'senate'].map(r => M.models[r].info.polls.filter(p => anIsoWall(p.end) > day7).map(p => `${p.pollster} (${M.models[r].info.title})`)).flat();
-    bits.push(`Over the past week the statewide environment, the average of the Governor and Senate forecasts compared with 2024, went from ${anMarginLabel(H7.env)} to ${anMarginLabel(M.house.env)}, a move of ${(Math.abs(dEnv) * 100).toFixed(1)} points toward ${dEnv >= 0 ? 'the Democrats' : 'the Republicans'}. The Governor forecast went from ${anMarginLabel(k * g7.t)} to ${anMarginLabel(k * gN.t)} and the Senate forecast from ${anMarginLabel(k * s7.t)} to ${anMarginLabel(k * sN.t)}${freshPolls.length ? ', after new polls from ' + freshPolls.slice(0, 4).join(', ') : ''}.`);
-    bits.push(`That swing is applied to every district (a little more for districts near even, less for lopsided ones). Each district's 2024 presidential baseline on this map is fixed, so nothing about the districts themselves changed; the ones sitting near a rating line crossed it.`);
-    if(seatsMoved) bits.push(`Republicans are now projected to win ${M.house.seats.R} seats (${H7.seats.R} a week ago) with ${M.house.seats.toss} toss-up${M.house.seats.toss === 1 ? '' : 's'} (${H7.seats.toss} a week ago).`);
-    moved.slice(0, 5).forEach(r => {
-      const old = H7.rows.find(x => x.d === r.d);
-      bits.push(`${anDistLabel(r.d)} went from ${anMarginLabel(old.margin)} (${old.rating}) to ${anMarginLabel(r.margin)} (${r.rating}), from a 2024 baseline of ${anMarginLabel(r.m24)}.`);
-    });
-    if(moved.length > 5) bits.push(`${moved.length - 5} other districts also changed rating.`);
-  }else{
-    const m = M.models[anState.race], info = m.info, S = m.series;
-    const last = S[S.length - 1], s7 = S.find(p => p.day === day7);
-    if(s7){
-      const f0 = s7.t * k, f1 = last.t * k, dF = f1 - f0;
-      const p0 = (s7.pollD - s7.pollR) / 100, p1 = (last.pollD - last.pollR) / 100, dP = p1 - p0;
-      if(Math.abs(dF) >= 0.01) bits.push(`Over the past week the forecast moved ${pts(dF)} points toward ${toward(dF, info)} (from ${anMarginLabel(f0)} to ${anMarginLabel(f1)}).`);
-      if(Math.abs(dP) >= 0.01) bits.push(`The polling average moved ${pts(dP)} points toward ${toward(dP, info)} (from ${anMarginLabel(p0)} to ${anMarginLabel(p1)}).`);
-      const r0 = ratingLabelForMargin(f0), r1 = ratingLabelForMargin(f1);
-      if(r0 !== r1) bits.push(`The race rating changed from ${r0} to ${r1}.`);
-    }
-    const fresh = info.polls.filter(p => anIsoWall(p.end) >= M.today - 2 * AN_DAY);
-    if(fresh.length) bits.push(`New ${fresh.length === 1 ? 'poll' : 'polls'}: ` + fresh.slice(0, 3).map(p => `${p.pollster} (${anMarginLabel((p.dem - p.rep) / 100)})`).join(', ') + '.');
+// What moved between two days for one race, and why: the forecast, the polling average, the adjusted fundamentals,
+// the poll weight, and any new polls. Everything is read back from the daily series.
+function anRaceDelta(M, race, dayA){
+  const k = 1 - AN_OTHER_SHARE, m = M.models[race], S = m.series;
+  const a = S.find(p => p.day === dayA), b = S[S.length - 1];
+  if(!a || !b) return null;
+  const fresh = m.info.polls.filter(p => anIsoWall(p.end) > dayA && anIsoWall(p.end) <= M.today)
+    .sort((x, y) => anIsoWall(y.end) - anIsoWall(x.end));
+  return { m, info:m.info, f0:a.t * k, f1:b.t * k, p0:(a.pollD - a.pollR) / 100, p1:(b.pollD - b.pollR) / 100,
+    u0:a.f, u1:b.f, w0:a.w, w1:b.w, fresh };
+}
+function anWhyText(d){
+  const L = anMarginLabel, out = [];
+  if(d.fresh.length){
+    out.push(`${d.fresh.length === 1 ? 'A new poll' : 'New polls'} (${d.fresh.slice(0, 4).map(p => `${p.pollster}, ${L((p.dem - p.rep) / 100)}`).join('; ')}) moved the polling average ${L(d.p0)} <span class="arr">→</span> ${L(d.p1)}.`);
   }
-  return bits.length ? `<p class="an-change"><b>What changed:</b> ${bits.join(' ')}</p>` : '';
+  if(Math.abs(d.u1 - d.u0) >= 0.001) out.push(`The adjusted fundamentals went ${L(d.u0)} <span class="arr">→</span> ${L(d.u1)} as the party mix of the projected electorate and the independent and party-loyalty polling updated.`);
+  if(Math.abs(d.w1 - d.w0) >= 0.001) out.push(`Polls now carry ${(d.w1 * 100).toFixed(1)}% of the target, up from ${(d.w0 * 100).toFixed(1)}%, as Election Day gets closer.`);
+  return out.join(' ');
+}
+function anChangeWindow(M, n){
+  const k = 1 - AN_OTHER_SHARE, dayA = M.today - n * AN_DAY;
+  const when = n === 1 ? 'since yesterday' : (n === 7 ? 'over the past week' : `over the past ${n} days`);
+  const L = anMarginLabel;
+  const head = `<div class="ch-h">What changed ${when}</div>`;
+  if(anState.race === 'house'){
+    const dg = anRaceDelta(M, 'governor', dayA), ds = anRaceDelta(M, 'senate', dayA);
+    if(!dg || !ds) return '';
+    const env0 = (dg.f0 + ds.f0) / 2 - M.past.y2024.margin;
+    const H0 = anHouseCompute(M.models, M.past, dayA, env0);
+    const moved = M.house.rows.filter((r, i) => r.rating !== H0.rows[i].rating);
+    const seatsMoved = M.house.seats.R !== H0.seats.R || M.house.seats.toss !== H0.seats.toss;
+    if(!moved.length && !seatsMoved) return '';
+    const rows = [];
+    if(seatsMoved){
+      const parts = [['Republicans', 'R'], ['Democrats', 'D'], ['toss-ups', 'toss']].filter(([n, key]) => M.house.seats[key] !== H0.seats[key]).map(([n, key]) => `${n} ${H0.seats[key]} <span class="arr">→</span> ${M.house.seats[key]}`);
+      rows.push(`<div class="ch-row"><b>Projected seats:</b> ${parts.join(', ')}</div>`);
+    }
+    moved.slice(0, 6).forEach(r => {
+      const o = H0.rows.find(x => x.d === r.d);
+      rows.push(`<div class="ch-row"><b>${anDistLabel(r.d)}:</b> ${L(o.margin)} (${o.rating}) <span class="arr">→</span> ${L(r.margin)} (${r.rating})</div>`);
+    });
+    if(moved.length > 6) rows.push(`<div class="ch-row">${moved.length - 6} more districts also changed rating.</div>`);
+    const dEnv = M.house.env - env0;
+    const why = `<div><b>Why:</b> every district starts from its fixed 2024 presidential result on the new map and gets the same statewide swing, so only the swing moved. The statewide environment (the average of the Governor and Senate forecasts, compared with 2024) went ${L(env0)} <span class="arr">→</span> ${L(M.house.env)}, a move of ${(Math.abs(dEnv) * 100).toFixed(1)} points toward ${dEnv >= 0 ? 'the Democrats' : 'the Republicans'}. The districts listed sit close to a rating line, so a small move crossed it.</div>` +
+      `<div style="margin-top:6px"><b>Governor:</b> ${L(dg.f0)} <span class="arr">→</span> ${L(dg.f1)}. ${anWhyText(dg)}</div>` +
+      `<div style="margin-top:6px"><b>Senate:</b> ${L(ds.f0)} <span class="arr">→</span> ${L(ds.f1)}. ${anWhyText(ds)}</div>`;
+    return `<div class="an-change">${head}${rows.join('')}<div class="ch-why">${why}</div></div>`;
+  }
+  const d = anRaceDelta(M, anState.race, dayA);
+  if(!d) return '';
+  const r0 = ratingLabelForMargin(d.f0), r1 = ratingLabelForMargin(d.f1);
+  const moved = Math.abs(d.f1 - d.f0) >= 0.01, polled = Math.abs(d.p1 - d.p0) >= 0.01;
+  if(!moved && !polled && r0 === r1 && !d.fresh.length) return '';
+  const rating = r0 === r1 ? `${r1}, no change in rating` : `${r0} <span class="arr">→</span> ${r1}`;
+  const row = `<div class="ch-row"><b>Forecast:</b> ${L(d.f0)} <span class="arr">→</span> ${L(d.f1)} (${rating})</div>` +
+    `<div class="ch-row"><b>Polling average:</b> ${L(d.p0)} <span class="arr">→</span> ${L(d.p1)}</div>`;
+  const why = anWhyText(d) || 'No new polls came in, so the polling average did not move.';
+  return `<div class="an-change">${head}${row}<div class="ch-why"><b>Why:</b> ${why}</div></div>`;
+}
+// Looks back one day first, then three, then seven, and reports the shortest window in which something moved.
+function anChangeHtml(M){
+  for(const n of [1, 3, 7]){ const h = anChangeWindow(M, n); if(h) return h; }
+  return '';
 }
 
 // ---- Download PNG (map + forecast summary, clearly marked as a forecast) ----

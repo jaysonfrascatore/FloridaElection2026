@@ -7,13 +7,13 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 15th, 2026 at 7:00pm Eastern Time
+Updated at October 16th, 2026 at 11:07am Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-47
+44
 
 Unchanged Counties:
 False
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-316,326
+322,909
 
 REP:
-268,657
+275,715
 
 OTHER:
-156,153
+159,904
 
 TOTAL:
-741,136
+758,528
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 47,669 votes statewide.
+🔵 Democrats lead by 47,194 votes statewide.
 
 Margin Change:
-+0.07% toward Democrats
+-0.13% toward Republicans
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +3,822
-🔴 REP: +2,477
-🟣 OTHER: +1,690
-🟢 TOTAL: +7,989
+🔵 DEM: +6,583
+🔴 REP: +7,058
+🟣 OTHER: +3,751
+🟢 TOTAL: +17,392
 
 REJECTED COUNTY UPDATES
 =================================
@@ -64,30 +64,21 @@ RATING / FORECAST CHANGES
 =================================
 
 
-Indian River
-
-Likely R → Lean R
-
-Margin Move:
-+0.003
-
-
-
-Okeechobee
+Charlotte
 
 Likely R → Safe R
 
 Margin Move:
--0.009
+-0.005
 
 
 
-Putnam
+Franklin
 
-Lean R → Likely R
+Toss Up D → Toss Up R
 
 Margin Move:
--0.001
+-0.013
 
 
 
@@ -95,46 +86,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️7 PM Florida EV & VBM Update
+🗳️11 AM Florida EV & VBM Update
 
-New votes have been cast in 47 counties over the last hour, with the largest update coming from Broward County.
+New votes have been cast in 44 counties over the last hour, with the largest update coming from Hillsborough County.
 
-🔵 DEM: +3,822
-🔴 REP: +2,477
-🟣 OTHER: +1,690
-🟢 TOTAL: +7,989
+🔵 DEM: +6,583
+🔴 REP: +7,058
+🟣 OTHER: +3,751
+🟢 TOTAL: +17,392
 
-🔵 Democrats lead by 47,669 votes statewide.
+🔵 Democrats lead by 47,194 votes statewide.
 
-🔴 Margin Change: +0.07% toward Democrats
+🔴 Margin Change: -0.13% toward Republicans
 
 Largest County Updates
 
 
-🥇Broward County
+🥇Hillsborough County
 
-🔵 DEM: +1,058
-🔴 REP: +383
-🟣 OTHER: +472
-🟢 TOTAL: +1,913
-
-
-
-🥈Palm Beach County
-
-🔵 DEM: +519
-🔴 REP: +142
-🟣 OTHER: +173
-🟢 TOTAL: +834
+🔵 DEM: +3,284
+🔴 REP: +2,491
+🟣 OTHER: +1,634
+🟢 TOTAL: +7,409
 
 
 
-🥉Polk County
+🥈Lee County
 
-🔵 DEM: +362
-🔴 REP: +311
-🟣 OTHER: +139
-🟢 TOTAL: +812
+🔵 DEM: +957
+🔴 REP: +1,779
+🟣 OTHER: +768
+🟢 TOTAL: +3,504
+
+
+
+🥉Collier County
+
+🔵 DEM: +385
+🔴 REP: +772
+🟣 OTHER: +317
+🟢 TOTAL: +1,474
 
 
 

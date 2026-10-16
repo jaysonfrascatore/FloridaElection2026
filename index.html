@@ -1492,6 +1492,8 @@
 
 <div id="analysisDashboard">
 
+  <div class="margin-strip" id="anTurnHero" style="display:none"></div>
+
   <div class="margin-strip" id="anHero">
     <div class="row">
       <span class="label" id="anHeroLabel">Projected final result</span>
@@ -1553,6 +1555,16 @@
             <th>County</th><th>Rating</th><th>Margin</th><th class="an-hm">DEM</th><th class="an-hm">REP</th><th class="an-hm">Other</th><th class="an-hm">Total</th><th class="an-hm">Turnout</th><th>vs 2024</th><th class="an-hm">vs 2022</th><th>Now</th>
           </tr></thead>
           <tbody id="anTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel" id="anTurnPanel" style="display:none">
+      <h2>Projected turnout by county</h2>
+      <div class="table-hint">Expected ballots when every vote is counted, against each county's registered voters.</div>
+      <div class="table-wrap">
+        <table id="anTurnTable">
+          <thead><tr><th>County</th><th class="an-hm">Registered</th><th>Counted</th><th>Projected total</th><th>Turnout</th><th class="an-hm">Counted %</th></tr></thead>
+          <tbody id="anTurnBody"></tbody>
         </table>
       </div>
     </div>
@@ -9541,6 +9553,41 @@ function anRenderHero(m, M){
   anSetText('anStatRating', ratingLabelForMargin(m.margin));
 }
 
+// ---- Final turnout view: statewide, no race ----
+function anRenderTurnHero(M){
+  const reg = M.regTot, tot = M.Esum, p = M.party, pt = (p.d + p.r + p.n) || 1;
+  const dP = p.d / pt * 100, rP = p.r / pt * 100, nP = p.n / pt * 100;
+  const card = (v, k, color) => `<div class="stat-card"><div class="v"${color ? ` style="color:${color}"` : ''}>${v}</div><div class="k">${k}</div></div>`;
+  document.getElementById('anTurnHero').innerHTML =
+    `<div class="row"><span class="label">Projected final turnout · Florida general election</span>` +
+    `<span class="leader"><span style="color:var(--total-green)">${(tot / reg * 100).toFixed(1)}%</span> <span style="font-size:13px; color:var(--muted)">of registered voters</span></span></div>` +
+    `<div class="bar-track"><div class="bar-seg bar-d" style="width:${dP}%"></div><div class="bar-seg bar-r" style="width:${rP}%"></div><div class="bar-seg bar-npa" style="width:${nP}%"></div></div>` +
+    `<div class="bar-labels"><span class="d" style="left:${Math.min(96, Math.max(4, dP / 2))}%">DEM ${dP.toFixed(1)}%</span><span class="r" style="left:${Math.min(96, Math.max(4, dP + rP / 2))}%">REP ${rP.toFixed(1)}%</span></div>` +
+    `<div class="stat-cards">` +
+      card(fmt(Math.round(tot)), 'Projected total votes', 'var(--total-green)') +
+      card(fmt(reg), 'Registered voters') +
+      card(fmt(M.actualSum), `Counted so far (${(tot ? M.actualSum / tot * 100 : 0).toFixed(1)}% of projected)`, 'var(--gold)') +
+      card(fmt(Math.round(p.d)), 'Projected Democratic ballots', 'var(--dem)') +
+      card(fmt(Math.round(p.r)), 'Projected Republican ballots', 'var(--rep)') +
+      card(fmt(Math.round(p.n)), 'Projected NPA/other ballots', 'var(--npa, #b794f4)') +
+    `</div>` +
+    `<div class="table-hint" style="margin-top:10px">Ballots are grouped by the voter's registered party, not by who they vote for. A Democrat or Republican who votes for the other party's candidate is still counted under their own party here.</div>`;
+}
+function anBuildTurnoutBlurb(M){
+  const today = new Date().toLocaleDateString('en-US', { timeZone:'America/New_York', weekday:'long', month:'long', day:'numeric' });
+  const pct = M.Esum ? M.actualSum / M.Esum * 100 : 0, tp = M.Esum / M.regTot * 100;
+  const p = M.party, pt = (p.d + p.r + p.n) || 1;
+  const p1 = `Florida is projected to finish with <span class="hl-green">roughly ${fmt(Math.round(M.Esum))} ballots</span>, a turnout of ${tp.toFixed(1)}% of registered voters, against ${(M.past.y2024.turnout * 100).toFixed(1)}% in 2024 and ${(M.past.y2022.turnout * 100).toFixed(1)}% in 2022 on today's voter rolls.`;
+  const p2 = `About ${pct.toFixed(1)}% of that is already in (<span class="hl-gold">${fmt(M.actualSum)} counted</span>), with ${Math.round(M.daysLeft)} days until Election Day. Counties running ahead of the rest of the state are nudged up and counties running behind are nudged down, and no county is projected below the votes already counted.`;
+  const p3 = `By registered party, that is about <span class="hl-d">${fmt(Math.round(p.d))} Democratic</span> (${(p.d / pt * 100).toFixed(1)}%), <span class="hl-r">${fmt(Math.round(p.r))} Republican</span> (${(p.r / pt * 100).toFixed(1)}%) and ${fmt(Math.round(p.n))} NPA or other (${(p.n / pt * 100).toFixed(1)}%). Counties with ballots counted are assumed to keep their party mix for the rest of their vote; counties with none yet use their registration.`;
+  return `<div class="an-date">${today}</div><h2>Today's read · Final turnout</h2><p>${p1}</p><p>${p2}</p><p>${p3}</p>`;
+}
+function anRenderTurnTable(m){
+  document.getElementById('anTurnBody').innerHTML = m.rows.map(r =>
+    `<tr><td class="county-name">${r.county}</td><td class="an-hm">${fmt(r.reg)}</td><td style="color:var(--gold)">${fmt(r.counted)}</td>` +
+    `<td class="num-total">${fmt(Math.round(r.E))}</td><td>${(r.turnout * 100).toFixed(1)}%</td><td class="an-hm">${r.E ? (r.counted / r.E * 100).toFixed(0) : 0}%</td></tr>`).join('');
+}
+
 function anHouseName(r, side){ return side === 'D' ? r.dem : (r.rep || 'none on the ballot'); }
 function anDistLabel(d){ return 'FL-' + String(d).padStart(2, '0'); }
 
@@ -9976,13 +10023,14 @@ async function anExportPng(){
   try{
     const M = anLast, race = anState.race, isHouse = race === 'house';
     const m = M.models[isHouse ? 'governor' : race], info = m.info, H = M.house;
-    const W = 900, S = 2, mapW = isHouse ? 560 : 900, mapH = 528;
+    const isTurn = !isHouse && anState.view === 'turnout';
+    const W = 900, S = 2, mapW = (isHouse || isTurn) ? 600 : 900, mapH = 528;
     const liveTraces = document.getElementById('anMap').data.filter(t => t.hoverinfo !== 'skip').map(t => Object.assign({}, t, { showscale:false }));
     const img = await renderMetricMapCanvas('an', null, mapW, mapH, S, liveTraces);
     const rowsLeg = [...document.querySelectorAll('#anSideLegend .side-legend-row')].map(r => ({
       color:r.querySelector('.sq').style.background, text:r.querySelector('.lbl').textContent }));
     const legTitle = (document.querySelector('#anSideLegend .side-legend-title') || {}).textContent || '';
-    const headerH = 214, legendH = 54, footerH = 96;
+    const headerH = 214, legendH = isTurn ? 14 : 54, footerH = 96;
     const cv = document.createElement('canvas');
     cv.width = W * S; cv.height = (headerH + mapH + legendH + footerH) * S;
     const ctx = cv.getContext('2d');
@@ -9990,14 +10038,23 @@ async function anExportPng(){
     const T = (txt, x, y, font, color) => { ctx.font = font.replace(/([\d.]+)px/, (a, n) => (n * S) + 'px'); ctx.fillStyle = color; ctx.fillText(txt, x * S, y * S); };
     const sans = 'Inter, Arial, sans-serif', mono = 'IBM Plex Mono, monospace';
     const stamp = new Date().toLocaleString('en-US', { timeZone:'America/New_York', month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit' }) + ' ET';
-    const title = isHouse ? 'Florida U.S. House Forecast 2026' : `Florida ${info.title} Forecast 2026: ${info.dem} vs ${info.rep}`;
+    const title = isTurn ? 'Florida 2026 General Election: Projected Final Turnout' : isHouse ? 'Florida U.S. House Forecast 2026' : `Florida ${info.title} Forecast 2026: ${info.dem} vs ${info.rep}`;
     T(title, 24, 40, `600 25px ${sans}`, '#e9edf5');
     // forecast banner
     const bx = 24 * S, by = 56 * S, bw = (W - 48) * S, bh = 34 * S;
     ctx.fillStyle = 'rgba(216,180,102,0.14)'; ctx.strokeStyle = '#d8b466'; ctx.lineWidth = 1.5 * S;
     if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 8 * S); ctx.fill(); ctx.stroke(); } else { ctx.fillRect(bx, by, bw, bh); ctx.strokeRect(bx, by, bw, bh); }
-    T(`FORECAST, NOT A RESULT. Subject to change as polls and votes come in. As of ${stamp}`, 38, 78, `700 13.5px ${mono}`, '#d8b466');
-    if(isHouse){
+    T(isTurn ? `PROJECTION, NOT A RESULT. Subject to change as ballots come in. As of ${stamp}` : `FORECAST, NOT A RESULT. Subject to change as polls and votes come in. As of ${stamp}`, 38, 78, `700 13.5px ${mono}`, '#d8b466');
+    if(isTurn){
+      const pt = (M.party.d + M.party.r + M.party.n) || 1;
+      T(`${(M.Esum / M.regTot * 100).toFixed(1)}% turnout projected`, 24, 118, `600 24px ${sans}`, '#80ed99');
+      T(`${fmt(Math.round(M.Esum))} projected ballots from ${fmt(M.regTot)} registered voters  ·  ${fmt(M.actualSum)} counted so far`, 24, 148, `15px ${sans}`, '#e9edf5');
+      ctx.font = `13px ${sans}`.replace(/([\d.]+)px/, (a, n) => (n * S) + 'px');
+      let x = 24 * S;
+      [[`Democratic ${fmt(Math.round(M.party.d))} (${(M.party.d / pt * 100).toFixed(1)}%)`, '#5b9bd9'], ['  ·  ', '#7c879c'], [`Republican ${fmt(Math.round(M.party.r))} (${(M.party.r / pt * 100).toFixed(1)}%)`, '#d4675a'], ['  ·  ', '#7c879c'], [`NPA/other ${fmt(Math.round(M.party.n))} (${(M.party.n / pt * 100).toFixed(1)}%)`, '#b794f4'], ['   by registered party', '#7c879c']].forEach(([t, c]) => {
+        ctx.fillStyle = c; ctx.fillText(t, x, 172 * S); x += ctx.measureText(t).width;
+      });
+    }else if(isHouse){
       ctx.font = `600 ${22 * S}px ${sans}`;
       let x = 24 * S;
       [[`Republicans ${H.seats.R}`, '#d4675a'], ['  ·  ', '#7c879c'], [`Democrats ${H.seats.D}`, '#5b9bd9'], ['   projected seats', '#7c879c']].forEach(([t, c], i) => {
@@ -10029,7 +10086,21 @@ async function anExportPng(){
       T('Closest races', x0, y0 + 4 * (cell + gap) + 18, `600 13px ${sans}`, '#8fa3c4');
       nc.forEach((r, i) => T(`${anDistLabel(r.d)}  ${anMarginLabel(r.margin)}  ${r.rating}`, x0, y0 + 4 * (cell + gap) + 40 + i * 20, `13px ${mono}`, r.margin > 0 ? '#5b9bd9' : '#d4675a'));
     }
-    // legend row
+    // legend
+    if(isTurn){
+      const sub = (document.querySelector('#anSideLegend .side-legend-title span') || {}).textContent || '';
+      const main = legTitle.replace(sub, '').trim();
+      const lx0 = 660, ly0 = headerH + 70;
+      T(main.toUpperCase(), lx0, ly0, `700 12px ${mono}`, '#8fa3c4');
+      T(sub, lx0, ly0 + 18, `11px ${sans}`, '#7c879c');
+      rowsLeg.forEach((r, i) => {
+        const yy = ly0 + 44 + i * 30;
+        ctx.fillStyle = r.color; ctx.fillRect(lx0 * S, (yy - 14) * S, 18 * S, 18 * S);
+        T(r.text, lx0 + 28, yy, `14px ${sans}`, '#e9edf5');
+      });
+      T('Counted by registered party,', lx0, ly0 + 44 + rowsLeg.length * 30 + 22, `12px ${sans}`, '#7c879c');
+      T('not by who they vote for.', lx0, ly0 + 44 + rowsLeg.length * 30 + 40, `12px ${sans}`, '#7c879c');
+    }else{
     let lx = 24; const ly = headerH + mapH + 30;
     T(legTitle.toUpperCase(), lx, ly, `700 11.5px ${mono}`, '#8fa3c4'); lx += 120;
     rowsLeg.forEach(r => {
@@ -10038,11 +10109,12 @@ async function anExportPng(){
       ctx.fillText(r.text, (lx + 22) * S, ly * S);
       lx += 22 + ctx.measureText(r.text).width / S + 18;
     });
+    }
     // footer
     const fy = headerH + mapH + legendH;
     ctx.fillStyle = '#d8b466'; ctx.fillRect(24 * S, fy * S, 3 * S, 40 * S);
-    T('This is a forecast, not a result. It changes daily as new polls and votes come in, and it can be wrong.', 36, fy + 16, `600 13px ${sans}`, '#d8b466');
-    T('Method: polling average blended with the 2018, 2022 and 2024 county results, adjusted for how NPA voters say they will vote.', 36, fy + 36, `12px ${sans}`, '#7c879c');
+    T(isTurn ? 'This is a projection, not a result. It changes as ballots come in, and it can be wrong.' : 'This is a forecast, not a result. It changes daily as new polls and votes come in, and it can be wrong.', 36, fy + 16, `600 13px ${sans}`, '#d8b466');
+    T(isTurn ? 'Method: each county\'s average turnout in 2018, 2022 and 2024, nudged by this year\'s early vote.' : 'Method: polling average blended with the 2018, 2022 and 2024 county results, adjusted for how NPA voters say they will vote.', 36, fy + 36, `12px ${sans}`, '#7c879c');
     drawSourceCredit(ctx, 24 * S, (fy + 78) * S, S);
     const a = document.createElement('a');
     a.href = cv.toDataURL('image/png');
@@ -10062,10 +10134,11 @@ async function renderAnalysis(){
   anLast = M;
   const m = M.models[anState.race === 'house' ? 'governor' : anState.race];
   const isHouse = anState.race === 'house';
+  const isTurn = !isHouse && anState.view === 'turnout';
   const show = (id, on) => { const el = document.getElementById(id); if(el) el.style.display = on ? '' : 'none'; };
-  show('anHero', !isHouse); show('anHouseHero', isHouse);
-  show('anCountyPanel', !isHouse); show('anHousePanel', isHouse);
-  show('anCompare', !isHouse); show('anNpa', !isHouse); show('anRaces', !isHouse);
+  show('anHero', !isHouse && !isTurn); show('anTurnHero', isTurn); show('anHouseHero', isHouse);
+  show('anCountyPanel', !isHouse && !isTurn); show('anTurnPanel', isTurn); show('anHousePanel', isHouse);
+  show('anCompare', !isHouse && !isTurn); show('anNpa', !isHouse && !isTurn); show('anRaces', !isHouse && !isTurn);
   show('anRace_governor', anState.race === 'governor'); show('anRace_senate', anState.race === 'senate');
   document.querySelectorAll('#anViewSelect button').forEach(b => { b.style.display = (isHouse && !['forecast', 'vs24'].includes(b.dataset.view)) ? 'none' : ''; });
   if(isHouse && !['forecast', 'vs24'].includes(anState.view)) anState.view = 'forecast';
@@ -10075,6 +10148,10 @@ async function renderAnalysis(){
     document.getElementById('anBlurb').innerHTML = anBuildHouseBlurb(M);
     anRenderHousePanel(M.house);
     anRenderHouseDetail(M.house);
+  }else if(isTurn){
+    anRenderTurnHero(M);
+    document.getElementById('anBlurb').innerHTML = anHighlight(anBuildTurnoutBlurb(M));
+    anRenderTurnTable(m);
   }else{
     anRenderHero(m, M);
     document.getElementById('anBlurb').innerHTML = anBuildBlurb(M);
@@ -10093,6 +10170,7 @@ async function renderAnalysis(){
   document.querySelectorAll('#anViewSelect button').forEach(b => b.classList.toggle('active', b.dataset.view === anState.view));
   if(isHouse){ await anRenderHouseMap(M.house); return; }
   await anRenderMap(m);
+  if(isTurn) return;
   await anDrawRace(anState.race, M.models[anState.race]);
 }
 

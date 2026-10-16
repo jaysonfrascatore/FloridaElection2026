@@ -373,6 +373,11 @@
   .an-method{ margin-top:22px; font-size:12px; color:var(--muted); line-height:1.65; }
   .an-method h3{ font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:#7ff0c4; margin:0 0 8px; }
   .an-method li{ margin-bottom:5px; }
+  .an-method ol{ padding-left:20px; margin:8px 0; }
+  .an-method p{ margin:10px 0; } .an-method ul{ padding-left:20px; margin:6px 0; }
+  .an-src{ width:100%; border-collapse:collapse; margin:10px 0; font-size:12px; }
+  .an-src th, .an-src td{ text-align:left; padding:5px 8px; border-bottom:1px solid var(--line, #212a3b); white-space:normal; }
+  .an-src th{ font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; }
   @keyframes anBlink{ 0%,100%{ opacity:1; } 50%{ opacity:.18; } }
   .an-blink{ animation:anBlink 2.8s ease-in-out infinite; }
   .an-live-dot{ display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align:middle; animation:anBlink 2.8s ease-in-out infinite; }
@@ -1561,14 +1566,33 @@
   <div id="anRaces"></div>
 
   <details class="panel an-method" id="anMethod" open>
-    <summary><h3>How this forecast is built</h3></summary>
+    <summary><h3>Methodology: how this forecast is built</h3></summary>
+    <p><b>In one sentence:</b> the forecast blends today's polling average with how each Florida county voted in 2018, 2022 and 2024, adjusted for how independents are leaning now, then applies the result to a projected turnout. It is a transparent estimate, not a model that has been tested against past elections.</p>
+    <ol>
+      <li><b>Final turnout.</b> Each county's expected ballots are its average turnout in the 2018 governor's, 2022 governor's and 2024 presidential races, measured against today's voter rolls (a June 2026 snapshot). The 2026 vote already counted gets a small say (15%): a county whose early vote is ahead of the rest of the state is nudged up, one behind is nudged down, and the statewide total stays on the three-election blend. A county is never projected below the votes already counted, or above 95% of its registered voters.</li>
+      <li><b>Polling average.</b> Every poll we have is averaged. A poll loses half its weight every 14 days, larger samples count a little more (capped at 1,500), and polls released by a campaign or party-aligned sponsor count 60% as much. Undecided voters are split in proportion to the two candidates.</li>
+      <li><b>Fundamentals (the history).</b> Each county starts from its own average two-party result in 2018, 2022 and 2024. One statewide shift moves every county together until the statewide margin matches the target.</li>
+      <li><b>Independents (NPA voters).</b> NPA voters have swung widely between elections, so the history is adjusted for where they are now. Polls that publish an independents' breakdown give the current NPA split (recent polls count more, sponsor polls less, and the figure is pulled 20% of the way toward even because independents are a small slice of each poll). That is compared with how independents actually voted in past exit polls (table below), and the fundamentals are moved by the difference, weighted by the NPA share of the projected electorate. The gap is capped at 25 points.</li>
+      <li><b>The target.</b> A blend of the polling average and the NPA-adjusted fundamentals. Polls get more weight as Election Day nears: about 55% at four months out, rising to about 90% on Election Day.</li>
+      <li><b>U.S. House.</b> Each district starts from the 2024 presidential result on the new map passed in May 2026. The same statewide swing as the Governor and Senate forecasts (their average, compared with 2024) is applied to every district, with lopsided districts moving less. Districts with public polls (FL-08, FL-09) give those polls a quarter of the weight. There is no incumbency adjustment, and most districts have no polling, so most House ratings are lean-based estimates.</li>
+    </ol>
+    <table class="an-src">
+      <thead><tr><th>Exit poll: independents</th><th>Democrat</th><th>Republican</th><th>Two-party D share</th></tr></thead>
+      <tbody>
+        <tr><td>2018 governor</td><td>54% Gillum</td><td>44% DeSantis</td><td>55.1%</td></tr>
+        <tr><td>2022 governor</td><td>45% Crist</td><td>53% DeSantis</td><td>45.9%</td></tr>
+        <tr><td>2024 president</td><td>45% Harris</td><td>53% Trump</td><td>45.9%</td></tr>
+        <tr><td><b>Baseline used</b></td><td colspan="2">average of the three</td><td><b>49.0%</b></td></tr>
+      </tbody>
+    </table>
+    <p><b>Where those numbers come from.</b> 2018: NBC News exit poll page (Edison/National Election Pool). 2022: the Edison Research / CNN exit poll as reproduced on Wikipedia. 2024: the exit poll table on Wikipedia's Florida page, which does not name the pollster. Exit polls count self-described independents, which is close to how most polls define NPA voters, but it is not identical to registered NPA. For reference, the same exit polls show party loyalty of 93% (D) and 92% (R) in 2018, 95% and 97% in 2022, and 97% and 93% in 2024.</p>
+    <p><b>What we changed and why.</b> An earlier version assumed 92% of Democrats and 88% of Republicans vote for their party and backed the independent baseline out of the county totals. That could not be checked: county results and voter-roll snapshots cannot separate party loyalty from turnout differences, and the math returned impossible values. Using the independents' exit-poll numbers directly removes that assumption.</p>
+    <p><b>Known limits.</b></p>
     <ul>
-      <li><b>Final turnout.</b> Each county's expected ballots are its average turnout in the 2018 governor's, 2022 governor's and 2024 presidential races, measured against today's voter rolls. The 2026 vote already counted gets a small say (15%): a county whose early vote is running ahead of the rest of the state is nudged up, one running behind is nudged down, and the statewide total stays on the three-election blend. A county is never projected below the votes already counted.</li>
-      <li><b>Who they vote for.</b> Each county starts from its own average two-party result in 2018, 2022 and 2024. One statewide shift moves every county together until the statewide result matches the target.</li>
-      <li><b>NPA voters.</b> NPA voters have swung widely from one election to the next, so the fundamentals are adjusted for where they stand now. Polls that publish an independents' breakdown give the NPA split (recent polls count more, party-aligned sponsors count less, and the number is pulled a fifth of the way toward even because independents are a small slice of each poll). The page compares that with the NPA split the 2018/2022/2024 average implies on today's electorate (92% of Democrats and 88% of Republicans backing their nominee) and moves the fundamentals by the difference, weighted by the NPA share of the projected electorate. Republicans and Democrats who vote across party lines are built into those loyalty rates.</li>
-      <li><b>The target.</b> A blend of the polling average and the NPA-adjusted fundamentals. Polls get more weight the closer Election Day gets, from about half at four months out to about 90% on Election Day. The polling average weights recent polls more (a poll loses half its weight every 14 days), larger samples slightly more, and party-aligned sponsors less. Undecided voters are split in proportion to the two candidates.</li>
-      <li><b>U.S. House.</b> Each district starts from the 2024 presidential result on the new map the legislature passed in May 2026. The same statewide swing as the Governor and Senate forecasts (their average, compared with 2024) is applied to every district, so districts that are already lopsided move less. Districts with public polls (FL-08, FL-09) give those polls a quarter of the weight. There is no incumbency adjustment, and most districts have no polling at all, so the House ratings are lean-based estimates rather than poll-driven forecasts.</li>
-      <li><b>What it is not.</b> A projection built from public history and polls, not a guarantee. The forecast, the polling average and the map are recalculated each time the page loads. Voter-roll sizes are a June 2026 snapshot.</li>
+      <li>No backtest: the weights (14-day poll half-life, the 55% to 90% poll weight, the 15% turnout nudge) are judgment calls, not fitted to past results.</li>
+      <li>One number, no error bars. A polling miss of several points would not be unusual.</li>
+      <li>Independents' polling subsamples are small and noisy. The same exit-poll baseline is used for Governor and Senate.</li>
+      <li>The forecast, polling average and map are recalculated each time the page loads, and the "what changed" note is computed from the poll history, not saved snapshots.</li>
     </ul>
   </details>
 </div>
@@ -8729,7 +8753,10 @@ const AN_SPONSOR_WEIGHT = 0.6;                    // polls from party-aligned sp
 // Fixed model settings (there are no dials on the page).
 const AN_TURNOUT_W = { y18:1, y22:1, y24:1 };      // weight of each past race in the turnout blend
 const AN_PACE_WEIGHT = 0.15;                       // how much a county's 2026 early pace vs. the rest of the state moves its turnout
-const AN_LOYAL = { d:0.92, r:0.88 };               // share of each party's voters who back their nominee
+// How independents actually voted, from the Edison Research / CNN exit polls: 2022 governor 45% Crist, 53% DeSantis;
+// 2024 president 45% Harris, 53% Trump; 2018 governor 54% Gillum, 44% DeSantis. Each turned into a two-party Democratic share.
+// This replaces an earlier guess about partisan loyalty, which could not be checked against county data.
+const AN_NPA_EXIT = { y2018:0.54 / 0.98, y2022:0.45 / 0.98, y2024:0.45 / 0.98 };
 const AN_NPA_HALF_LIFE_DAYS = 30;
 const AN_NPA_SHRINK = 0.8;                         // independent subsamples are small: pulled 20% toward an even split
 const AN_NPA_MAX_GAP = 0.25;
@@ -9306,7 +9333,7 @@ function anCompute(){
   };
   const fundamentals = wMargin(0);
   const qF = (1 + fundamentals) / 2;
-  const nuHist = sn > 0 ? (qF - AN_LOYAL.d * sd - (1 - AN_LOYAL.r) * sr) / sn : NaN;
+  const nuHist = (AN_NPA_EXIT.y2018 + AN_NPA_EXIT.y2022 + AN_NPA_EXIT.y2024) / 3;
   const fundFor = (race, asOf) => {
     const npa = anNpaAvg(race, asOf);
     if(!npa || !isFinite(nuHist)) return { f:fundamentals, gap:0, npa:null };
@@ -9428,7 +9455,7 @@ function anBuildBlurb(M){
   const p1 = `The forecast has ${leadTxt} in the ${info.title} race: ${pollTxt}.` + anChangeHtml(M);
   const p2 = `About ${pctCounted.toFixed(1)}% of the projected vote is already counted (<span class="hl-gold">${fmt(M.actualSum)} counted</span> of <span class="hl-green">roughly ${fmt(Math.round(M.Esum))} ballots</span>), with ${Math.round(M.daysLeft)} days until Election Day. Projected final turnout is ${turnoutPct.toFixed(1)}% of registered voters, against ${(M.past.y2024.turnout * 100).toFixed(1)}% in 2024 and ${(M.past.y2022.turnout * 100).toFixed(1)}% in 2022 on today's voter rolls.`;
   const npaLine = m.npa
-    ? `Polls that break out independents have NPA voters going ${(m.npa.nu * 100).toFixed(0)}% to ${info.dem} (two-party), ${m.npaGap >= 0 ? 'better' : 'worse'} for ${info.dem} than the 2018/2022/2024 average implies (about ${(M.nuHist * 100).toFixed(0)}%), so the fundamentals are adjusted to ${anMarginLabel(m.fundAdj)}.`
+    ? `Polls that break out independents have NPA voters going ${(m.npa.nu * 100).toFixed(0)}% to ${info.dem} (two-party), ${m.npaGap >= 0 ? 'better' : 'worse'} for ${info.dem} than the 2018, 2022 and 2024 exit polls implys (about ${(M.nuHist * 100).toFixed(0)}%), so the fundamentals are adjusted to ${anMarginLabel(m.fundAdj)}.`
     : '';
   const p3 = `Registered Republicans outnumber registered Democrats ${regR.toFixed(1)}% to ${regD.toFixed(1)}%, and the county average of the last three statewide results is ${anMarginLabel(M.fundamentals)} on a two-party basis (2018 governor ${anMarginLabel(past(SIM_2018))}, 2022 governor ${anMarginLabel(past(SIM_2022))}, 2024 president ${anMarginLabel(past(SIM_2024))}). ${npaLine}`;
   const dir = v => `${Math.abs(v * 100).toFixed(1)} points ${v >= 0 ? 'more Democratic' : 'more Republican'}`;
@@ -9846,7 +9873,7 @@ function anRenderNpa(M, only){
   document.getElementById('anNpa').innerHTML =
     `<h2>NPA voters</h2><div class="table-hint">NPA voters have swung hard from one election to the next, so their current lean is built into the fundamentals. Projected ballots: ` +
     `<span class="num-d">${fmt(Math.round(M.party.d))} Democratic</span> · <span class="num-r">${fmt(Math.round(M.party.r))} Republican</span> · <span class="num-npa">${fmt(Math.round(M.party.n))} NPA/other</span> (by registration). ` +
-    `Assumes ${Math.round(AN_LOYAL.d * 100)}% of Democrats and ${Math.round(AN_LOYAL.r * 100)}% of Republicans back their nominee, so crossover voting is included.</div>` +
+    `The baseline for how NPA voters lean comes from the 2018, 2022 and 2024 exit polls (about ${Math.round(M.nuHist * 100)}% Democratic, two-party), not from a guess about party loyalty.</div>` +
     `<div class="an-npa-grid">${only ? card(only) : card('governor') + card('senate')}</div>`;
 }
 

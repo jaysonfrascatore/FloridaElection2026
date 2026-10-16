@@ -9232,6 +9232,19 @@ function anMarginLabel(m){            // m is a fraction (+ = Democratic)
   if(parseFloat(pts.toFixed(1)) === 0) return 'Even';
   return (m > 0 ? 'D+' : 'R+') + pts.toFixed(1);
 }
+function anMarginLabel2(m){
+  const pts = Math.abs(m) * 100;
+  if(parseFloat(pts.toFixed(2)) === 0) return 'Even';
+  return (m > 0 ? 'D+' : 'R+') + pts.toFixed(2);
+}
+// Before/after labels for a change row: null when nothing moved at all; one decimal normally,
+// two decimals only when the move is real but too small to show at one decimal.
+function anPair(a, b){
+  const a2 = anMarginLabel2(a), b2 = anMarginLabel2(b);
+  if(a2 === b2) return null;
+  const a1 = anMarginLabel(a), b1 = anMarginLabel(b);
+  return a1 !== b1 ? [a1, b1] : [a2, b2];
+}
 function anMarginColor(m){ return parseFloat((Math.abs(m) * 100).toFixed(1)) === 0 ? '#e9edf5' : (m > 0 ? '#5b9bd9' : '#d4675a'); }
 function anFmtDate(iso){
   const d = new Date(anIsoWall(iso));
@@ -9984,7 +9997,8 @@ function anChangeWindow(M, n){
   const L = anMarginLabel;
   const head = `<div class="ch-h">What changed since yesterday's 7 pm update</div>`;
   const none = msg => `<div class="an-change">${head}<div class="ch-row">${msg}</div></div>`;
-  const diff = (x, y) => L(x) !== L(y);
+  const diff = (x, y) => anPair(x, y) !== null;
+  const P = (x, y) => { const p = anPair(x, y) || [L(x), L(y)]; return `${p[0]} <span class="arr">→</span> ${p[1]}`; };
   if(anState.race === 'house'){
     const dg = anRaceDelta(M, 'governor', dayA), ds = anRaceDelta(M, 'senate', dayA);
     if(!dg || !ds) return '';
@@ -10001,20 +10015,20 @@ function anChangeWindow(M, n){
     const ratingMoved = pairs.filter(p => p.o.rating !== p.r.rating);
     const rest = pairs.filter(p => p.o.rating === p.r.rating).sort((x, y) => Math.abs(x.r.margin) - Math.abs(y.r.margin));
     const shown = ratingMoved.concat(rest).slice(0, 6);
-    shown.forEach(({ r, o }) => rows.push(`<div class="ch-row"><b>${anDistLabel(r.d)}:</b> ${L(o.margin)} (${o.rating}) <span class="arr">→</span> ${L(r.margin)} (${r.rating})</div>`));
+    shown.forEach(({ r, o }) => rows.push(`<div class="ch-row"><b>${anDistLabel(r.d)}:</b> ${(() => { const p = anPair(o.margin, r.margin); return `${p[0]} (${o.rating}) <span class="arr">→</span> ${p[1]} (${r.rating})`; })()}</div>`));
     if(pairs.length > shown.length) rows.push(`<div class="ch-row">${pairs.length - shown.length} more districts moved by a similar amount without changing rating.</div>`);
     const dEnv = M.house.env - env0;
-    const whyParts = [`<div><b>Why:</b> every district starts from its fixed 2024 presidential result and gets the same statewide swing, so only the swing moved. The statewide environment (the average of the Governor and Senate forecasts, compared with 2024) went ${L(env0)} <span class="arr">→</span> ${L(M.house.env)}, a move of ${(Math.abs(dEnv) * 100).toFixed(1)} points toward ${dEnv >= 0 ? 'the Democrats' : 'the Republicans'}.</div>`];
-    if(diff(dg.f0, dg.f1)) whyParts.push(`<div style="margin-top:6px"><b>Governor:</b> ${L(dg.f0)} <span class="arr">→</span> ${L(dg.f1)}. ${anWhyText(dg)}</div>`);
-    if(diff(ds.f0, ds.f1)) whyParts.push(`<div style="margin-top:6px"><b>Senate:</b> ${L(ds.f0)} <span class="arr">→</span> ${L(ds.f1)}. ${anWhyText(ds)}</div>`);
+    const whyParts = [`<div><b>Why:</b> every district starts from its fixed 2024 presidential result and gets the same statewide swing, so only the swing moved. The statewide environment (the average of the Governor and Senate forecasts, compared with 2024) went ${P(env0, M.house.env)}, a move of ${(Math.abs(dEnv) * 100).toFixed(1)} points toward ${dEnv >= 0 ? 'the Democrats' : 'the Republicans'}.</div>`];
+    if(diff(dg.f0, dg.f1)) whyParts.push(`<div style="margin-top:6px"><b>Governor:</b> ${P(dg.f0, dg.f1)}. ${anWhyText(dg)}</div>`);
+    if(diff(ds.f0, ds.f1)) whyParts.push(`<div style="margin-top:6px"><b>Senate:</b> ${P(ds.f0, ds.f1)}. ${anWhyText(ds)}</div>`);
     return `<div class="an-change">${head}${rows.join('')}<div class="ch-why">${whyParts.join('')}</div></div>`;
   }
   const d = anRaceDelta(M, anState.race, dayA);
   if(!d) return '';
   const r0 = ratingLabelForMargin(d.f0), r1 = ratingLabelForMargin(d.f1);
   const rows = [];
-  if(diff(d.f0, d.f1) || r0 !== r1) rows.push(`<div class="ch-row"><b>Forecast:</b> ${L(d.f0)} <span class="arr">→</span> ${L(d.f1)} (${r0 === r1 ? r1 + ', no change in rating' : r0 + ' <span class="arr">→</span> ' + r1})</div>`);
-  if(diff(d.p0, d.p1)) rows.push(`<div class="ch-row"><b>Polling average:</b> ${L(d.p0)} <span class="arr">→</span> ${L(d.p1)}</div>`);
+  if(diff(d.f0, d.f1) || r0 !== r1) rows.push(`<div class="ch-row"><b>Forecast:</b> ${P(d.f0, d.f1)} (${r0 === r1 ? r1 + ', no change in rating' : r0 + ' <span class="arr">→</span> ' + r1})</div>`);
+  if(diff(d.p0, d.p1)) rows.push(`<div class="ch-row"><b>Polling average:</b> ${P(d.p0, d.p1)}</div>`);
   if(!rows.length) return none('Nothing changed: the forecast and the polling average are the same as at yesterday\'s update.');
   return `<div class="an-change">${head}${rows.join('')}<div class="ch-why"><b>Why:</b> ${anWhyText(d) || 'No new polls came in; the move comes from the updated electorate.'}</div></div>`;
 }

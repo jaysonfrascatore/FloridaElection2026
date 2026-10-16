@@ -5630,7 +5630,7 @@ function computeChoroplethBBox(svg){
 // afterward for the General Election metric (when the shift sliders
 // aren't active), so the export still shows them even though it isn't
 // reusing the on-screen SVG.
-async function renderMetricMapCanvas(metric, activeCounties, cssWidth, cssHeight, pixelScale){
+async function renderMetricMapCanvas(metric, activeCounties, cssWidth, cssHeight, pixelScale, customTraces){
   await ensureGeojson();
   const tempDiv = document.createElement('div');
   tempDiv.style.position = 'fixed';
@@ -5641,13 +5641,13 @@ async function renderMetricMapCanvas(metric, activeCounties, cssWidth, cssHeight
   document.body.appendChild(tempDiv);
 
   try{
-    const { trace } = buildMapTrace(metric, activeCounties);
+    const traces = customTraces || [buildMapTrace(metric, activeCounties).trace];
     const layout = {
       geo:{ scope:'usa', fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' },
       paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
       margin:{t:6,b:6,l:6,r:6}, font:{family:'Inter, sans-serif'}
     };
-    await Plotly.newPlot(tempDiv, [trace], layout, { displayModeBar:false, responsive:false });
+    await Plotly.newPlot(tempDiv, traces, layout, { displayModeBar:false, responsive:false });
 
     const svg = tempDiv.querySelector('svg');
     if((metric === 'demrepnpa' && !shiftSliderActive) || metric === 'dropwinner'){
@@ -9901,10 +9901,9 @@ async function anExportPng(){
   try{
     const M = anLast, race = anState.race, isHouse = race === 'house';
     const m = M.models[isHouse ? 'governor' : race], info = m.info, H = M.house;
-    const W = 900, S = 2, mapW = isHouse ? 560 : 900, mapH = isHouse ? 560 : 500;
-    const mapUrl = await Plotly.toImage('anMap', { format:'png', width:mapW, height:mapH, scale:S });
-    const img = new Image();
-    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = mapUrl; });
+    const W = 900, S = 2, mapW = isHouse ? 560 : 900, mapH = 528;
+    const liveTraces = document.getElementById('anMap').data.filter(t => t.hoverinfo !== 'skip').map(t => Object.assign({}, t, { showscale:false }));
+    const img = await renderMetricMapCanvas('an', null, mapW, mapH, S, liveTraces);
     const rowsLeg = [...document.querySelectorAll('#anSideLegend .side-legend-row')].map(r => ({
       color:r.querySelector('.sq').style.background, text:r.querySelector('.lbl').textContent }));
     const legTitle = (document.querySelector('#anSideLegend .side-legend-title') || {}).textContent || '';

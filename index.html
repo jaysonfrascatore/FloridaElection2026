@@ -1090,7 +1090,7 @@
     <div class="segmented" id="metricSelect">
       <button data-metric="demrepnpa" class="active">General Election</button>
       <button data-metric="rating">Primary Election</button>
-      <button data-metric="total">Total turnout</button>
+      <button data-metric="total">Live Turnout</button>
       <button data-metric="move">Margin move</button>
       <button data-metric="updated">Counties Updated</button>
       <button data-metric="dropwinner">Drop Winners</button>
@@ -1388,8 +1388,13 @@
         <span>Statewide turnout (share of registered voters who vote)</span>
         <span class="val" id="simTurnoutValue">75.0% &middot; &mdash; voters</span>
       </div>
-      <input type="range" id="simTurnoutSlider" class="adj-slider" min="65" max="85" step="0.1" value="75">
-      <div class="npa-slider-ends"><span>65%</span><span>85%</span></div>
+      <input type="range" id="simTurnoutSlider" class="adj-slider" min="40" max="90" step="0.1" value="75">
+      <div class="npa-slider-ends"><span>40%</span><span>90%</span></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+        <button class="sim-btn" id="simUseAnalysisTurnoutBtn" title="Set every county to the turnout the Analysis tab projects for it, so both tabs start from the same vote totals">Use the Analysis tab's projected turnout</button>
+        <button class="sim-btn" id="simClearCountyTurnoutBtn" style="display:none" title="Remove every county-by-county turnout setting so the slider above applies to all counties again">Clear county turnouts</button>
+      </div>
+      <div class="table-hint" id="simTurnoutHint" style="margin-top:6px">This slider sets one turnout for every county. To test a single county, click it and set its own turnout.</div>
     </div>
     <div style="flex:1; min-width:220px; display:none;" id="sim2024SwingWrap">
       <div class="npa-slider-label" style="margin-bottom:8px;">
@@ -1458,6 +1463,16 @@
 
         <div id="simEditableBlock">
           <div class="npa-slider-label" style="margin-top:6px; margin-bottom:8px;">
+            <span>Turnout in this county</span>
+            <span class="val" id="simCountyTurnLabel">&mdash;</span>
+          </div>
+          <input type="range" id="simCountyTurnSlider" class="adj-slider" min="30" max="95" step="0.1" value="75">
+          <div class="table-hint" id="simCountyTurnNote" style="margin:4px 0 6px"></div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+            <button class="sim-btn" id="simCountyTurnAnalysisBtn" title="Set this county to the turnout the Analysis tab projects for it">Use the Analysis projection</button>
+            <button class="sim-btn" id="simCountyTurnResetBtn" title="Go back to the statewide turnout slider for this county">Use the statewide setting</button>
+          </div>
+          <div class="npa-slider-label" style="margin-top:6px; margin-bottom:8px;">
             <span>Democratic share of the two-party vote</span>
             <span class="val" id="simDemPctLabel">50.0% D / 50.0% R</span>
           </div>
@@ -1520,7 +1535,7 @@
       <span class="r" id="anLabelR" style="left:72%">REP &mdash;</span>
     </div>
     <div class="stat-cards">
-      <div class="stat-card"><div class="v" id="anStatTurnout">&mdash;</div><div class="k">Projected final turnout</div></div>
+      <div class="stat-card"><div class="v" id="anStatTurnout">&mdash;</div><div class="k">Projected Final Turnout</div></div>
       <div class="stat-card"><div class="v" id="anStatTotal">&mdash;</div><div class="k">Projected total votes</div></div>
       <div class="stat-card"><div class="v" id="anStatD" style="color:var(--dem)">&mdash;</div><div class="k" id="anStatDk">Projected Democratic votes</div></div>
       <div class="stat-card"><div class="v" id="anStatR" style="color:var(--rep)">&mdash;</div><div class="k" id="anStatRk">Projected Republican votes</div></div>
@@ -1542,7 +1557,7 @@
       <button data-view="vs24">Change from 2024</button>
       <button data-view="vs22">Change from 2022</button>
       <button data-view="current">Current General Election results</button>
-      <button data-view="turnout">Projected final turnout</button>
+      <button data-view="turnout">Projected Final Turnout</button>
     </div>
     <button class="sim-btn" id="anDownloadPngBtn" style="margin-left:auto">Download PNG</button>
   </div>
@@ -1576,7 +1591,7 @@
       </div>
     </div>
     <div class="panel" id="anTurnPanel" style="display:none">
-      <h2>Projected turnout by county</h2>
+      <h2>Projected Final Turnout by county</h2>
       <div class="table-hint">Expected ballots when every vote is counted, against each county's registered voters.</div>
       <div class="table-wrap">
         <table id="anTurnTable">
@@ -1596,9 +1611,7 @@
 
   <details class="panel an-method" id="anMethod" open>
     <summary><h3>Methodology: how this forecast is built</h3></summary>
-    <p>Each time the tracker updates (the 7 p.m. ET run) or the page loads, the model rebuilds the forecast from scratch in a fixed order. It starts with the live vote: the ballots counted so far in each county, grouped by the voter's registered party, not by candidate. Because no candidate votes exist before Election Day, the live count never moves the candidate margin directly. It enters through turnout. Each county's expected final ballots are its average turnout in the 2018 governor's, 2022 governor's and 2024 presidential races, measured against today's voter rolls (a June 2026 snapshot), then nudged by 15% depending on whether that county's early vote is running ahead of or behind the rest of the state, and never set below the votes already counted or above 95% of registered voters. The remaining ballots are assumed to come from registered voters who have not voted yet, which fixes the projected Democratic, Republican and NPA shares of the electorate and keeps an early lead from either party from being stretched across the whole vote.</p>
-    <p>The candidate margin comes from two separate estimates that are then blended. The history side takes each county's own average two-party result in 2018, 2022 and 2024 and weights counties by their projected turnout, which gives a statewide margin before any adjustment. That history is adjusted twice, using the party mix from the step above as weights. First, for independents: polls that publish how NPA voters are splitting are averaged (recent polls count more, party-sponsored polls count 60% as much, and the figure is pulled 20% toward even because independents are a small slice of each poll) and compared with how independents actually voted in the 2018, 2022 and 2024 exit polls (54%, 45% and 45% Democratic of the two-party vote, about 49% on average). The gap, capped at 25 points, is multiplied by the NPA share of the electorate. Second, for party loyalty: polls that publish how Democrats and Republicans split are averaged by the number of each party's voters interviewed (with the same recency and sponsor weighting) and blended with the exit-poll baseline of 95% Democratic and 94% Republican loyalty, which counts as a 300-person sample so a few small subsamples cannot swing it. Republicans crossing over pull the result toward the Democrat, and Democrats crossing over pull it the other way. The polling side is the average of every poll in the file, where a poll loses half its weight every 14 days, larger samples count a little more (capped at 1,500), and undecided voters are split in proportion to the two candidates. The final statewide target is the polling average times a poll weight plus the adjusted history times the rest. The poll weight is about 55% at four months out and rises to about 90% on Election Day, and it is about 84% today.</p>
-    <p>One statewide shift is then applied to every county's historical result until the turnout-weighted total equals that target, which produces each county's projected Democratic and Republican votes, its rating and its color on the map. The U.S. House forecast uses the same machinery at the district level: each district starts from the 2024 presidential result on the new map, the same statewide swing (the average of the Governor and Senate forecasts compared with 2024) is applied to every district with lopsided districts moving less, then a small fundraising adjustment is added from each candidate's FEC filings: money raised from donors and committees counts in full, the candidate's own money counts at half weight, and the Democratic-to-Republican ratio (with a $25,000 floor on each side) is converted into at most 1.5 points of margin, then re-centered so the average across districts is unchanged and the statewide environment is not counted twice. Unopposed seats get no adjustment. The two districts with public polls (FL-08 and FL-09) give those polls a quarter of the weight. The chain is therefore live votes, then turnout and party mix, then history, then polls, then the poll weight, then the two adjustments, then the target, then the county results, then the district swing and money adjustment, then the district results. With no new polls, the polling averages stay the same and only turnout, party mix and the days left move, so a day of new votes changes the forecast very little. The weights (the 14-day half-life, the 55% to 90% poll weight, the 15% turnout nudge, the 20% NPA pull, the money adjustment's size and cap) are judgment calls that have not been tested against past elections, the forecast is a single number with no error range, and most polls publish no crosstabs, so the independent and loyalty adjustments rest on a handful of them. Fundraising figures are cycle-to-date totals from FEC.gov, mostly through July 29, 2026 (some through June 30), and have not yet been updated for third-quarter reports; they do not include outside spending. Exit-poll figures come from the NBC News (2018) and Edison Research / CNN (2022) exit polls and a 2024 table on Wikipedia that does not name its pollster.</p>
+    <p>Each update (the 7 p.m. ET run) the model rebuilds the forecast in a fixed order. It starts with the live count by registered party, which sets each county's expected final turnout (its 2018, 2022 and 2024 average, nudged 15% by this year's early-vote pace) and the party mix of the voters still to come. The history side is each county's average two-party result in those three elections, weighted by projected turnout, then adjusted for how independents and each party's own voters are polling against their exit-poll baselines (about 49% Democratic among independents, 95% Democratic and 94% Republican loyalty). The polling side averages every poll: a poll's weight halves every 14 days, grows with sample size, and counts 60% if a party or campaign sponsored it, the same for Democratic and Republican sponsors, while independent pollsters count in full. The statewide target blends the two, with polls at about 84% of the weight today and rising toward 90% on Election Day, and one statewide shift then sets each county's result. For the House, each district starts from its 2024 presidential result on the new map, gets the same statewide swing (lopsided districts move less), and then a small campaign-money adjustment of at most 1.5 points from FEC filings (mostly through July 29), with money a candidate put in counted at half weight; only FL-08 and FL-09 have district polls, which carry a quarter of the weight. The weights are judgment calls that have not been tested against past elections, the forecast is a single number with no error range, and the exit-poll baselines come from the NBC (2018) and Edison/CNN (2022) exit polls and a 2024 table that does not name its pollster.</p>
   </details>
 </div>
 
@@ -2790,8 +2803,8 @@ function turnoutRangeMovement(counties){
 // The key shown beside the map: a color square and its range for every
 // one of the nine ranges (all of them, always -- early in the count most
 // are empty, but the scale should be readable before turnout fills it in).
-function turnoutSideLegendHtml(){
-  return `<div class="side-legend-title">Turnout<span>% of registered voters</span></div>` +
+function turnoutSideLegendHtml(title){
+  return `<div class="side-legend-title">${title || 'Live Turnout'}<span>% of registered voters</span></div>` +
     TURNOUT_BINS.map(b =>
       `<div class="side-legend-row"><span class="sq" style="background:${b.color}"></span><span class="lbl">${b.key}</span></div>`
     ).join('');
@@ -2834,7 +2847,7 @@ const METRICS = {
   // TURNOUT_BINS). The raw vote count is still in the hover, the county
   // page and the table. sideLegend: the key sits beside the map as a
   // vertical list of squares instead of the chips under it.
-  total: { title:'Turnout by county (% of registered voters)', categorical:true, cats:TURNOUT_BINS, catFn:turnoutBinFor, sideLegend:true },
+  total: { title:'Live Turnout (% of registered voters)', categorical:true, cats:TURNOUT_BINS, catFn:turnoutBinFor, sideLegend:true },
   move: { title:'Counties with a forecast rating change', categorical:true, cats:MOVE_CATS, catFn:moveCategoryFor },
   updated: { title:'Counties updated (new votes reported)', categorical:true, cats:UPDATED_CATS, catFn:updatedCategoryFor },
   // Which party won each county's latest hourly vote drop specifically —
@@ -4260,7 +4273,7 @@ ${countiesReporting} of 67 counties have votes.`;
   // Both come from the same math (the new margin is the vote-weighted
   // average of the old margin and the drop's margin).
   const turnoutInfo = SHOW_TURNOUT ? turnoutFooterContent(list, totalVotes) : null;
-  const marginOpener = turnoutInfo ? `With ${turnoutInfo.pctText} turnout, the statewide` : 'The statewide';
+  const marginOpener = turnoutInfo ? `With ${turnoutInfo.pctText} Live Turnout, the statewide` : 'The statewide';
   let marginCard = '';
   if(marginInfo.hasCurrent){
     const yellow = '\u{1F7E1}';
@@ -5178,7 +5191,7 @@ function drawTurnoutLegendOnCanvas(ctx, x, bottomY, scale){
 
   ctx.fillStyle = '#e9edf5';
   ctx.font = `700 ${Math.round(S(14))}px ${sans}`;
-  ctx.fillText('TURNOUT', x + S(pad), top + S(pad + 14));
+  ctx.fillText('LIVE TURNOUT', x + S(pad), top + S(pad + 14));
   ctx.fillStyle = '#7c879c';
   ctx.font = `400 ${Math.round(S(12))}px ${sans}`;
   ctx.fillText('% of registered voters', x + S(pad), top + S(pad + 14 + 3 + 12));
@@ -5402,7 +5415,7 @@ function drawTurnoutFooter(ctx, content, footerY0, width, scale){
   const x0 = S(24), leftW = S(316);
   ctx.fillStyle = '#7c879c';
   ctx.font = `700 ${Math.round(S(14))}px ${sans}`;
-  ctx.fillText('STATEWIDE TURNOUT (EST.)', x0, footerY0 + S(34));
+  ctx.fillText('LIVE TURNOUT (STATEWIDE EST.)', x0, footerY0 + S(34));
 
   ctx.fillStyle = '#80ed99';
   ctx.font = `700 ${Math.round(S(fitPx(700, 58, 30, leftW, content.pctText)))}px ${sans}`;
@@ -6169,6 +6182,7 @@ const SIM_2024 = {
 // (0-100). 50 = tied. Keyed by county name. Only used in Tie mode.
 let simDemPct = {};
 let simTurnoutPct = 75;
+let simCountyTurnout = {};     // county -> turnout % set by hand (overrides the statewide slider)
 let selectedSimCounty = null;
 let simInitialized = false;
 let simCheckpointMode = 'tie'; // 'tie' | 'y2018' | 'y2022' | 'y2024'
@@ -6398,8 +6412,21 @@ function simLoadMap(values){
   simRecompute();
 }
 
+function simCountyTurnoutPct(name){
+  return (simCheckpointMode === 'tie' && name in simCountyTurnout) ? simCountyTurnout[name] : simTurnoutPct;
+}
 function simCountyTotal(name){
-  return Math.round(SIM_REG[name][0] * (simTurnoutPct/100));
+  return Math.round(SIM_REG[name][0] * (simCountyTurnoutPct(name)/100));
+}
+// The Analysis tab's projected final ballots for a county (its own estimate from 2018/2022/2024 turnout and the live pace).
+let simAnalysisCache = null, simAnalysisKey = '';
+function simAnalysisProjection(name){
+  try{
+    const key = String(COUNTIES.reduce((t, c) => t + (c.total || 0), 0));
+    if(!simAnalysisCache || simAnalysisKey !== key){ simAnalysisCache = anCompute(); simAnalysisKey = key; }
+    const e = simAnalysisCache.E[name];
+    return (e && SIM_REG[name]) ? { votes:e, pct:e / SIM_REG[name][0] * 100 } : null;
+  }catch(err){ return null; }
 }
 
 function simRatingFor(margin){
@@ -6700,7 +6727,12 @@ function renderSimStats(){
 
 function updateSimTurnoutLabel(){
   const totalVoters = SIM_COUNTY_NAMES.reduce((s,name)=>s+simCountyTotal(name),0);
-  document.getElementById('simTurnoutValue').textContent = `${simTurnoutPct.toFixed(1)}% \u00b7 ${fmt(totalVoters)} voters`;
+  const own = Object.keys(simCountyTurnout).length;
+  const effective = totalVoters / statewideRegisteredTotal() * 100;
+  document.getElementById('simTurnoutValue').textContent = own
+    ? `${effective.toFixed(1)}% overall \u00b7 ${fmt(totalVoters)} voters (${own} count${own === 1 ? 'y has its' : 'ies have their'} own turnout)`
+    : `${simTurnoutPct.toFixed(1)}% \u00b7 ${fmt(totalVoters)} voters`;
+  document.getElementById('simClearCountyTurnoutBtn').style.display = own ? '' : 'none';
 }
 
 function selectSimCounty(name){
@@ -6819,7 +6851,15 @@ function renderSimEditor(){
   document.getElementById('simEditorCounty').textContent = name + ' County';
   if(editable){
     document.getElementById('simEditorVoters').textContent =
-      `${fmt(reg[0])} registered voters \u00b7 ${fmt(s.total)} voting at ${simTurnoutPct.toFixed(1)}% turnout`;
+      `${fmt(reg[0])} registered voters \u00b7 ${fmt(s.total)} voting at ${simCountyTurnoutPct(name).toFixed(1)}% turnout`;
+    const ct = simCountyTurnoutPct(name), ap = simAnalysisProjection(name);
+    document.getElementById('simCountyTurnSlider').value = ct;
+    document.getElementById('simCountyTurnLabel').textContent = `${ct.toFixed(1)}% \u00b7 ${fmt(s.total)} voters`;
+    document.getElementById('simCountyTurnNote').textContent =
+      (name in simCountyTurnout ? 'Set by hand for this county. ' : `Following the statewide slider (${simTurnoutPct.toFixed(1)}%). `) +
+      (ap ? `The Analysis tab projects ${fmt(Math.round(ap.votes))} ballots here (${ap.pct.toFixed(1)}% of ${fmt(reg[0])} registered).` : 'The Analysis tab has no projection for this county yet.');
+    document.getElementById('simCountyTurnAnalysisBtn').style.display = ap ? '' : 'none';
+    document.getElementById('simCountyTurnResetBtn').style.display = (name in simCountyTurnout) ? '' : 'none';
   }else if(simCheckpointMode === 'y2024'){
     const swingNote = sim2024Swing === 0
       ? ''
@@ -6943,6 +6983,33 @@ document.getElementById('simTurnoutSlider').addEventListener('input', e => {
   simTurnoutPct = parseFloat(e.target.value);
   renderSim();
 });
+document.getElementById('simCountyTurnSlider').addEventListener('input', e => {
+  if(!selectedSimCounty || simCheckpointMode !== 'tie') return;
+  simCountyTurnout[selectedSimCounty] = parseFloat(e.target.value);
+  renderSim();
+});
+document.getElementById('simCountyTurnResetBtn').addEventListener('click', () => {
+  if(!selectedSimCounty) return;
+  delete simCountyTurnout[selectedSimCounty];
+  renderSim();
+});
+document.getElementById('simCountyTurnAnalysisBtn').addEventListener('click', () => {
+  if(!selectedSimCounty || simCheckpointMode !== 'tie') return;
+  const ap = simAnalysisProjection(selectedSimCounty);
+  if(ap) simCountyTurnout[selectedSimCounty] = ap.pct;
+  renderSim();
+});
+document.getElementById('simUseAnalysisTurnoutBtn').addEventListener('click', () => {
+  if(simCheckpointMode !== 'tie') return;
+  let any = false;
+  SIM_COUNTY_NAMES.forEach(n => { const ap = simAnalysisProjection(n); if(ap){ simCountyTurnout[n] = ap.pct; any = true; } });
+  if(!any) alert('The Analysis tab has no turnout projection yet.');
+  renderSim();
+});
+document.getElementById('simClearCountyTurnoutBtn').addEventListener('click', () => {
+  simCountyTurnout = {};
+  renderSim();
+});
 document.getElementById('sim2024SwingSlider').addEventListener('input', e => {
   sim2024Swing = parseFloat(e.target.value);
   const valEl = document.getElementById('sim2024SwingValue');
@@ -6982,6 +7049,7 @@ document.getElementById('simResetCountyBtn').addEventListener('click', () => {
 document.getElementById('simResetAllBtn').addEventListener('click', () => {
   // Blank map: every county 50/50 with no forecast behind it.
   simStartBlank();
+  simCountyTurnout = {};
   selectedSimCounty = null;
   selectedRatingBrush = null;
   document.querySelectorAll('#simRatingBrush button').forEach(b=>b.classList.remove('active'));
@@ -7084,7 +7152,7 @@ document.getElementById('simDownloadCsvBtn').addEventListener('click', () => {
   const rows = [['County','Registered','TurnoutPct','DEM_Pct','REP_Pct','DEM_Votes','REP_Votes','Rating']];
   SIM_COUNTY_NAMES.forEach(name => {
     const s = simCountyStats(name);
-    rows.push([name, SIM_REG[name][0], simCheckpointMode==='tie' ? simTurnoutPct.toFixed(1) : simCheckpointMode, s.demPct.toFixed(1), s.repPct.toFixed(1), s.demVotes, s.repVotes, s.rating]);
+    rows.push([name, SIM_REG[name][0], simCheckpointMode==='tie' ? simCountyTurnoutPct(name).toFixed(1) : simCheckpointMode, s.demPct.toFixed(1), s.repPct.toFixed(1), s.demVotes, s.repVotes, s.rating]);
   });
   // Statewide summary appended at the end (not the top) so the file still
   // re-uploads cleanly -- these trailing rows don't match any real county
@@ -7210,6 +7278,7 @@ document.getElementById('simCsvFileInput').addEventListener('change', e => {
       let applied = 0;
       const loaded = {};
       const turnoutValues = new Set();
+      const turnoutByCounty = {};
       parsed.data.forEach(row => {
         const name = (row.County || '').trim();
         if(!SIM_REG[name]) return;
@@ -7219,15 +7288,18 @@ document.getElementById('simCsvFileInput').addEventListener('change', e => {
           applied++;
         }
         const tp = parseFloat(row.TurnoutPct);
-        if(!isNaN(tp)) turnoutValues.add(tp.toFixed(1));
+        if(!isNaN(tp)){ turnoutValues.add(tp.toFixed(1)); turnoutByCounty[name] = tp; }
       });
       if(applied === 0) throw new Error('no matching counties found in that file');
       // The file becomes the new starting point (the national slider can
       // still shift it); counties it doesn't mention keep what they show now.
       simLoadMap(loaded);
+      simCountyTurnout = {};
       if(turnoutValues.size === 1){
         simTurnoutPct = parseFloat([...turnoutValues][0]);
         document.getElementById('simTurnoutSlider').value = simTurnoutPct;
+      }else if(turnoutValues.size > 1){
+        Object.keys(turnoutByCounty).forEach(n => { simCountyTurnout[n] = turnoutByCounty[n]; });
       }
       simCheckpointMode = 'tie';
       document.getElementById('simCheckpointMode').value = 'tie';
@@ -9613,7 +9685,7 @@ function anRenderTurnHero(M){
   const dP = p.d / pt * 100, rP = p.r / pt * 100, nP = p.n / pt * 100;
   const card = (v, k, color) => `<div class="stat-card"><div class="v"${color ? ` style="color:${color}"` : ''}>${v}</div><div class="k">${k}</div></div>`;
   document.getElementById('anTurnHero').innerHTML =
-    `<div class="row"><span class="label">Projected final turnout · Florida general election</span>` +
+    `<div class="row"><span class="label">Projected Final Turnout · Florida general election</span>` +
     `<span class="leader"><span style="color:var(--total-green)">${(tot / reg * 100).toFixed(1)}%</span> <span style="font-size:13px; color:var(--muted)">of registered voters</span></span></div>` +
     `<div class="bar-track"><div class="bar-seg bar-d" style="width:${dP}%"></div><div class="bar-seg bar-r" style="width:${rP}%"></div><div class="bar-seg bar-npa" style="width:${nP}%"></div></div>` +
     `<div class="bar-labels"><span class="d" style="left:${Math.min(96, Math.max(4, dP / 2))}%">DEM ${dP.toFixed(1)}%</span><span class="r" style="left:${Math.min(96, Math.max(4, dP + rP / 2))}%">REP ${rP.toFixed(1)}%</span></div>` +
@@ -9634,7 +9706,7 @@ function anBuildTurnoutBlurb(M){
   const p1 = `Florida is projected to finish with <span class="hl-green">roughly ${fmt(Math.round(M.Esum))} ballots</span>, a turnout of ${tp.toFixed(1)}% of registered voters, against ${(M.past.y2024.turnout * 100).toFixed(1)}% in 2024 and ${(M.past.y2022.turnout * 100).toFixed(1)}% in 2022 on today's voter rolls.`;
   const p2 = `About ${pct.toFixed(1)}% of that is already in (<span class="hl-gold">${fmt(M.actualSum)} counted</span>), with ${Math.round(M.daysLeft)} days until Election Day. Counties running ahead of the rest of the state are nudged up and counties running behind are nudged down, and no county is projected below the votes already counted.`;
   const p3 = `By registered party, that is about <span class="hl-d">${fmt(Math.round(p.d))} Democratic</span> (${(p.d / pt * 100).toFixed(1)}%), <span class="hl-r">${fmt(Math.round(p.r))} Republican</span> (${(p.r / pt * 100).toFixed(1)}%) and ${fmt(Math.round(p.n))} NPA or other (${(p.n / pt * 100).toFixed(1)}%). Counties with ballots counted are assumed to keep their party mix for the rest of their vote; counties with none yet use their registration.`;
-  return `<div class="an-date">${today}</div><h2>Today's read · Final turnout</h2><p>${p1}</p><p>${p2}</p><p>${p3}</p>`;
+  return `<div class="an-date">${today}</div><h2>Today's read · Projected Final Turnout</h2><p>${p1}</p><p>${p2}</p><p>${p3}</p>`;
 }
 function anRenderTurnTable(m){
   document.getElementById('anTurnBody').innerHTML = m.rows.map(r =>
@@ -9722,9 +9794,9 @@ function anRenderHouseDetail(H){
     `<div><div class="party num-r">Republican nominee</div><div class="nm">${r.rep || 'None on the ballot'}</div></div></div>${oth}` +
     `<div class="an-hd-grid">` +
     card(r.noRep ? 'Unopposed' : (parseFloat((Math.abs(r.margin) * 100).toFixed(1)) === 0 ? 'Even' : anMarginLabel(r.margin)), 'Forecast margin', anMarginColor(r.margin)) +
+    card(anMarginLabel(r.m24), '2024 president on this map', anMarginColor(r.m24)) +
     card((r.D * 100).toFixed(1) + '%', `${r.dem.split(' ').slice(-1)[0]} (D) share`, 'var(--dem)') +
     card((r.R * 100).toFixed(1) + '%', `${(r.rep || 'Republican').split(' ').slice(-1)[0]} (R) share`, 'var(--rep)') +
-    card(anMarginLabel(r.m24), '2024 president on this map', anMarginColor(r.m24)) +
     card(anShiftLabel(r.shift), 'Shift from 2024 (points)', anMarginColor(r.shift)) +
     card(r.rating, 'Forecast rating', col) +
     `</div>` +
@@ -9837,10 +9909,10 @@ async function anRenderMap(m){
   if(view === 'turnout'){
     cats = TURNOUT_BINS;
     z = m.rows.map(r => cats.findIndex(c => c.key === turnoutBinKeyFor(r.county, r.E)) + 0.5);
-    text = m.rows.map(r => `<b>${r.county}</b><br><b>Projected final turnout: ${(r.turnout * 100).toFixed(1)}% of registered voters</b><br>` +
+    text = m.rows.map(r => `<b>${r.county}</b><br><b>Projected Final Turnout: ${(r.turnout * 100).toFixed(1)}% of registered voters</b><br>` +
       `\u{1F7E2} Projected total votes: ${fmt(Math.round(r.E))}<br>Counted so far: ${fmt(r.counted)} (${r.E ? (r.counted / r.E * 100).toFixed(0) : 0}% of projected)<br>Registered voters: ${fmt(r.reg)}`);
-    title = 'Projected final turnout (% of registered voters)';
-    legendHtml = turnoutSideLegendHtml();
+    title = 'Projected Final Turnout (% of registered voters)';
+    legendHtml = turnoutSideLegendHtml('Projected Final Turnout');
   }else if(view === 'vs24' || view === 'vs22'){
     const is24 = view === 'vs24', lab = is24 ? '2024 president' : '2022 governor';
     cats = AN_SHIFT_CATS;

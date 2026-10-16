@@ -9979,7 +9979,7 @@ function anWhyText(d){
   if(Math.abs(d.w1 - d.w0) >= 0.001) out.push(`Polls now carry ${(d.w1 * 100).toFixed(1)}% of the target, up from ${(d.w0 * 100).toFixed(1)}%, as Election Day gets closer.`);
   return out.join(' ');
 }
-function anChangeWindow(M, n){
+function anChangeWindow(M, n, force){
   const k = 1 - AN_OTHER_SHARE, dayA = M.today - n * AN_DAY;
   const when = n === 1 ? 'since yesterday' : (n === 7 ? 'over the past week' : `over the past ${n} days`);
   const L = anMarginLabel;
@@ -9991,8 +9991,15 @@ function anChangeWindow(M, n){
     const H0 = anHouseCompute(M.models, M.past, dayA, env0);
     const moved = M.house.rows.filter((r, i) => r.rating !== H0.rows[i].rating);
     const seatsMoved = M.house.seats.R !== H0.seats.R || M.house.seats.toss !== H0.seats.toss;
-    if(!moved.length && !seatsMoved) return '';
+    if(!moved.length && !seatsMoved && !force) return '';
     const rows = [];
+    if(!moved.length && !seatsMoved){
+      rows.push(`<div class="ch-row">No district changed rating and the projected seats are unchanged. The closest races moved like this:</div>`);
+      M.house.rows.slice().sort((x, y) => Math.abs(x.margin) - Math.abs(y.margin)).slice(0, 4).forEach(r => {
+        const o = H0.rows.find(x => x.d === r.d);
+        rows.push(`<div class="ch-row"><b>${anDistLabel(r.d)}:</b> ${L(o.margin)} (${o.rating}) <span class="arr">→</span> ${L(r.margin)} (${r.rating})</div>`);
+      });
+    }
     if(seatsMoved){
       const parts = [['Republicans', 'R'], ['Democrats', 'D'], ['toss-ups', 'toss']].filter(([n, key]) => M.house.seats[key] !== H0.seats[key]).map(([n, key]) => `${n} ${H0.seats[key]} <span class="arr">→</span> ${M.house.seats[key]}`);
       rows.push(`<div class="ch-row"><b>Projected seats:</b> ${parts.join(', ')}</div>`);
@@ -10003,7 +10010,7 @@ function anChangeWindow(M, n){
     });
     if(moved.length > 6) rows.push(`<div class="ch-row">${moved.length - 6} more districts also changed rating.</div>`);
     const dEnv = M.house.env - env0;
-    const why = `<div><b>Why:</b> every district starts from its fixed 2024 presidential result on the new map and gets the same statewide swing, so only the swing moved. The statewide environment (the average of the Governor and Senate forecasts, compared with 2024) went ${L(env0)} <span class="arr">→</span> ${L(M.house.env)}, a move of ${(Math.abs(dEnv) * 100).toFixed(1)} points toward ${dEnv >= 0 ? 'the Democrats' : 'the Republicans'}. The districts listed sit close to a rating line, so a small move crossed it.</div>` +
+    const why = `<div><b>Why:</b> every district starts from its fixed 2024 presidential result on the new map and gets the same statewide swing, so only the swing moved. The statewide environment (the average of the Governor and Senate forecasts, compared with 2024) went ${L(env0)} <span class="arr">→</span> ${L(M.house.env)}, a move of ${(Math.abs(dEnv) * 100).toFixed(1)} points toward ${dEnv >= 0 ? 'the Democrats' : 'the Republicans'}. ${moved.length ? 'The districts listed sit close to a rating line, so a small move crossed it.' : 'None crossed a rating line.'}</div>` +
       `<div style="margin-top:6px"><b>Governor:</b> ${L(dg.f0)} <span class="arr">→</span> ${L(dg.f1)}. ${anWhyText(dg)}</div>` +
       `<div style="margin-top:6px"><b>Senate:</b> ${L(ds.f0)} <span class="arr">→</span> ${L(ds.f1)}. ${anWhyText(ds)}</div>`;
     return `<div class="an-change">${head}${rows.join('')}<div class="ch-why">${why}</div></div>`;
@@ -10012,7 +10019,7 @@ function anChangeWindow(M, n){
   if(!d) return '';
   const r0 = ratingLabelForMargin(d.f0), r1 = ratingLabelForMargin(d.f1);
   const moved = Math.abs(d.f1 - d.f0) >= 0.01, polled = Math.abs(d.p1 - d.p0) >= 0.01;
-  if(!moved && !polled && r0 === r1 && !d.fresh.length) return '';
+  if(!moved && !polled && r0 === r1 && !d.fresh.length && !force) return '';
   const rating = r0 === r1 ? `${r1}, no change in rating` : `${r0} <span class="arr">→</span> ${r1}`;
   const row = `<div class="ch-row"><b>Forecast:</b> ${L(d.f0)} <span class="arr">→</span> ${L(d.f1)} (${rating})</div>` +
     `<div class="ch-row"><b>Polling average:</b> ${L(d.p0)} <span class="arr">→</span> ${L(d.p1)}</div>`;
@@ -10022,7 +10029,7 @@ function anChangeWindow(M, n){
 // Looks back one day first, then three, then seven, and reports the shortest window in which something moved.
 function anChangeHtml(M){
   for(const n of [1, 3, 7]){ const h = anChangeWindow(M, n); if(h) return h; }
-  return '';
+  return anChangeWindow(M, 7, true);
 }
 
 // ---- Download PNG (map + forecast summary, clearly marked as a forecast) ----

@@ -976,9 +976,9 @@
      ============================================================ */
   .sorted-hover-tooltip{
     position:fixed; z-index:3000; display:none; pointer-events:none;
-    background:#151b28; border:1px solid #212a3b; border-radius:8px;
-    padding:10px 13px; font-family:var(--mono); font-size:11.5px; color:#e9edf5;
-    white-space:nowrap; box-shadow:0 6px 20px rgba(0,0,0,0.45);
+    background:rgba(21,27,40,0.68); border:1px solid rgba(124,135,156,0.35); border-radius:8px;
+    padding:8px 11px; font-family:var(--mono); font-size:11px; color:#e9edf5;
+    white-space:nowrap; box-shadow:0 4px 14px rgba(0,0,0,0.3);
   }
   .sorted-hover-date{ font-weight:600; margin-bottom:6px; color:#e9edf5; }
   .sorted-hover-row{ display:flex; align-items:center; gap:7px; padding:2px 0; }
@@ -4085,7 +4085,7 @@ function marginLineChartSpec(data, showAll){
       zeroline:true, zerolinecolor:'#556076', zerolinewidth:1.5
     },
     hovermode:'closest',
-    hoverdistance:40,
+    hoverdistance:-1,
     hoverlabel:{ bgcolor:'#151b28', bordercolor:'#7c879c', font:{family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5'} },
     showlegend:false
   };
@@ -8342,6 +8342,7 @@ const COUNTY_DETAIL_CHART_LAYOUT_BASE = {
   // version just for this -- when it also drives every map and other
   // chart -- isn't worth the risk for one feature on four charts.
   hovermode:'x unified',
+  hoverdistance:-1,     // pick the nearest update from anywhere in the plot, not only right on a line
   hoverlabel:{ bgcolor:'rgba(0,0,0,0)', bordercolor:'rgba(0,0,0,0)', font:{color:'rgba(0,0,0,0)', size:1} },
   // The underlying Date objects already carry the run's literal Eastern
   // wall-clock time (the CSV timestamps are always Eastern); these
@@ -8615,6 +8616,30 @@ let lastStatewideCumulativeData = null;
 // neither a rating lookup nor restart markers). showAll comes from the
 // relevant toggle's current state; noteElId is the "For clarity..."
 // disclaimer shown only while windowed.
+// A dotted light-yellow vertical line on a county's time charts at the moment in-person early voting opened there.
+// If that moment is older than the oldest point on screen (the 10-update window), a small note at the left edge says so.
+const EV_LINE_COLOR = '#f7e89b';
+function evStartLine(countyName, times){
+  const d = EV_DATA[countyName];
+  if(!d || !times || !times.length) return { shapes:[], annotations:[] };
+  const [mo, dy] = d[0].split('/').map(Number);
+  const x = new Date(2026, mo - 1, dy, 7, 0);   // polls open at 7:00 AM
+  const lo = Math.min.apply(null, times), hi = Math.max.apply(null, times);
+  const label = 'Early voting began ' + 'Oct' + ' ' + dy;
+  const font = { size:10, color:EV_LINE_COLOR, family:'IBM Plex Mono, monospace' };
+  if(x.getTime() > hi) return { shapes:[], annotations:[] };           // not open yet: nothing to mark
+  if(x.getTime() < lo){
+    return { shapes:[], annotations:[{ xref:'paper', yref:'paper', x:0, y:1, xanchor:'left', yanchor:'top', showarrow:false,
+      text:'◂ ' + label + ' (earlier than this window)', font, bgcolor:'rgba(10,14,23,0.75)' }] };
+  }
+  const late = (x.getTime() - lo) > (hi - lo) * 0.55;
+  return {
+    shapes:[{ type:'line', xref:'x', yref:'paper', x0:x, x1:x, y0:0, y1:1, line:{ color:EV_LINE_COLOR, width:1.6, dash:'dot' } }],
+    annotations:[{ xref:'x', yref:'paper', x:x, y:0.99, xanchor: late ? 'right' : 'left', yanchor:'top', xshift: late ? -6 : 6, showarrow:false,
+      text:label, font, bgcolor:'rgba(10,14,23,0.75)' }]
+  };
+}
+
 async function renderCumulativeChartWindowed(elId, noteElId, data, showAll){
   const el = document.getElementById(elId);
   if(!el) return;
@@ -8652,8 +8677,10 @@ async function renderCumulativeChartWindowed(elId, noteElId, data, showAll){
     });
   }
 
+  const evl = evStartLine(zoomedCounty, cTimes);
   await Plotly.newPlot(el, cumulativeTraces, {
     ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
+    shapes:evl.shapes, annotations:evl.annotations,
     yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'Votes', font:{size:10}}}
   }, {displayModeBar:false, responsive:true});
   attachSortedHoverTooltip(el, fmtCumulativeHoverValue, ratingLookup, netGainLookup, true);
@@ -8699,8 +8726,10 @@ async function renderCountyDetailCharts(countyRows){
     { ...lineBase, x:times, y:npaOtherPct, name:'NPA/Other %', line:{color:'#c77dff', width:2.5} }
   ];
 
+  const evl2 = evStartLine(zoomedCounty, times);
   await Plotly.newPlot(shareEl, shareTraces, {
     ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
+    shapes:evl2.shapes, annotations:evl2.annotations,
     yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:pctChartRange([demPct, repPct, npaOtherPct]), autorange:false, ticksuffix:'%'}
   }, {displayModeBar:false, responsive:true});
   attachSortedHoverTooltip(shareEl, fmtShareHoverValue, ratingLookup);
@@ -10241,15 +10270,28 @@ function anBlinkEnds(el, traceIdx){
   el.on('plotly_afterplot', apply);
 }
 
-function anChartLayout(yVals, endLabel, endY, endColor){
+// Date axis for the forecast and poll charts: starts on Jan 1 of the first year with data, ends on Election Day (Nov 3),
+// with markers on every Jan 1 and Jul 1 and a final one on Nov 1.
+function anDateAxis(firstIso){
+  const y0 = parseInt(String(firstIso).slice(0, 4), 10) || 2026;
+  const vals = [], text = [];
+  for(let y = y0; y <= 2026; y++){
+    vals.push(y + '-01-01'); text.push('Jan 1<br>' + y);
+    vals.push(y + '-07-01'); text.push('Jul 1');
+  }
+  vals.push('2026-11-01'); text.push('Nov 1');
+  return { range:[y0 + '-01-01', '2026-11-03'], tickmode:'array', tickvals:vals, ticktext:text };
+}
+function anChartLayout(yVals, endLabel, endY, endColor, firstIso){
   let range = pctChartRange([yVals]);
   return {
     ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
     margin:{ t:12, b:40, l:50, r:96 },
     hovermode:'x unified',
-    hoverlabel:{ bgcolor:'#151b28', bordercolor:'#7c879c', font:{ family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5' } },
+    hoverlabel:{ bgcolor:'rgba(21,27,40,0.68)', bordercolor:'rgba(124,135,156,0.35)', font:{ family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5' } },
+    hoverdistance:-1,
     showlegend:true, legend:{ orientation:'h', y:1.12, x:0, font:{ size:11 } },
-    xaxis:{ ...COUNTY_DETAIL_CHART_LAYOUT_BASE.xaxis, tickformat:'%b %-d', hoverformat:'%b %-d, %Y', automargin:true },
+    xaxis:{ ...COUNTY_DETAIL_CHART_LAYOUT_BASE.xaxis, ...anDateAxis(firstIso), tickformat:'%b %-d', hoverformat:'%b %-d, %Y', automargin:true },
     yaxis:{ ...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, range, autorange:false, ticksuffix:'%', title:{ text:'', font:{ size:10 } } },
     annotations:[{ xref:'x', yref:'y', x:endLabel.x, y:endY, xanchor:'left', yanchor:'middle', xshift:10, showarrow:false,
       text:endLabel.text, font:{ size:12, color:endColor, family:'IBM Plex Mono, monospace' } }]
@@ -10275,7 +10317,7 @@ async function anDrawRace(race, m){
     endMark(last.iso, last.fcD, '#5b9bd9', 'D end'), endMark(last.iso, last.fcR, '#d4675a', 'R end')
   ];
   const fcEndY = (last.fcD + last.fcR) / 2;
-  const fcLayout = anChartLayout(S.flatMap(p => [p.fcD, p.fcR]), { x:last.iso, text:`Expected<br>${anMarginLabel(fcLabelM)}` }, fcEndY, anMarginColor(fcLabelM));
+  const fcLayout = anChartLayout(S.flatMap(p => [p.fcD, p.fcR]), { x:last.iso, text:`Expected<br>${anMarginLabel(fcLabelM)}` }, fcEndY, anMarginColor(fcLabelM), x[0]);
   await Plotly.react(fcEl, fcTraces, fcLayout, { displayModeBar:false, responsive:true });
   anBlinkEnds(fcEl, [2, 3]);
 
@@ -10295,7 +10337,7 @@ async function anDrawRace(race, m){
   ];
   const pm = (last.pollD - last.pollR) / 100;
   const pLayout = anChartLayout(S.flatMap(p => [p.pollD, p.pollR]).concat(polls.flatMap(p => [p.dem, p.rep])),
-    { x:last.iso, text:`Average<br>${anMarginLabel(pm)}` }, (last.pollD + last.pollR) / 2, anMarginColor(pm));
+    { x:last.iso, text:`Average<br>${anMarginLabel(pm)}` }, (last.pollD + last.pollR) / 2, anMarginColor(pm), polls.length ? [x[0], polls[0].end].sort()[0] : x[0]);
   await Plotly.react(pollEl, pTraces, pLayout, { displayModeBar:false, responsive:true });
   anBlinkEnds(pollEl, [2, 3]);
 }

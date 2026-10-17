@@ -7,16 +7,16 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 16th, 2026 at 7:01pm Eastern Time
+Updated at October 17th, 2026 at 11:00am Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-46
+8
 
 Unchanged Counties:
-False
+True
 
 Rejected County Updates:
 0
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-347,275
+348,641
 
 REP:
-296,693
+298,118
 
 OTHER:
-172,967
+173,607
 
 TOTAL:
-816,935
+820,366
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 50,582 votes statewide.
+🔵 Democrats lead by 50,523 votes statewide.
 
 Margin Change:
-+0.06% toward Democrats
+-0.02% toward Republicans
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +4,781
-🔴 REP: +3,385
-🟣 OTHER: +2,337
-🟢 TOTAL: +10,503
+🔵 DEM: +1,366
+🔴 REP: +1,425
+🟣 OTHER: +640
+🟢 TOTAL: +3,431
 
 REJECTED COUNTY UPDATES
 =================================
@@ -64,39 +64,7 @@ RATING / FORECAST CHANGES
 =================================
 
 
-Charlotte
-
-Safe R → Likely R
-
-Margin Move:
-+0.002
-
-
-
-Indian River
-
-Lean R → Likely R
-
-Margin Move:
--0.002
-
-
-
-Putnam
-
-Lean R → Likely R
-
-Margin Move:
--0.008
-
-
-
-Sumter
-
-Safe R → Likely R
-
-Margin Move:
-+0.002
+No rating changes detected.
 
 
 
@@ -104,46 +72,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️7 PM Florida EV & VBM Update
+🗳️11 AM Florida EV & VBM Update
 
-New votes have been cast in 46 counties over the last hour, with the largest update coming from Broward County.
+New votes have been cast in 8 counties over the last hour, with the largest update coming from Polk County.
 
-🔵 DEM: +4,781
-🔴 REP: +3,385
-🟣 OTHER: +2,337
-🟢 TOTAL: +10,503
+🔵 DEM: +1,366
+🔴 REP: +1,425
+🟣 OTHER: +640
+🟢 TOTAL: +3,431
 
-🔵 Democrats lead by 50,582 votes statewide.
+🔵 Democrats lead by 50,523 votes statewide.
 
-🔴 Margin Change: +0.06% toward Democrats
+🔴 Margin Change: -0.02% toward Republicans
 
 Largest County Updates
 
 
-🥇Broward County
+🥇Polk County
 
-🔵 DEM: +1,517
-🔴 REP: +659
-🟣 OTHER: +676
-🟢 TOTAL: +2,852
-
-
-
-🥈Pinellas County
-
-🔵 DEM: +779
-🔴 REP: +955
-🟣 OTHER: +553
-🟢 TOTAL: +2,287
+🔵 DEM: +598
+🔴 REP: +676
+🟣 OTHER: +260
+🟢 TOTAL: +1,534
 
 
 
-🥉Palm Beach County
+🥈Volusia County
 
-🔵 DEM: +669
-🔴 REP: +226
-🟣 OTHER: +236
-🟢 TOTAL: +1,131
+🔵 DEM: +262
+🔴 REP: +263
+🟣 OTHER: +171
+🟢 TOTAL: +696
+
+
+
+🥉Escambia County
+
+🔵 DEM: +249
+🔴 REP: +259
+🟣 OTHER: +73
+🟢 TOTAL: +581
 
 
 

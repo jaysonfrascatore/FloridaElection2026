@@ -909,6 +909,10 @@
   .map-side-legend .side-legend-title span{
     display:block; font-size:9.5px; font-weight:400; color:var(--muted-2); text-transform:none; letter-spacing:0;
   }
+  #evToggleBtn{ background:#8ac926; color:#0a0e17; border:0; border-radius:8px; padding:9px 14px; font:600 12px Inter, sans-serif; cursor:pointer; }
+  #evToggleBtn:hover{ filter:brightness(1.08); }
+  .map-side-legend .ev-n{ color:var(--muted); font-weight:400; }
+  .map-side-legend .ev-note{ font-size:10.5px; color:var(--muted); margin-top:8px; line-height:1.4; max-width:190px; }
   .map-side-legend .side-legend-row{ display:flex; align-items:center; gap:9px; font-size:11.5px; color:var(--text); margin:5px 0; }
   .map-side-legend .sq{ width:15px; height:15px; border-radius:3px; border:1px solid rgba(255,255,255,0.22); flex:0 0 auto; }
   .map-side-legend.on{ display:block; }
@@ -1120,6 +1124,7 @@
           </button>
         </div>
       </div>
+      <div id="evToggleWrap" style="display:none;margin:2px 0 10px"><button id="evToggleBtn" type="button">Click for Early Voting Window Map</button></div>
       <div class="npa-slider-wrap" id="turnoutSliderWrap" style="display:none;">
         <div class="npa-slider-label">
           <span>Historical turnout &mdash; drag to replay turnout by county at any past update</span>
@@ -1609,9 +1614,13 @@
 
   <div id="anRaces"></div>
 
+  <details class="panel an-method" id="anTurnMethod" open style="display:none">
+    <summary><h3>Methodology: how Projected Final Turnout is calculated</h3></summary>
+    <p>Each county's projection starts from its past ballots: the Democratic plus Republican votes cast in the 2018 governor's, 2022 governor's and 2024 presidential races, each divided by 0.99 to account for votes cast for other candidates, since the history tables hold only the two major parties. The three totals are averaged with equal weight to give a historical expected ballot count for the county. Registration growth since 2018 is not reflected, because each past race enters as ballots cast and not as a share of that year's rolls, and the 2024 presidential year pulls the average up for a midterm. This year's pace is then applied: for every county with counted ballots, its counted votes divided by its historical estimate are compared with the same ratio across all reporting counties, the comparison is limited to between 0.7 and 1.3, and 15% of the gap moves that county up or down. All counties are then rescaled so the statewide total equals the plain three-election average, so the pace redistributes ballots between counties but never changes the statewide total. Each county is held to two limits: it cannot fall below the ballots already counted and it cannot exceed 95% of its registered voters. The statewide figure is the sum of the county projections divided by all registered voters, and each county's percentage is its projection divided by its own registered voters, both measured against a June 2026 snapshot of the voter rolls. The party split shown beside it estimates who is still to come from each county's unvoted registered voters by party, and it counts voters by registration, not by the candidate they vote for.</p>
+  </details>
   <details class="panel an-method" id="anMethod" open>
     <summary><h3>Methodology: how this forecast is built</h3></summary>
-    <p>Each update (the 7 p.m. ET run) the model rebuilds the forecast in a fixed order. It starts with the live count by registered party, which sets each county's expected final turnout (its 2018, 2022 and 2024 average, nudged 15% by this year's early-vote pace) and the party mix of the voters still to come. The history side is each county's average two-party result in those three elections, weighted by projected turnout, then adjusted for how independents and each party's own voters are polling against their exit-poll baselines (about 49% Democratic among independents, 95% Democratic and 94% Republican loyalty). The polling side averages every poll: a poll's weight halves every 14 days, grows with sample size, and counts 60% if a party or campaign sponsored it, the same for Democratic and Republican sponsors, while independent pollsters count in full. The statewide target blends the two, with polls at about 84% of the weight today and rising toward 90% on Election Day, and one statewide shift then sets each county's result. For the House, each district starts from its 2024 presidential result on the new map, gets the same statewide swing (lopsided districts move less), and then a small campaign-money adjustment of at most 1.5 points from FEC filings (mostly through July 29), with money a candidate put in counted at half weight; only FL-08 and FL-09 have district polls, which carry a quarter of the weight. The weights are judgment calls that have not been tested against past elections, the forecast is a single number with no error range, and the exit-poll baselines come from the NBC (2018) and Edison/CNN (2022) exit polls and a 2024 table that does not name its pollster.</p>
+    <p>Each update (the 7 p.m. ET run) the model rebuilds the forecast in a fixed order. It starts with the live count by registered party, which sets each county's expected final turnout (its 2018, 2022 and 2024 average, nudged 15% by this year's early-vote pace) and the party mix of the voters still to come. The history side is each county's average two-party result in those three elections, weighted by projected turnout, then adjusted for how independents and each party's own voters are polling against their exit-poll baselines (about 49% Democratic among independents, 95% Democratic and 94% Republican loyalty). The polling side averages every poll: a poll's weight halves every 14 days, grows with sample size, and counts 60% if a party or campaign sponsored it, the same for Democratic and Republican sponsors, while independent pollsters count in full. The statewide target blends the two, with polls at about 84% of the weight today and rising toward 90% on Election Day, and a small campaign-money term (the same rule as the House, at most 1.5 points, from FEC filings for the Senate and press-reported state filings for Governor) is added to the fundamentals only, since polls already reflect spending, and one statewide shift then sets each county's result. For the House, each district starts from its 2024 presidential result on the new map, gets the same statewide swing (lopsided districts move less), and then a small campaign-money adjustment of at most 1.5 points from FEC filings (mostly through July 29), with money a candidate put in counted at half weight; only FL-08 and FL-09 have district polls, which carry a quarter of the weight. The weights are judgment calls that have not been tested against past elections, the forecast is a single number with no error range, and the exit-poll baselines come from the NBC (2018) and Edison/CNN (2022) exit polls and a 2024 table that does not name its pollster.</p>
   </details>
 </div>
 
@@ -2834,9 +2843,52 @@ const DROP_KEY_ROWS = [
   { label:'3-way tie',               color:'#145a32' }
 ];
 
+// ---- In-person early voting windows (Florida Division of Elections, early voting period per county, files for 10/16/2026) ----
+const EV_DATA = {'Alachua':['10/19','11/01'],'Baker':['10/24','10/31'],'Bay':['10/19','10/31'],'Bradford':['10/19','11/01'],'Brevard':['10/19','10/31'],'Broward':['10/19','11/01'],'Calhoun':['10/19','10/31'],'Charlotte':['10/19','10/31'],'Citrus':['10/22','10/31'],'Clay':['10/23','10/31'],'Collier':['10/22','10/31'],'Columbia':['10/24','10/31'],'DeSoto':['10/22','10/31'],'Dixie':['10/22','10/31'],'Duval':['10/20','11/01'],'Escambia':['10/19','10/31'],'Flagler':['10/19','10/31'],'Franklin':['10/24','10/31'],'Gadsden':['10/19','11/01'],'Gilchrist':['10/24','10/31'],'Glades':['10/24','10/31'],'Gulf':['10/24','10/31'],'Hamilton':['10/24','10/31'],'Hardee':['10/22','10/31'],'Hendry':['10/19','10/31'],'Hernando':['10/22','10/31'],'Highlands':['10/22','10/31'],'Hillsborough':['10/19','11/01'],'Holmes':['10/24','10/31'],'Indian River':['10/19','10/31'],'Jackson':['10/22','10/31'],'Jefferson':['10/19','10/31'],'Lafayette':['10/24','10/31'],'Lake':['10/19','10/31'],'Lee':['10/19','10/31'],'Leon':['10/19','11/01'],'Levy':['10/22','11/01'],'Liberty':['10/24','10/31'],'Madison':['10/24','10/31'],'Manatee':['10/19','11/01'],'Marion':['10/22','10/31'],'Martin':['10/21','10/31'],'Miami-Dade':['10/19','11/01'],'Monroe':['10/19','10/31'],'Nassau':['10/22','10/31'],'Okaloosa':['10/19','10/31'],'Okeechobee':['10/24','10/31'],'Orange':['10/19','11/01'],'Osceola':['10/19','11/01'],'Palm Beach':['10/19','11/01'],'Pasco':['10/19','10/31'],'Pinellas':['10/19','11/01'],'Polk':['10/19','10/31'],'Putnam':['10/19','10/31'],'Santa Rosa':['10/19','10/31'],'Sarasota':['10/19','11/01'],'Seminole':['10/19','11/01'],'St. Johns':['10/21','10/31'],'St. Lucie':['10/19','10/31'],'Sumter':['10/24','10/31'],'Suwannee':['10/24','10/31'],'Taylor':['10/24','10/31'],'Union':['10/24','10/31'],'Volusia':['10/19','10/31'],'Wakulla':['10/24','10/31'],'Walton':['10/19','10/31'],'Washington':['10/24','10/31']};
+const EV_NOV1_COLOR = '#9c6644';
+const EV_START_CATS = [
+  { md:'10/19', key:'Mon, Oct 19', color:'#2EC4B6' },
+  { md:'10/20', key:'Tue, Oct 20', color:'#9d4edd' },
+  { md:'10/21', key:'Wed, Oct 21', color:'#CC5803' },
+  { md:'10/22', key:'Thu, Oct 22', color:'#ffb3c1' },
+  { md:'10/23', key:'Fri, Oct 23', color:'#ECE4B7' },
+  { md:'10/24', key:'Sat, Oct 24', color:'#1282A2' }
+];
+function evInfo(c){ return EV_DATA[c.county] || null; }
+function evCat(c){
+  const d = evInfo(c); if(!d) return EV_START_CATS[0].key;
+  const cat = EV_START_CATS.find(x => x.md === d[0]);
+  return cat ? cat.key : EV_START_CATS[0].key;
+}
+function evEndsNov1(c){ const d = evInfo(c); return !!d && d[1] === '11/01'; }
+function evCatColor(c){ return (EV_START_CATS.find(x => x.key === evCat(c)) || EV_START_CATS[0]).color; }
+function evStripeFor(c){ return evEndsNov1(c) ? 'url(#stripe-ev-' + evCatColor(c).replace('#','').toLowerCase() + ')' : null; }
+function ensureEvStripeDefs(svg){
+  if(!svg || svg.querySelector('#stripe-ev-2ec4b6')) return;
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  defs.innerHTML = EV_START_CATS.map(cat =>
+    '<pattern id="stripe-ev-' + cat.color.replace('#','').toLowerCase() + '" width="12" height="12" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">' +
+      '<rect width="12" height="12" fill="' + cat.color + '"></rect>' +
+      '<rect width="6" height="12" fill="' + EV_NOV1_COLOR + '"></rect>' +
+    '</pattern>').join('');
+  svg.insertBefore(defs, svg.firstChild);
+}
+function evSideLegendHtml(counties){
+  const list = counties || COUNTIES;
+  const rows = EV_START_CATS.map(cat => {
+    const n = list.filter(c => evCat(c) === cat.key).length;
+    return `<div class="side-legend-row"><span class="sq" style="background:${cat.color}"></span><span class="lbl">${cat.key}<span class="ev-n"> \u00b7 ${n}</span></span></div>`;
+  }).join('');
+  const nov1 = list.filter(evEndsNov1).length;
+  return `<div class="side-legend-title">Early voting starts<span>First day of in-person early voting</span></div>` + rows +
+    `<div class="side-legend-row" style="margin-top:10px"><span class="sq" style="background:${EV_NOV1_COLOR}"></span><span class="lbl">* Ends November 1st<span class="ev-n"> \u00b7 ${nov1}</span></span></div>` +
+    `<div class="ev-note">Brown Stripes: The county starts on the colors shown. A brown stripe indicates that the Early Voting period ends on November 1st.</div>`;
+}
+
 const METRICS = {
   // "Primary Election" — pinned to the frozen snapshot (STATIC_DVR_COUNTIES), never
   // touched by the live auto-refresh.
+  earlyvote: { title:'County by County Early Voting Window', categorical:true, cats:EV_START_CATS, catFn:evCat, evLegend:true },
   rating: { title:'Primary Election rating by county', categorical:true, cats:RATING_CATS, catFn:categoryFor },
   // "General Election" — live, starts at 0 votes for every county and fills
   // in as the live feed updates. Same rating-tier styling as Primary Election, but
@@ -2886,6 +2938,15 @@ function partyLeadLines(parties){
 }
 
 function tooltipText(list){
+  if(currentMetric === 'earlyvote'){
+    return list.map(c => {
+      const d = evInfo(c);
+      if(!d) return `<b>${c.county}</b><br>No early voting dates on file.`;
+      const fmtD = md => { const [m, dd] = md.split('/'); return (m === '11' ? 'Nov. ' : 'Oct. ') + parseInt(dd, 10); };
+      return `<b>${c.county}</b><br><b>Early voting: ${fmtD(d[0])} \u2013 ${fmtD(d[1])}</b><br>` +
+        (d[1] === '11/01' ? 'Includes Sunday, Nov. 1' : 'Ends Saturday, Oct. 31');
+    });
+  }
   if(currentMetric === 'dropwinner'){
     return list.map(c => {
       if(!c.totalNew){
@@ -3076,9 +3137,11 @@ function dropTieStripeFor(c){
   if(dAtMax && oAtMax) return 'url(#stripe-d-npa)';
   return 'url(#stripe-r-npa)';
 }
-function applyTieStripes(svg, activeCounties){
+function applyTieStripes(svg, activeCounties, metric){
   if(!svg) return;
+  metric = metric || currentMetric;
   ensureStripeDefs(svg);
+  if(metric === 'earlyvote') ensureEvStripeDefs(svg);
   const byFips = {};
   activeCounties.forEach(c => { byFips[c.fips] = c; });
   const paths = svg.querySelectorAll('path.choroplethlocation, g.choroplethlayer path');
@@ -3091,7 +3154,9 @@ function applyTieStripes(svg, activeCounties){
     const c = (fips && byFips[fips]) || activeCounties[i];
     if(!c) return;
     let stripe = null;
-    if(currentMetric === 'demrepnpa' && !isCountyPending(c)){
+    if(metric === 'earlyvote'){
+      stripe = evStripeFor(c);
+    }else if(currentMetric === 'demrepnpa' && !isCountyPending(c)){
       stripe = tieStripeFor(c);
     }else if(currentMetric === 'dropwinner'){
       stripe = dropTieStripeFor(c);
@@ -3139,6 +3204,7 @@ function buildMapTrace(metric, activeCounties){
     // General Election: the rating key beside the map too (the chips under
     // it stay, since they also cover Not Updated / NPA lead / ties).
     if(m.ratingKey) sideLegendHtml = ratingSideLegendHtml();
+    if(m.evLegend){ legendVisible = false; legendHtml = ''; sideLegendHtml = evSideLegendHtml(activeCounties); }
   }else if(m.symmetric){
     const maxAbs = Math.max(0.01, ...activeCounties.map(c=>Math.abs(m.get(c))));
     const z = activeCounties.map(m.get);
@@ -3178,6 +3244,11 @@ async function renderMap(){
   document.getElementById('npaSliderWrap').style.display = (currentMetric === 'demrepnpa') ? 'block' : 'none';
   document.getElementById('turnoutSliderWrap').style.display = (currentMetric === 'total') ? 'block' : 'none';
   // Total Turnout also shows the "Votes counted" panel, under the map.
+  const evWrap = document.getElementById('evToggleWrap');
+  if(evWrap){
+    evWrap.style.display = (currentMetric === 'total' || currentMetric === 'earlyvote') ? 'block' : 'none';
+    document.getElementById('evToggleBtn').textContent = currentMetric === 'earlyvote' ? 'Back to Live Turnout' : 'Click for Early Voting Window Map';
+  }
   const showVotesPerDay = currentMetric === 'total';
   document.getElementById('votesPerDayPanel').style.display = showVotesPerDay ? 'block' : 'none';
   document.getElementById('liveGrid').classList.toggle('with-votes-per-day', showVotesPerDay);
@@ -3211,8 +3282,8 @@ async function renderMap(){
     margin:{t:10,b:10,l:10,r:10}, font:{family:'Inter, sans-serif'}
   };
   Plotly.newPlot('map', [trace], layout, {displayModeBar:false, responsive:true, scrollZoom:true}).then(() => {
-    if((currentMetric === 'demrepnpa' && !shiftSliderActive) || currentMetric === 'dropwinner'){
-      applyTieStripes(document.querySelector('#map svg'), activeCounties);
+    if((currentMetric === 'demrepnpa' && !shiftSliderActive) || currentMetric === 'dropwinner' || currentMetric === 'earlyvote'){
+      applyTieStripes(document.querySelector('#map svg'), activeCounties, currentMetric);
     }
   });
 
@@ -3239,12 +3310,18 @@ var tableHeadDefaultHtml;
 var tableHeadMode = 'default';
 
 function tableModeFor(metric){
-  return metric === 'total' ? 'turnout' : 'default';
+  return metric === 'total' ? 'turnout' : (metric === 'earlyvote' ? 'ev' : 'default');
 }
 function tableKeysFor(mode){
+  if(mode === 'ev') return ['county', 'evStart', 'evEnd'];
   return mode === 'turnout'
     ? ['county', 'turnoutBin', 'turnoutPct', 'total', 'dem', 'rep', 'npa', 'diff']
     : ['county', 'leader', 'dem', 'rep', 'npa', 'diff', 'total', 'marginPct', 'rating'];
+}
+function evTableHeadHtml(){
+  return '<th data-key="county">County</th>' +
+    '<th data-key="evStart">Early voting starts</th>' +
+    '<th data-key="evEnd">Early voting ends</th>';
 }
 function turnoutTableHeadHtml(){
   return '<th data-key="county">County</th>' +
@@ -3260,6 +3337,8 @@ function turnoutTableHeadHtml(){
 // category sorts by range order, lowest first); everything else is just
 // the county's own field.
 function tableSortValue(c, key){
+  if(key === 'evStart'){ const d = EV_DATA[c.county]; return d ? d[0] : ''; }
+  if(key === 'evEnd'){ const d = EV_DATA[c.county]; return d ? d[1] : ''; }
   if(key === 'turnoutBin') return TURNOUT_BINS.findIndex(b => b.key === turnoutBinFor(c));
   if(key === 'turnoutPct') return countyTurnoutPct(c);
   return c[key];
@@ -3275,7 +3354,7 @@ function renderTable(){
   const headRow = document.querySelector('#voteTable thead tr');
   if(tableHeadDefaultHtml === undefined) tableHeadDefaultHtml = headRow.innerHTML;
   if(tableHeadMode !== mode){
-    headRow.innerHTML = mode === 'turnout' ? turnoutTableHeadHtml() : tableHeadDefaultHtml;
+    headRow.innerHTML = mode === 'turnout' ? turnoutTableHeadHtml() : (mode === 'ev' ? evTableHeadHtml() : tableHeadDefaultHtml);
     tableHeadMode = mode;
   }
   document.getElementById('voteTable').classList.toggle('turnout-table', mode === 'turnout');
@@ -3296,6 +3375,17 @@ function renderTable(){
   });
   const body = document.getElementById('tableBody');
   body.innerHTML = rows.map(c => {
+    if(mode === 'ev'){
+      const cat = EV_START_CATS.find(x => x.key === evCat(c));
+      const nov1 = evEndsNov1(c);
+      return `
+    <tr data-county="${c.county}" class="${c.county===highlightedCounty?'hl':''}">
+      <td class="county-name">${c.county}</td>
+      <td><span class="chip" style="background:${cat.color};color:${contrastText(cat.color)}">${cat.key}</span></td>
+      <td class="num-total">${nov1 ? '<span class="chip" style="background:' + EV_NOV1_COLOR + ';color:#fff">Sun, Nov 1 *</span>' : 'Sat, Oct 31'}</td>
+    </tr>
+  `;
+    }
     if(mode === 'turnout'){
       const binKey = turnoutBinFor(c);
       const color = TURNOUT_BINS.find(b => b.key === binKey).color;
@@ -5692,8 +5782,8 @@ async function renderMetricMapCanvas(metric, activeCounties, cssWidth, cssHeight
     await Plotly.newPlot(tempDiv, traces, layout, { displayModeBar:false, responsive:false });
 
     const svg = tempDiv.querySelector('svg');
-    if((metric === 'demrepnpa' && !shiftSliderActive) || metric === 'dropwinner'){
-      applyTieStripes(svg, activeCounties);
+    if((metric === 'demrepnpa' && !shiftSliderActive) || metric === 'dropwinner' || metric === 'earlyvote'){
+      applyTieStripes(svg, activeCounties, metric);
     }
 
     const targetW = cssWidth * pixelScale, targetH = cssHeight * pixelScale;
@@ -6091,7 +6181,133 @@ async function exportStatewidePng(btn, opts = {}){
     btn.disabled = false;
   }
 }
-document.getElementById('downloadMapPngBtn').addEventListener('click', e => exportStatewidePng(e.currentTarget));
+// Early Voting Window screenshot: 1800 x 1700 like the other statewide maps. No results or forecasts --
+// just the map, a legend stacked beside it, the county counts, and the sources.
+async function exportEarlyVotePng(btn){
+  const originalText = btn.textContent;
+  btn.textContent = 'Rendering…';
+  btn.disabled = true;
+  try{
+    const W = 1800, H = 1700, headerH = 264, mapW = 1300, mapH = 1056;
+    const sans = 'Inter, Arial, sans-serif', mono = 'IBM Plex Mono, monospace';
+    const counties = activeCountiesFor('earlyvote');
+    const mapCanvas = await renderMetricMapCanvas('earlyvote', counties, mapW / 2, mapH / 2, 2);
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#0a0e17';
+    ctx.fillRect(0, 0, W, H);
+
+    // wraps text to a width, returns the y after the last line
+    const wrap = (text, x, y, maxW, lineH) => {
+      const words = text.split(' '); let line = '';
+      words.forEach(w => {
+        const t = line ? line + ' ' + w : w;
+        if(ctx.measureText(t).width > maxW && line){ ctx.fillText(line, x, y); y += lineH; line = w; }
+        else line = t;
+      });
+      if(line){ ctx.fillText(line, x, y); y += lineH; }
+      return y;
+    };
+
+    // header
+    ctx.fillStyle = '#e9edf5';
+    ctx.font = `700 58px ${sans}`;
+    ctx.fillText('County by County Early Voting Window', 48, 86);
+    ctx.fillStyle = '#f4b860';
+    ctx.font = `600 30px ${sans}`;
+    ctx.fillText('Florida General Election · Election Day: Tuesday, November 3, 2026', 48, 138);
+    ctx.fillStyle = '#7c879c';
+    ctx.font = `400 26px ${sans}`;
+    wrap('Each county indicates the first day of in-person early voting by color. Counties with a solid color end the in-person early voting period on October 31st. A county with a brown stripe shows that a county\u2019s Early Voting period ends the next day, November 1st.', 48, 190, W - 96, 34);
+
+    // map (left)
+    ctx.drawImage(mapCanvas, 0, headerH);
+
+    // legend panel (right of the map, never over it)
+    const panelX = mapW + 40, panelW = W - panelX - 48, panelY = headerH + 24;
+    const sq = 40, rowH = 66, pad = 28;
+    const nov1 = counties.filter(evEndsNov1).length;
+    const rows = EV_START_CATS.map(cat => ({ color:cat.color, label:cat.key, n:counties.filter(c => evCat(c) === cat.key).length }));
+    ctx.font = `400 22px ${sans}`;
+    const noteLines = (() => {
+      const words = 'Brown Stripes: The county starts on the colors shown. A brown stripe indicates that the Early Voting period ends on November 1st.'.split(' ');
+      const out = []; let line = '';
+      words.forEach(w => { const t = line ? line + ' ' + w : w; if(ctx.measureText(t).width > panelW - pad * 2 && line){ out.push(line); line = w; } else line = t; });
+      if(line) out.push(line); return out;
+    })();
+    const panelH = pad + 104 + rows.length * rowH + 18 + rowH + 14 + noteLines.length * 30 + pad + 24;
+    const r = 18;
+    ctx.beginPath();
+    ctx.moveTo(panelX + r, panelY);
+    ctx.arcTo(panelX + panelW, panelY, panelX + panelW, panelY + panelH, r);
+    ctx.arcTo(panelX + panelW, panelY + panelH, panelX, panelY + panelH, r);
+    ctx.arcTo(panelX, panelY + panelH, panelX, panelY, r);
+    ctx.arcTo(panelX, panelY, panelX + panelW, panelY, r);
+    ctx.closePath();
+    ctx.fillStyle = '#151b28'; ctx.fill();
+    ctx.strokeStyle = '#212a3b'; ctx.lineWidth = 2; ctx.stroke();
+
+    let y = panelY + pad + 28;
+    ctx.fillStyle = '#e9edf5'; ctx.font = `700 28px ${sans}`;
+    ctx.fillText('EARLY VOTING STARTS', panelX + pad, y);
+    ctx.fillStyle = '#7c879c'; ctx.font = `400 21px ${sans}`;
+    ctx.fillText('First day of in-person early voting', panelX + pad, y + 32);
+    ctx.fillText('(number = counties)', panelX + pad, y + 60);
+    y += 104;
+    const drawRow = (color, label, n, star) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(panelX + pad, y - sq + 12, sq, sq);
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)'; ctx.lineWidth = 1.5;
+      ctx.strokeRect(panelX + pad, y - sq + 12, sq, sq);
+      ctx.fillStyle = '#e9edf5'; ctx.font = `600 26px ${sans}`;
+      ctx.fillText(label, panelX + pad + sq + 20, y + 8);
+      const lw = ctx.measureText(label).width;
+      ctx.fillStyle = '#7c879c'; ctx.font = `400 22px ${sans}`;
+      ctx.fillText('· ' + n, panelX + pad + sq + 20 + lw + 14, y + 8);
+      y += rowH;
+    };
+    rows.forEach(rw => drawRow(rw.color, rw.label, rw.n));
+    y += 18;
+    drawRow(EV_NOV1_COLOR, '* Ends November 1st', nov1);
+    y -= rowH - 64;
+    ctx.fillStyle = '#7c879c'; ctx.font = `400 22px ${sans}`;
+    noteLines.forEach(l => { ctx.fillText(l, panelX + pad, y); y += 30; });
+
+    // footer
+    const footerY = headerH + mapH;
+    ctx.fillStyle = '#151b28';
+    ctx.fillRect(0, footerY, W, H - footerY);
+    ctx.fillStyle = '#e9edf5'; ctx.font = `600 30px ${sans}`;
+    ctx.fillText(`Early voting is open in all ${counties.length} counties`, 48, footerY + 56);
+    const nov1List = counties.filter(evEndsNov1).map(c => c.county).sort((a, b) => a.localeCompare(b, 'en')).join(', ');
+    ctx.fillStyle = '#f4b860'; ctx.font = `600 24px ${sans}`;
+    ctx.fillText(`Through Sunday, Nov. 1 (${nov1}):`, 48, footerY + 112);
+    ctx.fillStyle = '#e9edf5'; ctx.font = `400 24px ${sans}`;
+    let fy = wrap(nov1List, 48, footerY + 148, W - 96, 34);
+    ctx.fillStyle = '#7c879c'; ctx.font = `400 22px ${sans}`;
+    fy = wrap('Dates are each county’s early voting period as filed with the Florida Division of Elections. Counties may adjust hours and sites; check your Supervisor of Elections.', 48, fy + 16, W - 96, 30);
+    ctx.fillStyle = '#556076'; ctx.font = `400 21px ${mono}`;
+    wrap('Source: Florida Vote Tracker 2026 (jaysonfrascatore.github.io/FloridaElection2026) and the Florida Division of Elections (countyfilesvbm-ev.floridados.gov/VoteByMailEarlyVotingReports)', 48, H - 62, W - 96, 28);
+
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = 'florida-early-voting-window.png';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }catch(err){
+    alert('Could not generate the map image: ' + err.message);
+  }finally{
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
+}
+document.getElementById('downloadMapPngBtn').addEventListener('click', e => currentMetric === 'earlyvote' ? exportEarlyVotePng(e.currentTarget) : exportStatewidePng(e.currentTarget));
+document.getElementById('evToggleBtn').addEventListener('click', () => {
+  currentMetric = currentMetric === 'earlyvote' ? 'total' : 'earlyvote';
+  if(zoomedCounty){ openCountyZoom(zoomedCounty); }
+  else{ renderMap(); renderTable(); }
+});
 document.getElementById('downloadMapOnlyBtn').addEventListener('click', e => exportStatewidePng(e.currentTarget, { mapOnly:true }));
 
 // ==================== Build Your Own Map ====================
@@ -8875,35 +9091,35 @@ const AN_HOUSE = [{"d":1,"m24":-38.98,"inc":"Jimmy Patronis (R)","dem":"Gay Vali
 
 // ---- FEC campaign finance (cycle to date, from FEC.gov candidate pages and the FEC's 18-month candidate table) ----
 // [FEC candidate ID, total receipts, money from the candidate (contributions + loans), cash on hand, "as of" date]
-const AN_FEC_ASOF = 'FEC filings through July 29, 2026 (June 30 for some districts); Holloway through September 30';
+const AN_FEC_ASOF = 'FEC candidate pages as of October 16, 2026. Each candidate shows the latest period FEC has processed: September 30 where the Q3 report is posted, otherwise July 29 (pre-primary) or June 30';
 const AN_FEC = {
- 1:{D:['H4FL01197',137751,0,13190,'6/30'],R:['H6FL01390',3603374,12000,788386,'6/30']},
- 2:{D:['H6FL02299',312077,1225,109445,'6/30'],R:['H6FL02331',960700,375000,592245,'6/30']},
- 3:{D:['H6FL03099',32195,1155,2322,'6/30'],R:['H0FL03175',1886103,0,871927,'6/30']},
- 4:{D:['H6FL05193',53761,0,42603,'9/30'],R:['H2FL04211',2163376,0,1632550,'7/29']},
- 5:{D:['H6FL05250',248286,1191,112827,'6/30'],R:['H6FL04105',696207,0,475360,'6/30']},
- 6:{D:['H6FL06340',287215,2065,86282,'6/30'],R:['H6FL06258',4236072,950000,1148821,'6/30']},
- 7:{D:['H6FL07215',1201455,0,763409,'6/30'],R:['H6FL07231',301662,134100,267871,'6/30']},
- 8:{D:['H6FL06399',697539,0,132765,'6/30'],R:['H4FL08168',1718546,0,1182065,'6/30']},
- 9:{D:['H6FL09179',1973450,0,1268860,'6/30'],R:['H6FL09294',1119100,1040000,878849,'6/30']},
- 10:{D:['H2FL10259',3373929,8250,1332681,'6/30'],R:null},
- 11:{D:['H6FL11357',116424,64965,102675,'6/30'],R:['H6FL11332',5134560,5000000,4085724,'6/30']},
- 12:{D:['H6FL15200',179655,14001,9552,'6/30'],R:['H6FL09070',1489323,0,586860,'6/30']},
- 13:{D:['H6FL13312',1084672,7000,765143,'6/30'],R:['H0FL13158',2988238,0,1455366,'6/30']},
- 14:{D:['H6FL11126',2337999,0,1744723,'7/29'],R:['H6FL14237',2125730,2014000,1948847,'7/29']},
- 15:{D:['H6FL15168',38496,17072,1926,'6/30'],R:['H2FL15241',2289998,0,1943656,'6/30']},
- 16:{D:['H6FL16158',223280,502,166281,'6/30'],R:['H6FL16141',971068,7000,838262,'6/30']},
- 17:{D:['H4FL17060',90660,38454,29947,'6/30'],R:['H8FL17053',1285468,0,2166212,'6/30']},
- 18:{D:['H6FL18212',12208,9748,1452,'6/30'],R:['H0FL15104',827754,0,945704,'6/30']},
- 19:{D:['H6FL19277',25798,20500,11963,'6/30'],R:['H6FL19137',1946721,1000000,625454,'6/30']},
- 20:{D:['H4FL20023',3146283,0,2803294,'6/30'],R:['H6FL20143',62126,0,46553,'6/30']},
+ 1:{D:['H4FL01197',275770,0,37127,'9/30'],R:['H6FL01390',4371825,12000,897893,'9/30']},
+ 2:{D:['H6FL02299',348120,1440,28038,'7/29'],R:['H6FL02331',1010277,375000,387029,'7/29']},
+ 3:{D:['H6FL03099',37794,1155,3011,'7/29'],R:['H0FL03175',2045294,0,876971,'7/29']},
+ 4:{D:['H6FL05193',27348,0,23633,'7/29'],R:['H2FL04211',2163376,0,1632550,'7/29']},
+ 5:{D:['H6FL05250',272423,1196,90533,'7/29'],R:['H6FL04105',726727,0,268730,'7/29']},
+ 6:{D:['H6FL06340',325710,2065,34096,'7/29'],R:['H6FL06258',4286207,950000,1191059,'7/29']},
+ 7:{D:['H6FL07215',2137358,0,443507,'9/30'],R:['H6FL07231',355955,134100,186155,'7/29']},
+ 8:{D:['H6FL06399',725731,0,108111,'7/29'],R:['H4FL08168',1824838,0,1197777,'7/29']},
+ 9:{D:['H6FL09179',2157834,0,1187355,'7/29'],R:['H6FL09294',2187322,1840000,516286,'9/30']},
+ 10:{D:['H2FL10259',3474867,8250,1283056,'7/29'],R:null},
+ 11:{D:['H6FL11357',119754,64965,32231,'7/29'],R:['H6FL11332',5248640,5000000,2248903,'7/29']},
+ 12:{D:['H6FL15200',186813,14001,4906,'7/29'],R:['H6FL09070',1588538,0,554070,'7/29']},
+ 13:{D:['H6FL13312',1223069,7000,683295,'7/29'],R:['H0FL13158',3233312,0,1474124,'7/29']},
+ 14:{D:['H6FL11126',2337999,0,1744723,'7/29'],R:['H6FL14237',2583857,2014000,1836951,'9/30']},
+ 15:{D:['H6FL15168',40108,17072,3474,'7/29'],R:['H2FL15241',2346664,0,1960682,'7/29']},
+ 16:{D:['H6FL16158',296507,502,80738,'7/29'],R:['H6FL16141',1087683,7000,622381,'7/29']},
+ 17:{D:['H4FL17060',148185,38898,32982,'9/30'],R:['H8FL17053',1337887,0,2083868,'7/29']},
+ 18:{D:['H6FL18212',12208,9748,1452,'6/30'],R:['H0FL15104',850000,0,960764,'7/29']},
+ 19:{D:['H6FL19277',57816,30500,19147,'9/30'],R:['H6FL19137',2065485,1050000,181899,'7/29']},
+ 20:{D:['H4FL20023',3300107,0,1861373,'7/29'],R:['H6FL20143',92566,0,18186,'9/30']},
  21:{D:['H6FL21075',579319,150001,188045,'7/29'],R:['H6FL18097',4308890,0,2928458,'7/29']},
  22:{D:['H6FL21059',2284052,247000,1296684,'7/29'],R:['H6FL22248',2587502,2500000,1067638,'7/29']},
  23:{D:['H2FL14053',2276254,0,1212162,'7/29'],R:['H2FL21132',156044,84053,35748,'6/30']},
  24:{D:['H6FL24095',812143,0,229093,'7/29'],R:['H6FL14203',313318,306068,298626,'7/29']},
- 25:{D:['H2FL22171',2998428,0,1882634,'7/29'],R:['H6FL23188',2265702,724010,485461,'7/29']},
+ 25:{D:['H2FL22171',5093834,0,1815026,'9/30'],R:['H6FL23188',2265702,724010,485461,'7/29']},
  26:{D:['H6FL26058',347681,250918,198600,'7/29'],R:['H2FL25018',2060782,0,2538703,'7/29']},
- 27:{D:['H6FL27098',661173,7000,325097,'7/29'],R:['H8FL27185',1999399,0,2259547,'7/29']},
+ 27:{D:['H6FL27098',661173,7000,325097,'7/29'],R:['H8FL27185',1999399,2493,2259547,'7/29']},
  28:{D:['H4FL28042',438286,343200,454610,'6/30'],R:['H0FL26036',601254,0,692873,'7/29']}
 };
 const AN_FUND_K = 0.75;        // points of margin per unit of ln(Democratic funds / Republican funds)
@@ -8917,6 +9133,22 @@ function anFundRaw(d){
   if(!f || !f.D || !f.R) return null;               // an unopposed seat gets no adjustment
   const x = Math.log((anFundEff(f.D) + AN_FUND_FLOOR) / (anFundEff(f.R) + AN_FUND_FLOOR));
   return anClamp(AN_FUND_K * x, -AN_FUND_CAP, AN_FUND_CAP);   // points, + = toward the Democrat
+}
+// Statewide races. Senate: FEC (Moody S6FL00640 through 9/30; Nixon S6FL00830 through 7/29, her Q3 report is not posted yet).
+// Governor is a state race, so it is not on FEC: figures are as reported by WLRN on Aug. 17, 2026 from Florida filings
+// (campaign account plus political committee; "more than" figures, so rounded down).
+const AN_STATE_FEC = {
+  senate:{ D:['S6FL00830', 974845, 0, 264978, '7/29'], R:['S6FL00640', 13338185, 0, 2820080, '9/30'],
+           src:'FEC.gov candidate pages', url:'https://www.fec.gov/data/candidate/S6FL00640/' },
+  governor:{ D:[null, 10200000, 0, 3765000, '8/17'], R:[null, 111000000, 0, 57800000, '8/17'],
+           src:'WLRN, Aug. 17, 2026 (Florida filings; not an FEC race)', url:'https://www.wlrn.org/government-politics/2026-08-17/will-byron-donalds-dominance-in-fundraising-result-in-a-gop-victory' }
+};
+// Same rule as the House, in points toward the Democrat. It enters only the non-poll part of the forecast, because polls already reflect money.
+function anStateFundPts(race){
+  const f = AN_STATE_FEC[race];
+  if(!f) return 0;
+  const x = Math.log((anFundEff(f.D) + AN_FUND_FLOOR) / (anFundEff(f.R) + AN_FUND_FLOOR));
+  return { raw:AN_FUND_K * x, pts:anClamp(AN_FUND_K * x, -AN_FUND_CAP, AN_FUND_CAP) };
 }
 function anMoney(n){ return n >= 1e6 ? '$' + (n / 1e6).toFixed(2) + 'M' : (n >= 1e3 ? '$' + Math.round(n / 1e3) + 'K' : '$' + Math.round(n)); }
 const AN_HOUSE_POLL_WEIGHT = 0.25;                 // share of a district's forecast that comes from its own polls, when it has any
@@ -9513,7 +9745,9 @@ function anCompute(){
     let f = fundamentals, gap = 0, loyAdj = 0;
     if(npa && isFinite(nuHist)){ gap = anClamp(npa.nu - nuHist, -AN_NPA_MAX_GAP, AN_NPA_MAX_GAP); f += 2 * gap * sn; }
     if(loy){ loyAdj = 2 * (sd * (loy.d - AN_LOYAL_EXIT.d) - sr * (loy.r - AN_LOYAL_EXIT.r)); f += loyAdj; }
-    return { f, gap, npa: npa && isFinite(nuHist) ? npa : null, loy, loyAdj };
+    const mon = anStateFundPts(race);
+    f += mon.pts / 100;
+    return { f, gap, npa: npa && isFinite(nuHist) ? npa : null, loy, loyAdj, moneyPts:mon.pts, moneyRaw:mon.raw };
   };
   const solveShift = target => {
     let lo = -45, hi = 45;
@@ -9576,8 +9810,11 @@ function anCompute(){
         });
       }
     }
+    // what the money term did to the statewide margin today (the non-poll share of the target, times the points)
+    const moneyEffect = (poll ? 1 - anPollWeight(daysLeft) : 1) * fd.moneyPts / 100 * (1 - AN_OTHER_SHARE);
     models[race] = { race, info, poll, target, shift, rows, sD, sR, sO, total, margin, series,
-      npa:fd.npa, npaGap:fd.gap, loy:fd.loy, loyAdj:fd.loyAdj, fundAdj:fd.f };
+      npa:fd.npa, npaGap:fd.gap, loy:fd.loy, loyAdj:fd.loyAdj, fundAdj:fd.f,
+      moneyPts:fd.moneyPts, moneyRaw:fd.moneyRaw, moneyEffect, fec:AN_STATE_FEC[race] };
   });
 
   const house = anHouseCompute(models, past, today);
@@ -9589,7 +9826,7 @@ function anHouseCompute(models, past, today, envOverride){
   const lg = p => Math.log(p / (1 - p)), sg = x => 1 / (1 + Math.exp(-x));
   const base = AN_HOUSE.map(h => ({ h, p24:anClamp((1 + (h.m24 / 100) / AN_PAST_TWO_PARTY_SHARE) / 2, 0.01, 0.99) }));
   const mean = a => base.reduce((s, b) => s + (1 - AN_OTHER_SHARE) * (2 * sg(lg(b.p24) + a) - 1), 0) / base.length;
-  const env = (envOverride !== undefined ? envOverride : (models.governor.margin + models.senate.margin) / 2 - past.y2024.margin);   // statewide swing vs 2024 (+ = toward Democrats)
+  const env = (envOverride !== undefined ? envOverride : ((models.governor.margin - (models.governor.moneyEffect || 0)) + (models.senate.margin - (models.senate.moneyEffect || 0))) / 2 - past.y2024.margin);   // statewide swing vs 2024 (+ = toward Democrats)
   const target = mean(0) + env;
   let lo = -3, hi = 3;
   for(let i = 0; i < 60; i++){ const mid = (lo + hi) / 2; if(mean(mid) < target) lo = mid; else hi = mid; }
@@ -9644,7 +9881,7 @@ function anBuildBlurb(M){
   const p3 = `Registered Republicans outnumber registered Democrats ${regR.toFixed(1)}% to ${regD.toFixed(1)}%, and the county average of the last three statewide results is ${anMarginLabel(M.fundamentals)} on a two-party basis (2018 governor ${anMarginLabel(past(SIM_2018))}, 2022 governor ${anMarginLabel(past(SIM_2022))}, 2024 president ${anMarginLabel(past(SIM_2024))}). ${npaLine}${loyLine}`;
   const dir = v => `${Math.abs(v * 100).toFixed(1)} points ${v >= 0 ? 'more Democratic' : 'more Republican'}`;
   const p4 = `Compared with the past: the ${info.title} forecast is ${dir(m.margin - M.past.y2024.margin)} than the 2024 presidential result and ${dir(m.margin - M.past.y2022.margin)} than the 2022 governor's race. Midterms have also tended to be harder for the party holding the White House, which is context rather than an input to the numbers here.`;
-  return anHighlight(`<div class="an-date">${today}</div><h2>Today's read · ${info.title}</h2><p>${p1}</p>${anChangeHtml(M)}<p>${p2}</p><p>${p3}</p><p>${p4}</p>`);
+  return anHighlight(`<div class="an-date">${today}</div><h2>Today's read · ${info.title}</h2><p>${p1}</p>${anChangeHtml(M)}<p>${p2}</p><p>${p3}</p><p>${p4}</p>`) + anStateFundHtml(M, race);
 }
 
 
@@ -9803,6 +10040,25 @@ function anRenderHouseDetail(H){
     anFundBlock(r) +
     `<p class="table-hint" style="margin:6px 0 12px">How this margin is built: the 2024 presidential result on this map was ${anMarginLabel(r.m24)}. The statewide environment (the average of the Governor and Senate forecasts) is ${(Math.abs(H.env) * 100).toFixed(1)} points ${H.env >= 0 ? 'more Democratic' : 'more Republican'} than 2024, and the swing is not spread evenly: districts closer to even move a little more than that average and very lopsided ones move less. This one shifts ${(Math.abs(r.shift - r.fundAdj) * 100).toFixed(1)} points ${(r.shift - r.fundAdj) >= 0 ? 'toward the Democrat' : 'toward the Republican'}. ${r.fec && r.fec.D && r.fec.R ? `Campaign money then moves it ${Math.abs(r.fundAdj * 100).toFixed(1) === '0.0' ? 'almost nothing' : (Math.abs(r.fundAdj * 100).toFixed(1) + ' points toward the ' + (r.fundAdj > 0 ? 'Democrat' : 'Republican'))} (see the money line above). ` : ''}${r.poll ? 'Its own polls are blended in. ' : ''}Result: ${r.noRep ? 'unopposed' : anMarginLabel(r.margin)}.</p>` +
     `${polls}`;
+}
+
+function anStateFundHtml(M, race){
+  const m = M.models[race], info = m.info, f = m.fec;
+  if(!f) return '';
+  const side = (rec, label, cls, name) => {
+    const id = rec[0] ? `FEC ID <a href="https://www.fec.gov/data/candidate/${rec[0]}/" target="_blank" rel="noopener">${rec[0]}</a>` : 'Florida filing (not FEC)';
+    return `<div class="an-fund-col"><div class="party ${cls}">${label}: ${name}</div><div class="nm">${rec[0] ? '' : 'more than '}${anMoney(rec[1])} raised</div>` +
+      `<div class="table-hint" style="margin:2px 0 0">${anMoney(rec[3])} cash on hand (through ${rec[4]}) · ${id}</div></div>`;
+  };
+  const capped = Math.abs(m.moneyRaw) > AN_FUND_CAP;
+  const eff = m.moneyEffect * 100;
+  const w = m.poll ? anPollWeight(M.daysLeft) : 0;
+  const txt = `Money gap: ${(Math.abs(m.moneyRaw)).toFixed(1)} points ${m.moneyRaw >= 0 ? 'toward ' + info.dem : 'toward ' + info.rep} before the cap${capped ? `, held to ${AN_FUND_CAP} points` : ''}. ` +
+    `It is added to the fundamentals only. Polls already reflect each side's advertising, and they carry about ${(w * 100).toFixed(0)}% of the target today, so the money moves the ${info.title} forecast by ${Math.abs(eff).toFixed(2)} points toward ${eff >= 0 ? info.dem : info.rep}. ` +
+    `Its weight fades as Election Day approaches and polls take over. Money the candidate put in counts at half weight (none reported here). Source: <a href="${f.url}" target="_blank" rel="noopener">${f.src}</a>.`;
+  return `<div class="table-hint" style="margin-top:14px">Campaign money · ${info.title}</div>` +
+    `<div class="an-cand an-fund">${side(f.D, 'Democrat', 'num-d', info.dem)}${side(f.R, 'Republican', 'num-r', info.rep)}</div>` +
+    `<p class="table-hint" style="margin:4px 0 8px">${txt}</p>`;
 }
 
 function anFundBlock(r){
@@ -10325,6 +10581,7 @@ async function renderAnalysis(){
   const show = (id, on) => { const el = document.getElementById(id); if(el) el.style.display = on ? '' : 'none'; };
   show('anHero', !isHouse && !isTurn); show('anTurnHero', isTurn); show('anHouseHero', isHouse);
   if(!isHouse){ const mp = document.getElementById('anMapPrompt'); if(mp) mp.style.display = 'none'; }
+  show('anTurnMethod', isTurn); show('anMethod', !isTurn);
   show('anCountyPanel', !isHouse && !isTurn); show('anTurnPanel', isTurn); show('anHousePanel', isHouse);
   show('anCompare', !isHouse && !isTurn); show('anNpa', !isHouse && !isTurn); show('anRaces', !isHouse && !isTurn);
   show('anRace_governor', anState.race === 'governor'); show('anRace_senate', anState.race === 'senate');

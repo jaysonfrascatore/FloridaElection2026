@@ -260,6 +260,7 @@
   .an-td-head .nm{ font-weight:600; font-size:14px; } .an-td-head .big{ font-family:var(--mono); font-size:26px; font-weight:700; }
   .an-td-head .sub{ font-size:12px; color:var(--muted); } .an-td-head .up{ color:#7ff0c4; } .an-td-head .down{ color:#f4b860; }
   .an-td-head button{ margin-left:auto; background:transparent; border:1px solid #2b3550; color:var(--muted); border-radius:6px; padding:3px 9px; font-size:11px; cursor:pointer; }
+  .an-legend{ flex-basis:100%; font-size:11px; color:var(--muted); } .an-legend i{ display:inline-block; width:22px; vertical-align:middle; margin:0 6px 0 0; } .an-legend i.ln{ height:3px; border-radius:2px; background:linear-gradient(90deg,#8BE9C6,#E5EC1C,#306F58); } .an-legend i.dt{ border-top:2px dotted #9aa4b8; margin-left:14px; }
   .an-td-note{ font-size:11px; color:var(--muted); margin-top:4px; }
   #anTurnBody tr{ cursor:pointer; } #anTurnBody tr.an-sel td{ background:rgba(255,255,255,.07); }
   .an-av{ display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; border-radius:50%; border:2px solid; overflow:hidden; background:linear-gradient(160deg,#3a4663,#1c2335); box-sizing:border-box; vertical-align:middle; }
@@ -1270,6 +1271,11 @@
            the map, which controls both at once. -->
       <div id="countyChartsView">
         <h2 id="countyChartsTitle">County Trend</h2>
+        <div class="an-turn-detail" id="countyTurnoutTrack" style="display:none">
+          <div class="an-td-head" id="ctHead"></div>
+          <div id="ctChart" style="height:250px;"></div>
+          <div class="an-td-note" id="ctNote"></div>
+        </div>
         <div class="county-detail-chart-wrap">
           <div class="chart-header-row">
             <h3 id="countyDetailCumulativeLabel">Cumulative Votes</h3>
@@ -7770,6 +7776,7 @@ async function loadAndRenderCountyCharts(countyName){
 
   document.getElementById('countyDetailCumulativeLabel').textContent = 'Cumulative Votes';
   document.getElementById('countyDetailShareLabel').textContent = 'Vote Share Over Time';
+  renderLiveTurnoutTrack(countyName, rows).catch(() => {});
   if(currentMetric === 'dropwinner'){
     // The bar chart (who won each drop) is still specific to Drop
     // Winners, but the two line charts now show the same vote-count/
@@ -10061,37 +10068,31 @@ async function anTurnHistory(){
   return points;
 }
 function anTurnBin(v){ return TURNOUT_BINS.find(b => v >= b.min && v < b.max) || TURNOUT_BINS[TURNOUT_BINS.length - 1]; }
-async function anRenderTurnDetail(M){
-  const seq = ++anTurnSeq;
-  let pts = [];
-  try{ pts = await anTurnHistory(); }catch(e){ pts = []; }
-  if(seq !== anTurnSeq) return;
-  const name = anState.turnCounty && SIM_REG[anState.turnCounty] ? anState.turnCounty : null;
-  const reg = name ? SIM_REG[name][0] : M.regTot;
-  const headEl = document.getElementById('anTurnHead'), noteEl = document.getElementById('anTurnNote'), chartEl = document.getElementById('anTurnChart');
-  // the live numbers are the last point, so the readout always matches the table and the map
-  const nowV = (name ? M.E[name] : M.Esum) / reg * 100, nowS = M.Esum / M.regTot * 100;
-  const series = pts.map(p => ({ t:new Date(p.t), v:(name ? p.E[name] : p.Esum) / reg * 100, s:p.Esum / M.regTot * 100 }));
-  if(!series.length || Math.abs(series[series.length - 1].v - nowV) > 0.005) series.push({ t:new Date(), v:nowV, s:nowS });
+// One tracker for both tabs: a county's turnout over each logged update, colored by turnout category, with the state as a dotted line.
+// opts: { name (county or null), series [{t, v, s}], headEl, noteEl, chartEl, onReset, decimals, noteText, stateLabel, kind }
+async function anRenderTracker(o){
+  const name = o.name, dp = o.decimals === undefined ? 1 : o.decimals, series = o.series;
+  const unit = dp >= 2 ? 0.005 : 0.05;
   const last = series[series.length - 1], prev = series.length > 1 ? series[series.length - 2] : null, first = series[0];
   const bin = anTurnBin(last.v);
   const d = prev ? last.v - prev.v : 0, dFirst = last.v - first.v;
-  const arrow = x => Math.abs(x) < 0.05 ? '' : (x > 0 ? '<span class="up">▲ ' : '<span class="down">▼ ') + Math.abs(x).toFixed(1) + ' pts</span>';
+  const arrow = x => Math.abs(x) < unit ? '' : (x > 0 ? '<span class="up">▲ ' : '<span class="down">▼ ') + Math.abs(x).toFixed(dp) + ' pts</span>';
   const stamp = t => t.toLocaleDateString('en-US', { month:'short', day:'numeric' }) + ', ' + t.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
   let move = '';
   if(prev){
     const pb = anTurnBin(prev.v);
     move = pb.key !== bin.key ? `Moved ${last.v > prev.v ? 'up into' : 'down into'} the ${bin.key} category at the latest update.` : '';
   }
-  const vsState = name ? (() => { const g = last.v - last.s; return `<span class="sub">${Math.abs(g) < 0.05 ? 'In line with' : (g > 0 ? '+' : '−') + Math.abs(g).toFixed(1) + ' pts ' + (g > 0 ? 'above' : 'below')} the state (${last.s.toFixed(1)}%)</span>`; })() : '';
-  headEl.innerHTML = `<span class="nm">${name ? name + ' County' : 'Florida (statewide)'}</span>` +
-    `<span class="big" style="color:${bin.color}">${last.v.toFixed(1)}%</span>` +
-    `<span class="sub">${prev ? (Math.abs(d) < 0.05 ? 'no change since the last update' : arrow(d) + ' since the last update') : 'first update'}</span>` +
-    (series.length > 2 ? `<span class="sub">${Math.abs(dFirst) < 0.05 ? 'flat' : arrow(dFirst)} since ${first.t.toLocaleDateString('en-US', { month:'short', day:'numeric' })}</span>` : '') +
-    vsState + (name ? '<button type="button" id="anTurnReset">Show statewide</button>' : '');
-  const rb = document.getElementById('anTurnReset');
-  if(rb) rb.addEventListener('click', () => { anState.turnCounty = null; anQueueRender(); });
-  noteEl.textContent = (move ? move + ' ' : '') + 'Each point is one logged update; the projection is replayed with today\'s method on the ballots counted at that time. The line takes the color of the turnout category it is in.' + (series.length < 2 ? ' More points will appear as updates come in.' : '');
+  const vsState = name ? (() => { const g = last.v - last.s; return `<span class="sub">${Math.abs(g) < unit ? 'In line with' : (g > 0 ? '+' : '−') + Math.abs(g).toFixed(dp) + ' pts ' + (g > 0 ? 'above' : 'below')} the state (${last.s.toFixed(dp)}%)</span>`; })() : '';
+  o.headEl.innerHTML = `<span class="nm">${name ? name + ' County' : 'Florida (statewide)'}</span>` +
+    `<span class="big" style="color:${bin.color}">${last.v.toFixed(dp)}%</span>` +
+    `<span class="sub">${prev ? (Math.abs(d) < unit ? 'no change since the last update' : arrow(d) + ' since the last update') : 'first update'}</span>` +
+    (series.length > 2 ? `<span class="sub">${Math.abs(dFirst) < unit ? 'flat' : arrow(dFirst)} since ${first.t.toLocaleDateString('en-US', { month:'short', day:'numeric' })}</span>` : '') +
+    vsState + (name && o.onReset ? '<button type="button" class="an-tr-reset">Show statewide</button>' : '') +
+    (name ? `<span class="an-legend"><i class="ln"></i>${name} County <i class="dt"></i>Florida statewide (comparison)</span>` : '');
+  const rb = o.headEl.querySelector('.an-tr-reset');
+  if(rb) rb.addEventListener('click', o.onReset);
+  o.noteEl.textContent = (move ? move + ' ' : '') + o.noteText + ' The line takes the color of the turnout category it is in.' + (series.length < 2 ? ' More points will appear as updates come in.' : '');
   const traces = [];
   if(name) traces.push({ x:series.map(p => p.t), y:series.map(p => p.s), type:'scatter', mode:'lines', line:{ color:'#9aa4b8', width:1.6, dash:'dot' }, hoverinfo:'skip' });
   for(let i = 1; i < series.length; i++){
@@ -10099,19 +10100,77 @@ async function anRenderTurnDetail(M){
   }
   traces.push({ x:series.map(p => p.t), y:series.map(p => p.v), type:'scatter', mode:'markers',
     marker:{ size:8, color:series.map(p => anTurnBin(p.v).color), line:{ color:'#0a0e17', width:1.5 } },
-    text:series.map((p, i) => `<b>${stamp(p.t)}</b><br>${name || 'Florida'}: ${p.v.toFixed(1)}% (${anTurnBin(p.v).key})` +
-      (i ? `<br>${Math.abs(p.v - series[i - 1].v) < 0.05 ? 'no change' : (p.v > series[i - 1].v ? '▲ ' : '▼ ') + Math.abs(p.v - series[i - 1].v).toFixed(1) + ' pts'} vs the update before` : '') +
-      (name ? `<br>State: ${p.s.toFixed(1)}%` : '')),
+    text:series.map((p, i) => `<b>${stamp(p.t)}</b><br>${name || 'Florida'}: ${p.v.toFixed(dp)}% (${anTurnBin(p.v).key})` +
+      (i ? `<br>${Math.abs(p.v - series[i - 1].v) < unit ? 'no change' : (p.v > series[i - 1].v ? '▲ ' : '▼ ') + Math.abs(p.v - series[i - 1].v).toFixed(dp) + ' pts'} vs the update before` : '') +
+      (name ? `<br>State: ${p.s.toFixed(dp)}%` : '')),
     hoverinfo:'text', hoverlabel:{ bgcolor:'rgba(21,27,40,0.68)', bordercolor:'rgba(124,135,156,0.35)', font:{ family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5' } } });
   const all = series.map(p => p.v).concat(name ? series.map(p => p.s) : []);
   let lo = Math.min(...all), hi = Math.max(...all);
   if(hi - lo < 1){ const c = (hi + lo) / 2; lo = c - 0.5; hi = c + 0.5; }
   const pad = (hi - lo) * 0.18;
-  const layout = { margin:{ t:8, r:12, b:34, l:44 }, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', showlegend:false, hovermode:'closest', hoverdistance:-1,
+  const stateTag = [];
+  const layout = { annotations:stateTag, margin:{ t:8, r:12, b:34, l:44 }, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', showlegend:false, hovermode:'closest', hoverdistance:-1,
     font:{ family:'Inter, sans-serif', color:'#9aa4b8', size:11 },
     xaxis:{ gridcolor:'#212a3b', tickformat:'%b %-d<br>%-I %p', tickfont:{ size:10 } },
-    yaxis:{ gridcolor:'#212a3b', ticksuffix:'%', tickformat:'.1f', range:[lo - pad, hi + pad], tickfont:{ size:10 } } };
-  await Plotly.react(chartEl, traces, layout, { displayModeBar:false, responsive:true });
+    yaxis:{ gridcolor:'#212a3b', ticksuffix:'%', tickformat:'.' + (dp >= 2 ? 1 : 1) + 'f', range:[Math.max(0, lo - pad), hi + pad], tickfont:{ size:10 } } };
+  await Plotly.react(o.chartEl, traces, layout, { displayModeBar:false, responsive:true });
+}
+
+async function anRenderTurnDetail(M){
+  const seq = ++anTurnSeq;
+  let pts = [];
+  try{ pts = await anTurnHistory(); }catch(e){ pts = []; }
+  if(seq !== anTurnSeq) return;
+  const name = anState.turnCounty && SIM_REG[anState.turnCounty] ? anState.turnCounty : null;
+  const reg = name ? SIM_REG[name][0] : M.regTot;
+  // the live numbers are the last point, so the readout always matches the table and the map
+  const nowV = (name ? M.E[name] : M.Esum) / reg * 100, nowS = M.Esum / M.regTot * 100;
+  const series = pts.map(p => ({ t:new Date(p.t), v:(name ? p.E[name] : p.Esum) / reg * 100, s:p.Esum / M.regTot * 100 }));
+  if(!series.length || Math.abs(series[series.length - 1].v - nowV) > 0.005) series.push({ t:new Date(), v:nowV, s:nowS });
+  await anRenderTracker({ name, series, decimals:1, headEl:document.getElementById('anTurnHead'), noteEl:document.getElementById('anTurnNote'), chartEl:document.getElementById('anTurnChart'),
+    onReset:() => { anState.turnCounty = null; anQueueRender(); },
+    noteText:'Each point is one logged update; the projection is replayed with today\'s method on the ballots counted at that time.' });
+}
+
+// Live Results tab: a zoomed county's ballots counted so far as a share of its registered voters, after each logged update.
+async function renderLiveTurnoutTrack(countyName, rows){
+  const wrap = document.getElementById('countyTurnoutTrack');
+  if(!wrap) return;
+  if(currentMetric !== 'total' || !SHOW_TURNOUT || !SIM_REG[countyName]){ wrap.style.display = 'none'; return; }
+  const names = SIM_COUNTY_NAMES, byCounty = {}, times = new Set();
+  rows.forEach(r => {
+    const n = normName(pick(r, ['County', 'County_x'])), t = parseHistoryTimestamp(pick(r, ['Timestamp']));
+    if(!n || !t || !SIM_REG[n]) return;
+    const dem = num(pick(r, ['DEM'])), rep = num(pick(r, ['REP'])), ind = num(pick(r, ['IND'])), npa = num(pick(r, ['NPA'])), other = num(pick(r, ['OTHER']));
+    (byCounty[n] = byCounty[n] || []).push([+t, num(pick(r, ['TOTAL'])) || (dem + rep + ind + npa + other)]);
+    times.add(+t);
+  });
+  names.forEach(n => { if(byCounty[n]) byCounty[n].sort((a, b) => a[0] - b[0]); });
+  const regTot = names.reduce((s, n) => s + SIM_REG[n][0], 0), idx = {};
+  const series = [...times].sort((a, b) => a - b).map(t => {
+    let sum = 0, mine = 0;
+    names.forEach(n => {
+      const list = byCounty[n]; let i = idx[n] === undefined ? -1 : idx[n];
+      while(list && i + 1 < list.length && list[i + 1][0] <= t) i++;
+      idx[n] = i;
+      const v = list && i >= 0 ? list[i][1] : 0;
+      sum += v; if(n === countyName) mine = v;
+    });
+    return { t:new Date(t), v:countyTurnoutPctFor(countyName, mine), s:Math.round(Math.min(0.95, sum / regTot) * 10000) / 100 };
+  });
+  if(zoomedCounty !== countyName) return;
+  // the live numbers are the last point, so the readout matches the map and the info panel
+  const live = COUNTIES.find(c => c.county === countyName);
+  const liveTotal = COUNTIES.reduce((s, c) => s + (c.total || 0), 0);
+  if(live && series.length){
+    const nowV = countyTurnoutPctFor(countyName, live.total), nowS = Math.round(Math.min(0.95, liveTotal / regTot) * 10000) / 100;
+    const l = series[series.length - 1];
+    if(Math.abs(l.v - nowV) > 0.004 || Math.abs(l.s - nowS) > 0.004) series.push({ t:new Date(), v:nowV, s:nowS });
+  }
+  if(!series.length){ wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  await anRenderTracker({ name:countyName, series, decimals:2, headEl:document.getElementById('ctHead'), noteEl:document.getElementById('ctNote'), chartEl:document.getElementById('ctChart'),
+    noteText:'Each point is one logged update: ballots counted so far as a share of registered voters.' });
 }
 
 function anRenderTurnTable(m){

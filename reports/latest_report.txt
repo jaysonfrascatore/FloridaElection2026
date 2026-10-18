@@ -7,13 +7,13 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 18th, 2026 at 3:00pm Eastern Time
+Updated at October 18th, 2026 at 7:00pm Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-2
+0
 
 Unchanged Counties:
 True
@@ -42,15 +42,15 @@ STATEWIDE SUMMARY
 🔵 Democrats lead by 50,901 votes statewide.
 
 Margin Change:
-+0.00% toward Democrats
+No change
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +15
+🔵 DEM: +0
 🔴 REP: +0
-🟣 OTHER: +6
-🟢 TOTAL: +21
+🟣 OTHER: +0
+🟢 TOTAL: +0
 
 REJECTED COUNTY UPDATES
 =================================
@@ -72,38 +72,20 @@ TWEET DRAFT
 =================================
 
 
-🗳️3 PM Florida EV & VBM Update
+🗳️7 PM Florida EV & VBM Update
 
-New votes have been cast in 2 counties over the last hour, with the largest update coming from Broward County.
-
-🔵 DEM: +15
-🔴 REP: +0
-🟣 OTHER: +6
-🟢 TOTAL: +21
-
-🔵 Democrats lead by 50,901 votes statewide.
-
-🔴 Margin Change: +0.00% toward Democrats
-
-Largest County Updates
-
-
-🥇Broward County
-
-🔵 DEM: +15
-🔴 REP: +0
-🟣 OTHER: +5
-🟢 TOTAL: +20
-
-
-
-🥈Monroe County
+New votes have been cast in 0 counties over the last hour, with the largest update coming from No county County.
 
 🔵 DEM: +0
 🔴 REP: +0
-🟣 OTHER: +1
-🟢 TOTAL: +1
+🟣 OTHER: +0
+🟢 TOTAL: +0
 
+🔵 Democrats lead by 50,901 votes statewide.
+
+🔴 Margin Change: No change
+
+Largest County Updates
 
 
 #Florida #EarlyVoting #VoteByMail

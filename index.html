@@ -255,6 +255,13 @@
   .an-blurb b.d, .hl-d{ color:var(--dem); } .an-blurb b.r, .hl-r{ color:var(--rep); }
   .hl-d, .hl-r, .hl-green, .hl-gold{ font-weight:600; }
   .hl-green{ color:var(--total-green); } .hl-gold{ color:var(--gold); }
+  .an-turn-detail{ margin:4px 0 14px; padding:12px 14px; border:1px solid #212a3b; border-radius:10px; background:rgba(255,255,255,.02); }
+  .an-td-head{ display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 16px; margin-bottom:6px; }
+  .an-td-head .nm{ font-weight:600; font-size:14px; } .an-td-head .big{ font-family:var(--mono); font-size:26px; font-weight:700; }
+  .an-td-head .sub{ font-size:12px; color:var(--muted); } .an-td-head .up{ color:#7ff0c4; } .an-td-head .down{ color:#f4b860; }
+  .an-td-head button{ margin-left:auto; background:transparent; border:1px solid #2b3550; color:var(--muted); border-radius:6px; padding:3px 9px; font-size:11px; cursor:pointer; }
+  .an-td-note{ font-size:11px; color:var(--muted); margin-top:4px; }
+  #anTurnBody tr{ cursor:pointer; } #anTurnBody tr.an-sel td{ background:rgba(255,255,255,.07); }
   .an-av{ display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; border-radius:50%; border:2px solid; overflow:hidden; background:linear-gradient(160deg,#3a4663,#1c2335); box-sizing:border-box; vertical-align:middle; }
   .an-av img{ width:100%; height:100%; object-fit:cover; display:block; }
   .an-av-i{ font-family:var(--mono); font-weight:700; letter-spacing:.02em; }
@@ -1603,7 +1610,12 @@
     </div>
     <div class="panel" id="anTurnPanel" style="display:none">
       <h2>Projected Final Turnout by county</h2>
-      <div class="table-hint">Expected ballots when every vote is counted, against each county's registered voters.</div>
+      <div class="table-hint">Expected ballots when every vote is counted, against each county's registered voters. Click a county (here or on the map) to see how its projection has moved with each update.</div>
+      <div class="an-turn-detail">
+        <div class="an-td-head" id="anTurnHead"></div>
+        <div id="anTurnChart" style="height:250px;"></div>
+        <div class="an-td-note" id="anTurnNote"></div>
+      </div>
       <div class="table-wrap">
         <table id="anTurnTable">
           <thead><tr><th>County</th><th class="an-hm">Registered</th><th>Counted</th><th>Projected total</th><th>Turnout</th><th class="an-hm">Counted %</th></tr></thead>
@@ -9636,7 +9648,7 @@ const AN_POLLS_DEFAULT = {
 };
 let anPolls = AN_POLLS_DEFAULT;
 let anPollsTried = false;
-const anState = { race:'governor', view:'forecast', inited:false, district:null };
+const anState = { race:'governor', view:'forecast', inited:false, district:null, turnCounty:null };
 let anLast = null;       // last computed model (for the map/table redraws)
 let anMapSeq = 0;
 
@@ -9722,21 +9734,16 @@ function anLoyAvg(race, asOfWall){
 function anPollWeight(daysLeft){ return 0.55 + 0.35 * (1 - Math.min(daysLeft, 120) / 120); }
 
 // ---- the forecast engine ----
-function anCompute(){
+// Expected final ballots per county, given how many ballots each county has counted so far (counted = {county: n}).
+// Pure, so the same rule can be replayed on any past update to draw a county's projection over time.
+function anProjectTurnout(actual){
   const names = SIM_COUNTY_NAMES;
-  const byName = {};
-  COUNTIES.forEach(c => { byName[c.county] = c; });
-  const regTot = names.reduce((s, n) => s + SIM_REG[n][0], 0);
-
-  // 1. expected ballots: blend of 2018 / 2022 / 2024 turnout, a small say for the 2026 early pace
   const rate = (yr, n) => ((yr[n][0] + yr[n][1]) / AN_PAST_TWO_PARTY_SHARE) / SIM_REG[n][0];
   const wSum = AN_TURNOUT_W.y18 + AN_TURNOUT_W.y22 + AN_TURNOUT_W.y24;
-  const hist = {}, actual = {};
+  const hist = {};
   names.forEach(n => {
     const r = (AN_TURNOUT_W.y18 * rate(SIM_2018, n) + AN_TURNOUT_W.y22 * rate(SIM_2022, n) + AN_TURNOUT_W.y24 * rate(SIM_2024, n)) / wSum;
     hist[n] = anClamp(r, 0, 0.95) * SIM_REG[n][0];
-    const c = byName[n];
-    actual[n] = c ? (c.total || 0) : 0;
   });
   const histSum = names.reduce((s, n) => s + hist[n], 0);
   let aSum = 0, hWith = 0;
@@ -9753,8 +9760,21 @@ function anCompute(){
   const E = {};
   names.forEach(n => {
     const e = paced[n] * (pacedSum ? histSum / pacedSum : 1);
-    E[n] = Math.max(Math.min(e, 0.95 * SIM_REG[n][0]), actual[n]);
+    E[n] = Math.max(Math.min(e, 0.95 * SIM_REG[n][0]), actual[n] || 0);
   });
+  return { E, hist, rho };
+}
+
+function anCompute(){
+  const names = SIM_COUNTY_NAMES;
+  const byName = {};
+  COUNTIES.forEach(c => { byName[c.county] = c; });
+  const regTot = names.reduce((s, n) => s + SIM_REG[n][0], 0);
+
+  // 1. expected ballots: blend of 2018 / 2022 / 2024 turnout, a small say for the 2026 early pace
+  const actual = {};
+  names.forEach(n => { const c = byName[n]; actual[n] = c ? (c.total || 0) : 0; });
+  const { E, hist, rho } = anProjectTurnout(actual);
   const Esum = names.reduce((s, n) => s + E[n], 0);
   const actualSum = names.reduce((s, n) => s + actual[n], 0);
 
@@ -10009,9 +10029,94 @@ function anBuildTurnoutBlurb(M){
   const p3 = `By registered party, that is about <span class="hl-d">${fmt(Math.round(p.d))} Democratic</span> (${(p.d / pt * 100).toFixed(1)}%), <span class="hl-r">${fmt(Math.round(p.r))} Republican</span> (${(p.r / pt * 100).toFixed(1)}%) and ${fmt(Math.round(p.n))} NPA or other (${(p.n / pt * 100).toFixed(1)}%). Counties with ballots counted are assumed to keep their party mix for the rest of their vote; counties with none yet use their registration.`;
   return `<div class="an-date">${today}</div><h2>Today's read · Projected Final Turnout</h2><p>${p1}</p><p>${p2}</p><p>${p3}</p>`;
 }
+
+// ---- Projected Final Turnout over time: replays the projection on every logged update ----
+let anTurnHistCache = null, anTurnHistRows = null, anTurnSeq = 0;
+async function anTurnHistory(){
+  const rows = await ensureCountyHistoryLoaded();
+  if(anTurnHistCache && anTurnHistRows === rows) return anTurnHistCache;
+  const names = SIM_COUNTY_NAMES, byCounty = {}, times = new Set();
+  rows.forEach(r => {
+    const n = normName(pick(r, ['County', 'County_x'])), t = parseHistoryTimestamp(pick(r, ['Timestamp']));
+    if(!n || !t || !SIM_REG[n]) return;
+    const dem = num(pick(r, ['DEM'])), rep = num(pick(r, ['REP'])), ind = num(pick(r, ['IND'])), npa = num(pick(r, ['NPA'])), other = num(pick(r, ['OTHER']));
+    const total = num(pick(r, ['TOTAL'])) || (dem + rep + ind + npa + other);
+    (byCounty[n] = byCounty[n] || []).push([+t, total]);
+    times.add(+t);
+  });
+  names.forEach(n => { if(byCounty[n]) byCounty[n].sort((a, b) => a[0] - b[0]); });
+  const idx = {};
+  const points = [...times].sort((a, b) => a - b).map(t => {
+    const actual = {};
+    names.forEach(n => {
+      const list = byCounty[n]; let i = idx[n] === undefined ? -1 : idx[n];
+      while(list && i + 1 < list.length && list[i + 1][0] <= t) i++;
+      idx[n] = i;
+      actual[n] = list && i >= 0 ? list[i][1] : 0;
+    });
+    const { E } = anProjectTurnout(actual);
+    return { t, E, Esum:names.reduce((s, n) => s + E[n], 0) };
+  });
+  anTurnHistRows = rows; anTurnHistCache = points;
+  return points;
+}
+function anTurnBin(v){ return TURNOUT_BINS.find(b => v >= b.min && v < b.max) || TURNOUT_BINS[TURNOUT_BINS.length - 1]; }
+async function anRenderTurnDetail(M){
+  const seq = ++anTurnSeq;
+  let pts = [];
+  try{ pts = await anTurnHistory(); }catch(e){ pts = []; }
+  if(seq !== anTurnSeq) return;
+  const name = anState.turnCounty && SIM_REG[anState.turnCounty] ? anState.turnCounty : null;
+  const reg = name ? SIM_REG[name][0] : M.regTot;
+  const headEl = document.getElementById('anTurnHead'), noteEl = document.getElementById('anTurnNote'), chartEl = document.getElementById('anTurnChart');
+  // the live numbers are the last point, so the readout always matches the table and the map
+  const nowV = (name ? M.E[name] : M.Esum) / reg * 100, nowS = M.Esum / M.regTot * 100;
+  const series = pts.map(p => ({ t:new Date(p.t), v:(name ? p.E[name] : p.Esum) / reg * 100, s:p.Esum / M.regTot * 100 }));
+  if(!series.length || Math.abs(series[series.length - 1].v - nowV) > 0.005) series.push({ t:new Date(), v:nowV, s:nowS });
+  const last = series[series.length - 1], prev = series.length > 1 ? series[series.length - 2] : null, first = series[0];
+  const bin = anTurnBin(last.v);
+  const d = prev ? last.v - prev.v : 0, dFirst = last.v - first.v;
+  const arrow = x => Math.abs(x) < 0.05 ? '' : (x > 0 ? '<span class="up">▲ ' : '<span class="down">▼ ') + Math.abs(x).toFixed(1) + ' pts</span>';
+  const stamp = t => t.toLocaleDateString('en-US', { month:'short', day:'numeric' }) + ', ' + t.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+  let move = '';
+  if(prev){
+    const pb = anTurnBin(prev.v);
+    move = pb.key !== bin.key ? `Moved ${last.v > prev.v ? 'up into' : 'down into'} the ${bin.key} category at the latest update.` : '';
+  }
+  const vsState = name ? (() => { const g = last.v - last.s; return `<span class="sub">${Math.abs(g) < 0.05 ? 'In line with' : (g > 0 ? '+' : '−') + Math.abs(g).toFixed(1) + ' pts ' + (g > 0 ? 'above' : 'below')} the state (${last.s.toFixed(1)}%)</span>`; })() : '';
+  headEl.innerHTML = `<span class="nm">${name ? name + ' County' : 'Florida (statewide)'}</span>` +
+    `<span class="big" style="color:${bin.color}">${last.v.toFixed(1)}%</span>` +
+    `<span class="sub">${prev ? (Math.abs(d) < 0.05 ? 'no change since the last update' : arrow(d) + ' since the last update') : 'first update'}</span>` +
+    (series.length > 2 ? `<span class="sub">${Math.abs(dFirst) < 0.05 ? 'flat' : arrow(dFirst)} since ${first.t.toLocaleDateString('en-US', { month:'short', day:'numeric' })}</span>` : '') +
+    vsState + (name ? '<button type="button" id="anTurnReset">Show statewide</button>' : '');
+  const rb = document.getElementById('anTurnReset');
+  if(rb) rb.addEventListener('click', () => { anState.turnCounty = null; anQueueRender(); });
+  noteEl.textContent = (move ? move + ' ' : '') + 'Each point is one logged update; the projection is replayed with today\'s method on the ballots counted at that time. The line takes the color of the turnout category it is in.' + (series.length < 2 ? ' More points will appear as updates come in.' : '');
+  const traces = [];
+  if(name) traces.push({ x:series.map(p => p.t), y:series.map(p => p.s), type:'scatter', mode:'lines', line:{ color:'#9aa4b8', width:1.6, dash:'dot' }, hoverinfo:'skip' });
+  for(let i = 1; i < series.length; i++){
+    traces.push({ x:[series[i - 1].t, series[i].t], y:[series[i - 1].v, series[i].v], type:'scatter', mode:'lines', line:{ color:anTurnBin(series[i].v).color, width:3.5 }, hoverinfo:'skip' });
+  }
+  traces.push({ x:series.map(p => p.t), y:series.map(p => p.v), type:'scatter', mode:'markers',
+    marker:{ size:8, color:series.map(p => anTurnBin(p.v).color), line:{ color:'#0a0e17', width:1.5 } },
+    text:series.map((p, i) => `<b>${stamp(p.t)}</b><br>${name || 'Florida'}: ${p.v.toFixed(1)}% (${anTurnBin(p.v).key})` +
+      (i ? `<br>${Math.abs(p.v - series[i - 1].v) < 0.05 ? 'no change' : (p.v > series[i - 1].v ? '▲ ' : '▼ ') + Math.abs(p.v - series[i - 1].v).toFixed(1) + ' pts'} vs the update before` : '') +
+      (name ? `<br>State: ${p.s.toFixed(1)}%` : '')),
+    hoverinfo:'text', hoverlabel:{ bgcolor:'rgba(21,27,40,0.68)', bordercolor:'rgba(124,135,156,0.35)', font:{ family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5' } } });
+  const all = series.map(p => p.v).concat(name ? series.map(p => p.s) : []);
+  let lo = Math.min(...all), hi = Math.max(...all);
+  if(hi - lo < 1){ const c = (hi + lo) / 2; lo = c - 0.5; hi = c + 0.5; }
+  const pad = (hi - lo) * 0.18;
+  const layout = { margin:{ t:8, r:12, b:34, l:44 }, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', showlegend:false, hovermode:'closest', hoverdistance:-1,
+    font:{ family:'Inter, sans-serif', color:'#9aa4b8', size:11 },
+    xaxis:{ gridcolor:'#212a3b', tickformat:'%b %-d<br>%-I %p', tickfont:{ size:10 } },
+    yaxis:{ gridcolor:'#212a3b', ticksuffix:'%', tickformat:'.1f', range:[lo - pad, hi + pad], tickfont:{ size:10 } } };
+  await Plotly.react(chartEl, traces, layout, { displayModeBar:false, responsive:true });
+}
+
 function anRenderTurnTable(m){
   document.getElementById('anTurnBody').innerHTML = m.rows.map(r =>
-    `<tr><td class="county-name">${r.county}</td><td class="an-hm">${fmt(r.reg)}</td><td style="color:var(--gold)">${fmt(r.counted)}</td>` +
+    `<tr data-county="${r.county}" class="${anState.turnCounty === r.county ? 'an-sel' : ''}"><td class="county-name">${r.county}</td><td class="an-hm">${fmt(r.reg)}</td><td style="color:var(--gold)">${fmt(r.counted)}</td>` +
     `<td class="num-total">${fmt(Math.round(r.E))}</td><td>${(r.turnout * 100).toFixed(1)}%</td><td class="an-hm">${r.E ? (r.counted / r.E * 100).toFixed(0) : 0}%</td></tr>`).join('');
 }
 
@@ -10287,7 +10392,21 @@ async function anRenderMap(m){
     paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
     margin:{ t:10, b:10, l:10, r:10 }, font:{ family:'Inter, sans-serif' }
   };
-  await Plotly.react('anMap', [trace], layout, { displayModeBar:false, responsive:true });
+  const traces = [trace];
+  if(view === 'turnout' && anState.turnCounty){
+    const sr = m.rows.find(r => r.county === anState.turnCounty);
+    if(sr) traces.push({ type:'choropleth', geojson:geojsonFL, locations:[sr.fips], z:[0], featureidkey:'id', zmin:0, zmax:1,
+      colorscale:[[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0)']], marker:{ line:{ color:'#ffffff', width:2.5 } }, hoverinfo:'skip', showscale:false });
+  }
+  const mapEl = document.getElementById('anMap');
+  await Plotly.react(mapEl, traces, layout, { displayModeBar:false, responsive:true });
+  if(mapEl.removeAllListeners) mapEl.removeAllListeners('plotly_click');
+  mapEl.on('plotly_click', ev => {
+    if(anState.view !== 'turnout') return;
+    const loc = ev.points && ev.points[0] && ev.points[0].location;
+    const row = loc && m.rows.find(r => r.fips === loc);
+    if(row){ anState.turnCounty = anState.turnCounty === row.county ? null : row.county; anQueueRender(); }
+  });
 }
 
 // Slow blink on the last point of the chosen traces (re-applied after
@@ -10715,7 +10834,7 @@ async function renderAnalysis(){
   document.querySelectorAll('#anViewSelect button').forEach(b => b.classList.toggle('active', b.dataset.view === anState.view));
   if(isHouse){ await anRenderHouseMap(M.house); return; }
   await anRenderMap(m);
-  if(isTurn) return;
+  if(isTurn){ await anRenderTurnDetail(M); return; }
   await anDrawRace(anState.race, M.models[anState.race]);
 }
 
@@ -10732,6 +10851,10 @@ function initAnalysis(){
   if(window.innerWidth <= 640){ const mt = document.getElementById('anMethod'); if(mt) mt.removeAttribute('open'); }
   document.querySelectorAll('#anRaceSelect button').forEach(b => b.addEventListener('click', () => { anState.race = b.dataset.race; anQueueRender(); }));
   document.getElementById('anDownloadPngBtn').addEventListener('click', anExportPng);
+  document.getElementById('anTurnBody').addEventListener('click', ev => {
+    const tr = ev.target.closest('tr[data-county]');
+    if(tr){ anState.turnCounty = anState.turnCounty === tr.dataset.county ? null : tr.dataset.county; anQueueRender(); }
+  });
   document.querySelectorAll('#anViewSelect button').forEach(b => b.addEventListener('click', () => { anState.view = b.dataset.view; anQueueRender(); }));
 }
 

@@ -7,13 +7,13 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 17th, 2026 at 7:00pm Eastern Time
+Updated at October 18th, 2026 at 11:00am Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-4
+2
 
 Unchanged Counties:
 True
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-353,826
+354,099
 
 REP:
-303,151
+303,213
 
 OTHER:
-176,332
+176,406
 
 TOTAL:
-833,309
+833,718
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 50,675 votes statewide.
+🔵 Democrats lead by 50,886 votes statewide.
 
 Margin Change:
--0.00% toward Republicans
++0.01% toward Democrats
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +346
-🔴 REP: +337
-🟣 OTHER: +167
-🟢 TOTAL: +850
+🔵 DEM: +273
+🔴 REP: +62
+🟣 OTHER: +74
+🟢 TOTAL: +409
 
 REJECTED COUNTY UPDATES
 =================================
@@ -72,46 +72,37 @@ TWEET DRAFT
 =================================
 
 
-🗳️7 PM Florida EV & VBM Update
+🗳️11 AM Florida EV & VBM Update
 
-New votes have been cast in 4 counties over the last hour, with the largest update coming from Escambia County.
+New votes have been cast in 2 counties over the last hour, with the largest update coming from Broward County.
 
-🔵 DEM: +346
-🔴 REP: +337
-🟣 OTHER: +167
-🟢 TOTAL: +850
+🔵 DEM: +273
+🔴 REP: +62
+🟣 OTHER: +74
+🟢 TOTAL: +409
 
-🔵 Democrats lead by 50,675 votes statewide.
+🔵 Democrats lead by 50,886 votes statewide.
 
-🔴 Margin Change: -0.00% toward Republicans
+🔴 Margin Change: +0.01% toward Democrats
 
 Largest County Updates
 
 
-🥇Escambia County
+🥇Broward County
 
-🔵 DEM: +160
-🔴 REP: +257
-🟣 OTHER: +85
-🟢 TOTAL: +502
+🔵 DEM: +183
+🔴 REP: +15
+🟣 OTHER: +38
+🟢 TOTAL: +236
 
 
 
 🥈Palm Beach County
 
-🔵 DEM: +121
-🔴 REP: +59
-🟣 OTHER: +54
-🟢 TOTAL: +234
-
-
-
-🥉Broward County
-
-🔵 DEM: +49
-🔴 REP: +14
-🟣 OTHER: +19
-🟢 TOTAL: +82
+🔵 DEM: +90
+🔴 REP: +47
+🟣 OTHER: +36
+🟢 TOTAL: +173
 
 
 

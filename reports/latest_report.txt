@@ -7,7 +7,7 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 18th, 2026 at 11:00am Eastern Time
+Updated at October 18th, 2026 at 3:00pm Eastern Time
 
 Counties Loaded:
 67 / 67
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-354,099
+354,114
 
 REP:
 303,213
 
 OTHER:
-176,406
+176,412
 
 TOTAL:
-833,718
+833,739
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 50,886 votes statewide.
+🔵 Democrats lead by 50,901 votes statewide.
 
 Margin Change:
-+0.01% toward Democrats
++0.00% toward Democrats
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +273
-🔴 REP: +62
-🟣 OTHER: +74
-🟢 TOTAL: +409
+🔵 DEM: +15
+🔴 REP: +0
+🟣 OTHER: +6
+🟢 TOTAL: +21
 
 REJECTED COUNTY UPDATES
 =================================
@@ -72,37 +72,37 @@ TWEET DRAFT
 =================================
 
 
-🗳️11 AM Florida EV & VBM Update
+🗳️3 PM Florida EV & VBM Update
 
 New votes have been cast in 2 counties over the last hour, with the largest update coming from Broward County.
 
-🔵 DEM: +273
-🔴 REP: +62
-🟣 OTHER: +74
-🟢 TOTAL: +409
+🔵 DEM: +15
+🔴 REP: +0
+🟣 OTHER: +6
+🟢 TOTAL: +21
 
-🔵 Democrats lead by 50,886 votes statewide.
+🔵 Democrats lead by 50,901 votes statewide.
 
-🔴 Margin Change: +0.01% toward Democrats
+🔴 Margin Change: +0.00% toward Democrats
 
 Largest County Updates
 
 
 🥇Broward County
 
-🔵 DEM: +183
-🔴 REP: +15
-🟣 OTHER: +38
-🟢 TOTAL: +236
+🔵 DEM: +15
+🔴 REP: +0
+🟣 OTHER: +5
+🟢 TOTAL: +20
 
 
 
-🥈Palm Beach County
+🥈Monroe County
 
-🔵 DEM: +90
-🔴 REP: +47
-🟣 OTHER: +36
-🟢 TOTAL: +173
+🔵 DEM: +0
+🔴 REP: +0
+🟣 OTHER: +1
+🟢 TOTAL: +1
 
 
 

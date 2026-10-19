@@ -926,6 +926,13 @@
   #evToggleBtn{ background:#8ac926; color:#0a0e17; border:0; border-radius:8px; padding:9px 14px; font:600 12px Inter, sans-serif; cursor:pointer; }
   #evToggleBtn:hover{ filter:brightness(1.08); }
   .bt-b{ background:#151b28; border:1px solid #2b3550; color:#e9edf5; border-radius:8px; padding:7px 12px; font:600 12px Inter,sans-serif; cursor:pointer; } .bt-b.act{ background:#caffbf; color:#0a0e17; border-color:#caffbf; }
+  .bt-pct{ display:block; font-size:10.5px; color:var(--muted); }
+  .bt-mob{ display:none; }
+  .bt-card{ border:1px solid #212a3b; border-radius:8px; padding:8px 10px; margin:0 0 6px; background:#101624; } .bt-card.cur{ border-color:#caffbf; background:rgba(202,255,191,.07); }
+  .bt-ch{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:13px; margin-bottom:6px; }
+  .bt-cg{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+  .bt-mc{ display:flex; flex-direction:column; font-size:12.5px; min-width:0; } .bt-mk{ font:600 9.5px var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+  @media (max-width:640px){ .bt-desk{ display:none; } .bt-mob{ display:block; } }
   .bt-t{ width:100%; border-collapse:collapse; } .bt-t th,.bt-t td{ padding:5px 8px; text-align:right; border-bottom:1px solid #212a3b; white-space:nowrap; } .bt-t th:first-child,.bt-t td:first-child{ text-align:left; } .bt-t th{ font:600 10px var(--mono); color:var(--muted); text-transform:uppercase; } .bt-t tr.cur td{ background:rgba(138,201,38,.10); }
   .map-side-legend .ev-n{ color:var(--muted); font-weight:400; }
   .map-side-legend .ev-note{ font-size:10.5px; color:var(--muted); margin-top:8px; line-height:1.4; max-width:190px; }
@@ -2957,13 +2964,19 @@ function btRender(){
     `<button type="button" class="bt-b${btView===k?' act':''}" data-k="${k}">${BT_LABELS[k]}</button>`).join('');
   document.querySelectorAll('#btBtns button').forEach(b => b.onclick = () => { btView = b.dataset.k; if(zoomedCounty){ refreshZoomedCountyView(); } else { renderMap(); renderTable(); } });
   const f = n => n.toLocaleString();
-  const row = (k, l) => { const x = btStat[k], t = x[0]+x[1]+x[2];
-    return `<tr class="${btView===k?'cur':''}"><td>${l}</td><td style="color:#4f8fd0">${f(x[0])}</td><td style="color:#d9695d">${f(x[1])}</td><td style="color:#b86fe0">${f(x[2])}</td><td><b>${f(t)}</b></td></tr>`; };
-  const tt = [0,1,2].map(i => btStat.vbm[i] + btStat.ev[i] + btStat.ed[i]);
-  const totalRow = `<tr class="${btView==='all'?'cur':''}"><td><b>Total Vote</b></td><td style="color:#4f8fd0"><b>${f(tt[0])}</b></td><td style="color:#d9695d"><b>${f(tt[1])}</b></td><td style="color:#b86fe0"><b>${f(tt[2])}</b></td><td><b>${f(tt[0]+tt[1]+tt[2])}</b></td></tr>`;
+  const rows = btTableRows();                       // Total Vote, Mail, Early, Election Day (same numbers as the screenshot)
+  const BL = '#4f8fd0', RD = '#d9695d', PU = '#b86fe0';
+  const pc = (v, t) => t ? (v / t * 100).toFixed(1) + '%' : '\u2014';
+  const marg = (r, t) => { if(!t) return { text:'\u2014', color:'' }; const m = (r.d - r.r) / t * 100, l = formatMarginLabel(m); return { text:l, color: l === 'Even' ? '' : (m > 0 ? BL : RD) }; };
+  const cell = (v, t, c) => `<td><span style="color:${c}">${f(v)}</span><span class="bt-pct">${pc(v, t)}</span></td>`;
+  const desk = rows.map((r, i) => { const t = r.d + r.r + r.n, m = marg(r, t);
+    return `<tr class="${btView===r.key?'cur':''}"><td>${i===0?'<b>'+r.label+'</b>':r.label}</td>${cell(r.d,t,BL)}${cell(r.r,t,RD)}${cell(r.n,t,PU)}<td><b>${f(t)}</b></td><td style="color:${m.color}"><b>${m.text}</b></td></tr>`; }).join('');
+  const mob = rows.map(r => { const t = r.d + r.r + r.n, m = marg(r, t);
+    const p = (lab, v, c) => `<div class="bt-mc"><span class="bt-mk">${lab}</span><span style="color:${c}">${f(v)}</span><span class="bt-pct">${pc(v, t)}</span></div>`;
+    return `<div class="bt-card${btView===r.key?' cur':''}"><div class="bt-ch"><b>${r.label}</b><span><b>${f(t)}</b> <span style="color:${m.color}"><b>${m.text}</b></span></span></div><div class="bt-cg">${p('DEM', r.d, BL)}${p('REP', r.r, RD)}${p('NPA/Other', r.n, PU)}</div></div>`; }).join('');
   const reporting = COUNTIES.filter(c => c.total > 0).length;
   const note = btCovered < reporting ? `<div style="margin-top:6px;font-size:11px;color:var(--muted)">Type split covers ${btCovered} of ${reporting} reporting counties so far; the rest fill in once they have it.</div>` : '';
-  document.getElementById('btSummary').innerHTML = `<table class="bt-t"><thead><tr><th>Statewide</th><th>DEM</th><th>REP</th><th>NPA/Other</th><th>Total</th></tr></thead><tbody>${row('vbm','Vote by Mail')}${row('ev','Early Vote')}${row('ed','Election Day')}${totalRow}</tbody></table>${note}`;
+  document.getElementById('btSummary').innerHTML = `<table class="bt-t bt-desk"><thead><tr><th>Statewide</th><th>DEM</th><th>REP</th><th>NPA/Other</th><th>Total</th><th>Margin</th></tr></thead><tbody>${desk}</tbody></table><div class="bt-mob">${mob}</div>${note}`;
 }
 const METRICS = {
   // "Primary Election" — pinned to the frozen snapshot (STATIC_DVR_COUNTIES), never
@@ -3358,7 +3371,7 @@ async function renderMap(){
   if(zoomedCounty) return;
 
   const layout = {
-    geo:{ scope:'usa', fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' },
+    geo:Object.assign({ scope:'usa', fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, window.matchMedia('(max-width: 640px)').matches ? { scope:'world', projection:{ type:'mercator' } } : {}),
     paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
     margin:{t:10,b:10,l:10,r:10}, font:{family:'Inter, sans-serif'}
   };

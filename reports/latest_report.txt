@@ -7,16 +7,16 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 18th, 2026 at 10:00pm Eastern Time
+Updated at October 19th, 2026 at 11:00am Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-0
+54
 
 Unchanged Counties:
-True
+False
 
 Rejected County Updates:
 0
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-354,114
+378,684
 
 REP:
-303,213
+328,729
 
 OTHER:
-176,412
+189,091
 
 TOTAL:
-833,739
+896,504
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 50,901 votes statewide.
+🔵 Democrats lead by 49,955 votes statewide.
 
 Margin Change:
-No change
+-0.34% toward Republicans
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +0
-🔴 REP: +0
-🟣 OTHER: +0
-🟢 TOTAL: +0
+🔵 DEM: +24,570
+🔴 REP: +25,516
+🟣 OTHER: +12,679
+🟢 TOTAL: +62,765
 
 REJECTED COUNTY UPDATES
 =================================
@@ -64,7 +64,75 @@ RATING / FORECAST CHANGES
 =================================
 
 
-No rating changes detected.
+Brevard
+
+Toss Up R → Lean R
+
+Margin Move:
+-0.020
+
+
+
+Charlotte
+
+Likely R → Safe R
+
+Margin Move:
+-0.032
+
+
+
+Franklin
+
+Toss Up R → Toss Up D
+
+Margin Move:
++0.006
+
+
+
+Hendry
+
+Toss Up R → Likely R
+
+Margin Move:
+-0.069
+
+
+
+Liberty
+
+Lean R → Likely R
+
+Margin Move:
+-0.038
+
+
+
+Putnam
+
+Likely R → Safe R
+
+Margin Move:
+-0.070
+
+
+
+Sarasota
+
+Likely D → Lean D
+
+Margin Move:
+-0.019
+
+
+
+Volusia
+
+Toss Up D → Toss Up R
+
+Margin Move:
+-0.009
 
 
 
@@ -72,20 +140,47 @@ TWEET DRAFT
 =================================
 
 
-🗳️10 PM Florida EV & VBM Update
+🗳️11 AM Florida EV & VBM Update
 
-New votes have been cast in 0 counties over the last hour, with the largest update coming from No county County.
+New votes have been cast in 54 counties over the last hour, with the largest update coming from Hillsborough County.
 
-🔵 DEM: +0
-🔴 REP: +0
-🟣 OTHER: +0
-🟢 TOTAL: +0
+🔵 DEM: +24,570
+🔴 REP: +25,516
+🟣 OTHER: +12,679
+🟢 TOTAL: +62,765
 
-🔵 Democrats lead by 50,901 votes statewide.
+🔵 Democrats lead by 49,955 votes statewide.
 
-🔴 Margin Change: No change
+🔴 Margin Change: -0.34% toward Republicans
 
 Largest County Updates
+
+
+🥇Hillsborough County
+
+🔵 DEM: +5,279
+🔴 REP: +4,636
+🟣 OTHER: +2,654
+🟢 TOTAL: +12,569
+
+
+
+🥈Broward County
+
+🔵 DEM: +2,589
+🔴 REP: +1,118
+🟣 OTHER: +1,008
+🟢 TOTAL: +4,715
+
+
+
+🥉Miami-Dade County
+
+🔵 DEM: +1,946
+🔴 REP: +1,639
+🟣 OTHER: +992
+🟢 TOTAL: +4,577
+
 
 
 #Florida #EarlyVoting #VoteByMail

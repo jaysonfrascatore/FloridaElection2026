@@ -7,13 +7,13 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 19th, 2026 at 11:00am Eastern Time
+Updated at October 19th, 2026 at 3:00pm Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-54
+59
 
 Unchanged Counties:
 False
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-378,684
+428,581
 
 REP:
-328,729
+382,164
 
 OTHER:
-189,091
+215,329
 
 TOTAL:
-896,504
+1,026,074
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 49,955 votes statewide.
+🔵 Democrats lead by 46,417 votes statewide.
 
 Margin Change:
--0.34% toward Republicans
+-0.67% toward Republicans
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +24,570
-🔴 REP: +25,516
-🟣 OTHER: +12,679
-🟢 TOTAL: +62,765
+🔵 DEM: +49,897
+🔴 REP: +53,435
+🟣 OTHER: +26,238
+🟢 TOTAL: +129,570
 
 REJECTED COUNTY UPDATES
 =================================
@@ -64,75 +64,84 @@ RATING / FORECAST CHANGES
 =================================
 
 
-Brevard
+Flagler
 
-Toss Up R → Lean R
+Toss Up D → Lean R
+
+Margin Move:
+-0.089
+
+
+
+Franklin
+
+Toss Up D → Toss Up R
+
+Margin Move:
+-0.026
+
+
+
+Highlands
+
+Toss Up D → Toss Up R
+
+Margin Move:
+-0.023
+
+
+
+Indian River
+
+Likely R → Safe R
+
+Margin Move:
+-0.039
+
+
+
+Okeechobee
+
+Safe R → Likely R
+
+Margin Move:
++0.014
+
+
+
+Pasco
+
+Lean D → Toss Up D
+
+Margin Move:
+-0.034
+
+
+
+Seminole
+
+Likely D → Lean D
 
 Margin Move:
 -0.020
 
 
 
-Charlotte
+Sumter
 
 Likely R → Safe R
 
 Margin Move:
--0.032
+-0.017
 
 
 
-Franklin
+Wakulla
 
-Toss Up R → Toss Up D
-
-Margin Move:
-+0.006
-
-
-
-Hendry
-
-Toss Up R → Likely R
+Likely R → Lean R
 
 Margin Move:
--0.069
-
-
-
-Liberty
-
-Lean R → Likely R
-
-Margin Move:
--0.038
-
-
-
-Putnam
-
-Likely R → Safe R
-
-Margin Move:
--0.070
-
-
-
-Sarasota
-
-Likely D → Lean D
-
-Margin Move:
--0.019
-
-
-
-Volusia
-
-Toss Up D → Toss Up R
-
-Margin Move:
--0.009
++0.025
 
 
 
@@ -140,46 +149,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️11 AM Florida EV & VBM Update
+🗳️3 PM Florida EV & VBM Update
 
-New votes have been cast in 54 counties over the last hour, with the largest update coming from Hillsborough County.
+New votes have been cast in 59 counties over the last hour, with the largest update coming from Miami-Dade County.
 
-🔵 DEM: +24,570
-🔴 REP: +25,516
-🟣 OTHER: +12,679
-🟢 TOTAL: +62,765
+🔵 DEM: +49,897
+🔴 REP: +53,435
+🟣 OTHER: +26,238
+🟢 TOTAL: +129,570
 
-🔵 Democrats lead by 49,955 votes statewide.
+🔵 Democrats lead by 46,417 votes statewide.
 
-🔴 Margin Change: -0.34% toward Republicans
+🔴 Margin Change: -0.67% toward Republicans
 
 Largest County Updates
 
 
-🥇Hillsborough County
+🥇Miami-Dade County
 
-🔵 DEM: +5,279
-🔴 REP: +4,636
-🟣 OTHER: +2,654
-🟢 TOTAL: +12,569
-
-
-
-🥈Broward County
-
-🔵 DEM: +2,589
-🔴 REP: +1,118
-🟣 OTHER: +1,008
-🟢 TOTAL: +4,715
+🔵 DEM: +7,783
+🔴 REP: +6,206
+🟣 OTHER: +4,889
+🟢 TOTAL: +18,878
 
 
 
-🥉Miami-Dade County
+🥈Orange County
 
-🔵 DEM: +1,946
-🔴 REP: +1,639
-🟣 OTHER: +992
-🟢 TOTAL: +4,577
+🔵 DEM: +4,175
+🔴 REP: +2,517
+🟣 OTHER: +2,005
+🟢 TOTAL: +8,697
+
+
+
+🥉Broward County
+
+🔵 DEM: +4,695
+🔴 REP: +2,133
+🟣 OTHER: +1,636
+🟢 TOTAL: +8,464
 
 
 

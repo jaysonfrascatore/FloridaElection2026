@@ -1,0 +1,195 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Election ID:
+FL-2026-General
+
+Run Time:
+Updated at October 19th, 2026 at 3:00pm Eastern Time
+
+Counties Loaded:
+67 / 67
+
+Updated Counties:
+59
+
+Unchanged Counties:
+False
+
+Rejected County Updates:
+0
+
+STATEWIDE TOTALS
+=================================
+
+DEM:
+428,581
+
+REP:
+382,164
+
+OTHER:
+215,329
+
+TOTAL:
+1,026,074
+
+STATEWIDE SUMMARY
+=================================
+
+🔵 Democrats lead by 46,417 votes statewide.
+
+Margin Change:
+-0.67% toward Republicans
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +49,897
+🔴 REP: +53,435
+🟣 OTHER: +26,238
+🟢 TOTAL: +129,570
+
+REJECTED COUNTY UPDATES
+=================================
+
+
+No county updates were rejected.
+
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+Flagler
+
+Toss Up D → Lean R
+
+Margin Move:
+-0.089
+
+
+
+Franklin
+
+Toss Up D → Toss Up R
+
+Margin Move:
+-0.026
+
+
+
+Highlands
+
+Toss Up D → Toss Up R
+
+Margin Move:
+-0.023
+
+
+
+Indian River
+
+Likely R → Safe R
+
+Margin Move:
+-0.039
+
+
+
+Okeechobee
+
+Safe R → Likely R
+
+Margin Move:
++0.014
+
+
+
+Pasco
+
+Lean D → Toss Up D
+
+Margin Move:
+-0.034
+
+
+
+Seminole
+
+Likely D → Lean D
+
+Margin Move:
+-0.020
+
+
+
+Sumter
+
+Likely R → Safe R
+
+Margin Move:
+-0.017
+
+
+
+Wakulla
+
+Likely R → Lean R
+
+Margin Move:
++0.025
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️3 PM Florida EV & VBM Update
+
+New votes have been cast in 59 counties over the last hour, with the largest update coming from Miami-Dade County.
+
+🔵 DEM: +49,897
+🔴 REP: +53,435
+🟣 OTHER: +26,238
+🟢 TOTAL: +129,570
+
+🔵 Democrats lead by 46,417 votes statewide.
+
+🔴 Margin Change: -0.67% toward Republicans
+
+Largest County Updates
+
+
+🥇Miami-Dade County
+
+🔵 DEM: +7,783
+🔴 REP: +6,206
+🟣 OTHER: +4,889
+🟢 TOTAL: +18,878
+
+
+
+🥈Orange County
+
+🔵 DEM: +4,175
+🔴 REP: +2,517
+🟣 OTHER: +2,005
+🟢 TOTAL: +8,697
+
+
+
+🥉Broward County
+
+🔵 DEM: +4,695
+🔴 REP: +2,133
+🟣 OTHER: +1,636
+🟢 TOTAL: +8,464
+
+
+
+#Florida #EarlyVoting #VoteByMail

@@ -940,8 +940,6 @@
   .bt-desk{ display:none; } .bt-mob{ display:block; }
   .bt-head{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; font:600 10px var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:.08em; } .bt-hint{ letter-spacing:.04em; text-transform:none; font-weight:500; color:#caffbf; opacity:.85; }
   .bt-card, .bt-t tbody tr{ cursor:pointer; -webkit-tap-highlight-color:transparent; } .bt-t tbody tr:hover td{ background:rgba(255,255,255,.04); } .bt-card:hover{ border-color:#35435f; } .bt-card:focus-visible, .bt-t tbody tr:focus-visible{ outline:2px solid #caffbf; outline-offset:-2px; }
-  .bt-lead{ color:#6ee7a0; font-weight:600; font-size:.74em; margin-left:6px; white-space:nowrap; letter-spacing:0; }
-  .bt-cg.has-lead{ grid-template-columns:minmax(0,1.75fr) minmax(0,1fr) minmax(0,1fr); }
   .bt-dot{ display:inline-block; width:7px; height:7px; border-radius:50%; background:#caffbf; margin-right:7px; vertical-align:middle; }
   .shift-details{ margin-top:14px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,.02); padding:0 12px; }
   .shift-details > summary{ list-style:none; cursor:pointer; display:flex; align-items:center; gap:10px; padding:11px 0; -webkit-tap-highlight-color:transparent; } .shift-details > summary::-webkit-details-marker{ display:none; }
@@ -2431,18 +2429,6 @@ async function loadLatestCSV(isManualRefresh){
       rows = previousRows; sourceLabel = PREVIOUS_PATH;
     }
 
-    // Previous run's Mail / Early Vote / Election Day totals (saved by the script) -- only used
-    // for the split text's "increase/decrease" and "move toward" lines. It is ignored unless it
-    // belongs to the same run as the rows on screen, and a missing file just means no comparison.
-    btPrev = null;
-    try{
-      const sp = await fetch('data/split_previous.json?t=' + Date.now(), { cache:'no-store' });
-      if(sp.ok){
-        const j = await sp.json();
-        const stamp = rows && rows[0] && (rows[0]['Timestamp'] || rows[0]['Last Updated']);
-        if(j && j.previous && (!j.run_time || !stamp || j.run_time === stamp)) btPrev = j.previous;
-      }
-    }catch(e){ btPrev = null; }
     buildCounties(rows);
     lastLoadedAt = new Date();
     autoLoadFailed = false;
@@ -3004,7 +2990,6 @@ function evSideLegendHtml(counties){
 // "All ballots" view is untouched; the buttons stay hidden until those columns have any ballots in them.
 const BT_LABELS = { all:'Vote Totals', vbm:'Mail only', ev:'Early Vote only', ed:'Election Day Vote' };
 let btView = 'all', btHas = false, btStat = null, btCounties = {}, btCovered = 0;
-let btPrev = null;   // previous run's statewide split totals { vbm:[D,R,NPA+Other], ev:[...], ed:[...] } from data/split_previous.json, or null
 function btLoad(rows){
   try{
     const K = { vbm:'VBM', ev:'EV', ed:'ED' };
@@ -3038,12 +3023,8 @@ function btRender(){
   const desk = rows.map((r, i) => { const t = r.d + r.r + r.n, m = marg(r, t);
     return `<tr class="${btView===r.key?'cur':''}" data-k="${r.key}" tabindex="0" role="button" aria-pressed="${btView===r.key}"><td>${btView===r.key?'<span class="bt-dot"></span>':''}${i===0?'<b>'+r.label+'</b>':r.label}</td>${cell(r.d,t,BL)}${cell(r.r,t,RD)}${cell(r.n,t,PU)}<td><b>${f(t)}</b></td><td style="color:${m.color}"><b>${m.text}</b></td></tr>`; }).join('');
   const mob = rows.map(r => { const t = r.d + r.r + r.n, m = marg(r, t);
-    const p = (lab, v, c, ld) => `<div class="bt-mc"><span class="bt-mk">${lab}</span><span style="color:${c}">${f(v)}${ld || ''}</span><span class="bt-pct">${pc(v, t)}</span></div>`;
-    // Whoever leads (D vs R) is listed first, with their raw-vote lead in green next to their total.
-    const lead = r.d - r.r, ld = lead ? `<span class="bt-lead">(+${f(Math.abs(lead))})</span>` : '';
-    const dC = ['DEM', r.d, BL], rC = ['REP', r.r, RD], a = lead >= 0 ? dC : rC, b = lead >= 0 ? rC : dC;
-    const cells = p(a[0], a[1], a[2], ld) + p(b[0], b[1], b[2]) + p('NPA/Other', r.n, PU);
-    return `<div class="bt-card${btView===r.key?' cur':''}" data-k="${r.key}" tabindex="0" role="button" aria-pressed="${btView===r.key}"><div class="bt-ch"><b>${btView===r.key?'<span class="bt-dot"></span>':''}${r.label}</b><span><b>${f(t)}</b> <span style="color:${m.color}"><b>${m.text}</b></span></span></div><div class="bt-cg${lead ? ' has-lead' : ''}">${cells}</div></div>`; }).join('');
+    const p = (lab, v, c) => `<div class="bt-mc"><span class="bt-mk">${lab}</span><span style="color:${c}">${f(v)}</span><span class="bt-pct">${pc(v, t)}</span></div>`;
+    return `<div class="bt-card${btView===r.key?' cur':''}" data-k="${r.key}" tabindex="0" role="button" aria-pressed="${btView===r.key}"><div class="bt-ch"><b>${btView===r.key?'<span class="bt-dot"></span>':''}${r.label}</b><span><b>${f(t)}</b> <span style="color:${m.color}"><b>${m.text}</b></span></span></div><div class="bt-cg">${p('DEM', r.d, BL)}${p('REP', r.r, RD)}${p('NPA/Other', r.n, PU)}</div></div>`; }).join('');
   const reporting = COUNTIES.filter(c => c.total > 0).length;
   const note = btCovered < reporting ? `<div style="margin-top:6px;font-size:11px;color:var(--muted)">Type split covers ${btCovered} of ${reporting} reporting counties so far; the rest fill in once they have it.</div>` : '';
   document.getElementById('btSummary').innerHTML = `<table class="bt-t bt-desk"><thead><tr><th>Statewide</th><th>DEM</th><th>REP</th><th>NPA/Other</th><th>Total</th><th>Margin</th></tr></thead><tbody>${desk}</tbody></table><div class="bt-mob">${mob}</div>${note}`;
@@ -4363,50 +4344,6 @@ function drawRichLines(ctx, lines, x, firstBaselineY, lineH, fontPx, scale){
 
 // Builds the 4 copy-paste-ready text blocks (each becomes one carousel
 // card, and together make up the full "Copy" output).
-
-// ---- Mail / In Person Early Voting split text (update summary cards) ----
-// Margin is measured the same way as everywhere else on the page: (D - R) as a share of ALL
-// ballots in that split (NPA/Other included). The previous run's totals come from
-// data/split_previous.json (btPrev); with no previous run the comparison lines are left out.
-function splitTextInfo(key){
-  if(!btHas || !btStat || !btStat[key]) return null;
-  const [d, r, n] = btStat[key], t = d + r + n;
-  if(!t) return null;
-  const margin = (d - r) / t * 100;
-  const lead = d - r;                                   // + = Democrats ahead
-  const leader = lead > 0 ? 'Democrats' : (lead < 0 ? 'Republicans' : null);
-  const info = { d, r, n, t, margin, lead, leader, hasPrior:false };
-  const pv = btPrev && btPrev[key];
-  if(pv && (pv[0] + pv[1] + pv[2]) > 0){
-    const pt = pv[0] + pv[1] + pv[2], pMargin = (pv[0] - pv[1]) / pt * 100;
-    info.hasPrior = true;
-    info.leadChange = (leader === 'Democrats' ? 1 : -1) * (lead - (pv[0] - pv[1]));   // change in the CURRENT leader's raw lead
-    info.moveAmount = margin - pMargin;                  // + = moved toward Democrats
-  }
-  return info;
-}
-function splitHeadline(label, info){
-  if(!info.leader) return `\u{1F7E1} ${label}: Even`;
-  const e = info.leader === 'Democrats' ? '\u{1F535}' : '\u{1F534}';
-  return `${e} ${label}: ${formatMarginLabel(info.margin)} (+${fmt(Math.abs(info.lead))})`;
-}
-function splitBlockText(label, short, info){
-  const head = splitHeadline(label, info);
-  if(!info.leader) return `${head}\n\u{1F7E1} ${short} is tied between Democrats and Republicans.`;
-  const e = info.leader === 'Democrats' ? '\u{1F535}' : '\u{1F534}';
-  let line = `${e} ${info.leader} lead ${short} only by ${fmt(Math.abs(info.lead))} votes`;
-  if(info.hasPrior){
-    if(info.leadChange === 0) line += ', unchanged from the previous lead.';
-    else line += `, ${info.leadChange > 0 ? 'an increase' : 'a decrease'} of ${fmt(Math.abs(info.leadChange))} votes compared to the previous lead.`;
-  }else line += '.';
-  let out = `${head}\n${line}`;
-  if(info.hasPrior && Math.abs(info.moveAmount).toFixed(2) !== '0.00'){
-    const toD = info.moveAmount > 0;
-    out += `\n${toD ? '\u{1F535}' : '\u{1F534}'} This is a ${Math.abs(info.moveAmount).toFixed(2)}% move toward ${toD ? 'Democrats' : 'Republicans'}.`;
-  }
-  return out;
-}
-
 function buildTweetSections(){
   const list = COUNTIES;
   const sign = n => (n>=0?'+':'') + fmt(n);
@@ -4535,16 +4472,8 @@ function buildTweetSections(){
   // grand total, the leader line, and the counties-with-votes line --
   // all one card, matching the exact wording and order of the
   // reference example.
-  const vbmInfo = splitTextInfo('vbm'), evInfo = splitTextInfo('ev');
-  // The splits card: Mail first, then In Person Early Voting. Left out when there is no split data yet.
-  const splitsCard = (vbmInfo || evInfo)
-    ? 'Splits:\n\n' + [
-        vbmInfo ? splitBlockText('Vote by Mail', 'VBM', vbmInfo) : '',
-        evInfo ? splitBlockText('In Person Early Voting', 'IPEV', evInfo) : ''
-      ].filter(Boolean).join('\n\n')
-    : '';
   const section1 =
-`\u{1F5F3}\u{FE0F} Florida Vote By Mail + In Person Early Voting Update, ${headerDate}
+`\u{1F5F3}\u{FE0F} Florida VBM Update, ${headerDate}
 
 Statewide Total Votes:
 ${statewideLines}
@@ -4556,7 +4485,9 @@ ${dropLines}
 \u{1F7E2} TOTAL: ${sign(totalNewTotal)}
 
 \u{1F7E2} Total Votes Statewide: ${fmt(totalVotes)}
-${leaderLine}${marginMoveLine ? '\n' + marginMoveLine : ''}`;
+${leaderLine}${marginMoveLine ? '\n' + marginMoveLine : ''}
+
+${countiesReporting} of 67 counties have votes.`;
 
   // Card 2: short transition line into the per-county breakdown.
   // County ratings and margin changes are intentionally left out for
@@ -4671,9 +4602,7 @@ ${topDropsText}
   // Top 3 is always last. The margin and turnout cards sit between the
   // "counties updated" line and Top 3, and are each left out only when
   // they have nothing to say (no votes yet, or turnout hidden).
-  const cards = [section1];
-  if(splitsCard) cards.push(splitsCard);
-  cards.push(section2);
+  const cards = [section1, section2];
   if(marginCard) cards.push(marginCard);
   if(turnoutCard) cards.push(turnoutCard);
   cards.push(section3);

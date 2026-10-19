@@ -925,6 +925,8 @@
   }
   #evToggleBtn{ background:#8ac926; color:#0a0e17; border:0; border-radius:8px; padding:9px 14px; font:600 12px Inter, sans-serif; cursor:pointer; }
   #evToggleBtn:hover{ filter:brightness(1.08); }
+  .bt-b{ background:#151b28; border:1px solid #2b3550; color:#e9edf5; border-radius:8px; padding:7px 12px; font:600 12px Inter,sans-serif; cursor:pointer; } .bt-b.act{ background:#caffbf; color:#0a0e17; border-color:#caffbf; }
+  .bt-t{ width:100%; border-collapse:collapse; } .bt-t th,.bt-t td{ padding:5px 8px; text-align:right; border-bottom:1px solid #212a3b; white-space:nowrap; } .bt-t th:first-child,.bt-t td:first-child{ text-align:left; } .bt-t th{ font:600 10px var(--mono); color:var(--muted); text-transform:uppercase; } .bt-t tr.cur td{ background:rgba(138,201,38,.10); }
   .map-side-legend .ev-n{ color:var(--muted); font-weight:400; }
   .map-side-legend .ev-note{ font-size:10.5px; color:var(--muted); margin-top:8px; line-height:1.4; max-width:190px; }
   .map-side-legend .side-legend-row{ display:flex; align-items:center; gap:9px; font-size:11.5px; color:var(--text); margin:5px 0; }
@@ -1137,6 +1139,11 @@
             <span>&#8635;</span> <span id="countyZoomResetLabel">Reset Zoom</span>
           </button>
         </div>
+      </div>
+      <div id="btView" style="display:none;margin:2px 0 10px">
+        <div style="font:600 10px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">View the map by ballot type</div>
+        <div id="btBtns" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+        <div id="btSummary" style="margin-top:8px;font-size:12px;overflow-x:auto"></div>
       </div>
       <div id="evToggleWrap" style="display:none;margin:2px 0 10px"><button id="evToggleBtn" type="button">Click for Early Voting Window Map</button></div>
       <div class="npa-slider-wrap" id="turnoutSliderWrap" style="display:none;">
@@ -2180,6 +2187,7 @@ function historicalTickFor(metric){
 }
 function activeCountiesFor(metric){
   const i = historicalIndexFor(metric);
+  if(metric === 'demrepnpa' && btView !== 'all' && btCounties[btView] && !(i !== null && historicalSnapshots[i])) return btCounties[btView];
   if(i !== null && historicalSnapshots[i]){
     return historicalSnapshots[i];
   }
@@ -2568,6 +2576,7 @@ function buildCounties(rows){
   // simply hasn't reported yet) defaults to 0 / "Not Updated" instead of
   // vanishing from the live map/table entirely.
   COUNTIES = fillMissingCountiesAtZero(scraped);
+  btLoad(rows);
   setNextUpdateClockRun(latestTimestampString(COUNTIES.map(c => c.runTimestamp)));
 }
 
@@ -2915,6 +2924,43 @@ function evSideLegendHtml(counties){
     `<div class="ev-note">Brown Stripes: The county starts on the colors shown. A brown stripe indicates that the Early Voting period ends on November 1st.</div>`;
 }
 
+// ---- Ballot-type views on the General Election tab (vote by mail / early vote / Election Day) ----
+// Reads the DEM/REP/NPA/OTHER x VBM/EV/ED columns the tracker CSV already carries. The default
+// "All ballots" view is untouched; the buttons stay hidden until those columns have any ballots in them.
+const BT_LABELS = { all:'Vote Totals', vbm:'Mail only', ev:'Early Vote only', ed:'Election Day Vote' };
+let btView = 'all', btHas = false, btStat = null, btCounties = {};
+function btLoad(rows){
+  try{
+    const K = { vbm:'VBM', ev:'EV', ed:'ED' };
+    const stat = { vbm:[0,0,0], ev:[0,0,0], ed:[0,0,0] };
+    const next = {};
+    Object.keys(K).forEach(k => {
+      const t = K[k], fake = [];
+      rows.forEach(r => {
+        const d = num(pick(r,['DEM '+t])), rp = num(pick(r,['REP '+t])), n = num(pick(r,['NPA '+t])), o = num(pick(r,['OTHER '+t]));
+        if(!(d+rp+n+o)) return;
+        stat[k][0] += d; stat[k][1] += rp; stat[k][2] += n + o;
+        fake.push({ County:pick(r,['County_x','County','County_y']), Code:pick(r,['Code']), Timestamp:pick(r,['Timestamp']), DEM:d, REP:rp, NPA:n, IND:0, OTHER:o, TOTAL:d+rp+n+o });
+      });
+      next[k] = fillMissingCountiesAtZero(buildCountyRecords(fake));
+    });
+    btCounties = next; btStat = stat;
+    btHas = Object.keys(stat).some(k => stat[k][0] + stat[k][1] + stat[k][2] > 0);
+  }catch(e){ btHas = false; btCounties = {}; btStat = null; }
+  if(!btHas) btView = 'all';
+}
+function btRender(){
+  const box = document.getElementById('btView'); if(!box) return;
+  const on = btHas && currentMetric === 'demrepnpa';
+  box.style.display = on ? 'block' : 'none'; if(!on) return;
+  document.getElementById('btBtns').innerHTML = Object.keys(BT_LABELS).map(k =>
+    `<button type="button" class="bt-b${btView===k?' act':''}" data-k="${k}">${BT_LABELS[k]}</button>`).join('');
+  document.querySelectorAll('#btBtns button').forEach(b => b.onclick = () => { btView = b.dataset.k; if(zoomedCounty){ refreshZoomedCountyView(); } else { renderMap(); renderTable(); } });
+  const f = n => n.toLocaleString();
+  const row = (k, l) => { const x = btStat[k], t = x[0]+x[1]+x[2];
+    return `<tr class="${btView===k?'cur':''}"><td>${l}</td><td style="color:#4f8fd0">${f(x[0])}</td><td style="color:#d9695d">${f(x[1])}</td><td style="color:#b86fe0">${f(x[2])}</td><td><b>${f(t)}</b></td></tr>`; };
+  document.getElementById('btSummary').innerHTML = `<table class="bt-t"><thead><tr><th>Statewide</th><th>DEM</th><th>REP</th><th>NPA/Other</th><th>Total</th></tr></thead><tbody>${row('vbm','Vote by Mail')}${row('ev','Early Vote')}${row('ed','Election Day')}</tbody></table>`;
+}
 const METRICS = {
   // "Primary Election" — pinned to the frozen snapshot (STATIC_DVR_COUNTIES), never
   // touched by the live auto-refresh.
@@ -3037,7 +3083,7 @@ function tooltipText(list){
       if(isCountyPending(c)){
         return `<b>${c.county}</b><br>` +
           `Rating: Not Updated<br>` +
-          `This county's site hasn't posted new results yet \u2014 showing 0 votes for now.`;
+          (btView !== 'all' ? `No ${BT_LABELS[btView]} ballots counted here yet.` : `This county's site hasn't posted new results yet \u2014 showing 0 votes for now.`);
       }
       if(!shiftSliderActive){
         const combinedNpaOther = npaOtherTotal(c);
@@ -3271,6 +3317,7 @@ async function renderMap(){
   const m = METRICS[currentMetric];
   const activeCounties = activeCountiesFor(currentMetric);
   document.getElementById('mapTitle').textContent = m.title;
+  btRender();
   document.getElementById('npaSliderWrap').style.display = (currentMetric === 'demrepnpa') ? 'block' : 'none';
   document.getElementById('turnoutSliderWrap').style.display = (currentMetric === 'total') ? 'block' : 'none';
   // Total Turnout also shows the "Votes counted" panel, under the map.

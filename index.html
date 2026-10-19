@@ -237,6 +237,16 @@
   .next-update.nu-yellow .nu-time{ color:#d8b466; }
   .next-update.nu-green .nu-time{ color:var(--total-green); }
   .next-update.nu-green .nu-time.nu-prep{ font-size:16px; letter-spacing:.02em; }
+  /* Desktop: the countdown moves to the very top of the page, centered and large. */
+  #clockTop{ display:none; }
+  @media (min-width:761px){
+    #clockTop.has{ display:block; margin:6px auto 22px; text-align:center; }
+    #clockTop .next-update{ flex:none; margin:0 auto; padding:14px 40px 16px; display:none; width:max-content; max-width:100%; border:1px solid var(--border); border-radius:16px; background:rgba(255,255,255,.02); }
+    #clockTop .next-update.on{ display:block; }
+    #clockTop .next-update .nu-label{ font-size:14px; letter-spacing:.14em; }
+    #clockTop .next-update .nu-time{ font-size:64px; line-height:1.05; margin-top:6px; letter-spacing:.03em; }
+    #clockTop .next-update.nu-green .nu-time.nu-prep{ font-size:40px; }
+  }
   @media (max-width:1499px){ .next-update{ margin:0 12px; } }
   @media (max-width:760px){ .next-update{ flex:1 1 100%; margin:0; } }
 
@@ -927,7 +937,7 @@
   #evToggleBtn:hover{ filter:brightness(1.08); }
   .bt-b-unused{ background:#151b28; border:1px solid #2b3550; color:#e9edf5; border-radius:8px; padding:7px 12px; font:600 12px Inter,sans-serif; cursor:pointer; } .bt-b.act{ background:#caffbf; color:#0a0e17; border-color:#caffbf; }
   .bt-pct{ display:block; font-size:10.5px; color:var(--muted); }
-  .bt-desk{ display:none; } .bt-mob{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; } .bt-mob .bt-card{ margin:0; padding:10px 12px; }
+  .bt-desk{ display:none; } .bt-mob{ display:block; }
   .bt-head{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; font:600 10px var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:.08em; } .bt-hint{ letter-spacing:.04em; text-transform:none; font-weight:500; color:#caffbf; opacity:.85; }
   .bt-card, .bt-t tbody tr{ cursor:pointer; -webkit-tap-highlight-color:transparent; } .bt-t tbody tr:hover td{ background:rgba(255,255,255,.04); } .bt-card:hover{ border-color:#35435f; } .bt-card:focus-visible, .bt-t tbody tr:focus-visible{ outline:2px solid #caffbf; outline-offset:-2px; }
   .bt-dot{ display:inline-block; width:7px; height:7px; border-radius:50%; background:#caffbf; margin-right:7px; vertical-align:middle; }
@@ -940,9 +950,7 @@
   .bt-ch{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:13px; margin-bottom:6px; }
   .bt-cg{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
   .bt-mc{ display:flex; flex-direction:column; font-size:12.5px; min-width:0; } .bt-mk{ font:600 9.5px var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
-  @media (min-width:921px){ .bt-mob{ grid-template-columns:repeat(4,minmax(0,1fr)); } #btView.bt-wide{ margin:2px 0 14px !important; } }
-  @media (min-width:641px){ .bt-mob .bt-ch{ flex-direction:column; align-items:flex-start; gap:2px; margin-bottom:8px; } .bt-mob .bt-ch > b{ white-space:nowrap; font-size:13.5px; } .bt-mob .bt-ch > span{ font-size:13px; white-space:nowrap; } }
-  @media (max-width:640px){ .bt-mob{ display:block; } .bt-card{ padding:7px 10px; margin-bottom:5px; } .bt-ch{ margin-bottom:4px; font-size:12.5px; } .bt-mc{ font-size:12px; } .bt-pct{ font-size:10px; line-height:1.15; } }
+    @media (max-width:640px){ .bt-mob{ display:block; } .bt-card{ padding:7px 10px; margin-bottom:5px; } .bt-ch{ margin-bottom:4px; font-size:12.5px; } .bt-mc{ font-size:12px; } .bt-pct{ font-size:10px; line-height:1.15; } }
   .bt-t{ table-layout:auto; } .bt-t th,.bt-t td{ overflow:visible !important; text-overflow:clip !important; } .bt-t thead th{ position:static; cursor:default; } .bt-t tbody tr{ transition:none; } .bt-t td:first-child{ width:34%; } .bt-t tr.cur td:first-child{ box-shadow:inset 3px 0 0 #caffbf; } .bt-t tr.cur td{ background:rgba(202,255,191,.09) !important; }
   .bt-t{ width:100%; border-collapse:collapse; } .bt-t th,.bt-t td{ padding:5px 8px; text-align:right; border-bottom:1px solid #212a3b; white-space:nowrap; } .bt-t th:first-child,.bt-t td:first-child{ text-align:left; } .bt-t th{ font:600 10px var(--mono); color:var(--muted); text-transform:uppercase; } .bt-t tr.cur td{ background:rgba(138,201,38,.10); }
   .map-side-legend .ev-n{ color:var(--muted); font-weight:400; }
@@ -1047,6 +1055,8 @@
 </style>
 </head>
 <body>
+
+<div id="clockTop"></div>
 
 <header>
   <div class="title-block">
@@ -2590,6 +2600,17 @@ function tickNextUpdateClock(){
   timeEl.textContent = nextUpdateClockText(sec);
 }
 setInterval(tickNextUpdateClock, 250);
+// Wide screens: park the countdown in the big slot at the very top of the page; phones keep it in the tab row.
+function placeClock(){
+  const box = document.getElementById('nextUpdateClock'), top = document.getElementById('clockTop'), sb = document.querySelector('.controls .search-box');
+  if(!box || !top || !sb) return;
+  const wide = window.matchMedia('(min-width: 761px)').matches;
+  if(wide){ if(box.parentNode !== top) top.appendChild(box); }
+  else if(box.parentNode === top){ sb.parentNode.insertBefore(box, sb); }
+  top.classList.toggle('has', wide);
+}
+placeClock();
+window.matchMedia('(min-width: 761px)').addEventListener('change', placeClock);
 
 function buildCounties(rows){
   const scraped = buildCountyRecords(rows);
@@ -2996,18 +3017,6 @@ function btRender(){
     el.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); pick(el); } };
   });
 }
-// Wide screens: the "Splits" cards get their own full-width row above the map/table
-// (4 across). When the page is one column (phones/tablets) they sit just above the map.
-function placeBtView(){
-  const bt = document.getElementById('btView'), grid = document.getElementById('liveGrid');
-  if(!bt || !grid) return;
-  const wide = window.matchMedia('(min-width: 921px)').matches;
-  if(wide){ if(bt.nextElementSibling !== grid) grid.parentNode.insertBefore(bt, grid); }
-  else { const row = document.getElementById('mapZoomRow'); if(row && bt.nextElementSibling !== row) row.parentNode.insertBefore(bt, row); }
-  bt.classList.toggle('bt-wide', wide);
-}
-placeBtView();
-window.matchMedia('(min-width: 921px)').addEventListener('change', placeBtView);
 const METRICS = {
   // "Primary Election" — pinned to the frozen snapshot (STATIC_DVR_COUNTIES), never
   // touched by the live auto-refresh.

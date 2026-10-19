@@ -7,13 +7,13 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 19th, 2026 at 3:00pm Eastern Time
+Updated at October 19th, 2026 at 7:02pm Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-59
+58
 
 Unchanged Counties:
 False
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-428,581
+457,244
 
 REP:
-382,164
+406,118
 
 OTHER:
-215,329
+229,011
 
 TOTAL:
-1,026,074
+1,092,373
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 46,417 votes statewide.
+🔵 Democrats lead by 51,126 votes statewide.
 
 Margin Change:
--0.67% toward Republicans
++0.10% toward Democrats
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +49,897
-🔴 REP: +53,435
-🟣 OTHER: +26,238
-🟢 TOTAL: +129,570
+🔵 DEM: +28,663
+🔴 REP: +23,954
+🟣 OTHER: +13,682
+🟢 TOTAL: +66,299
 
 REJECTED COUNTY UPDATES
 =================================
@@ -64,84 +64,48 @@ RATING / FORECAST CHANGES
 =================================
 
 
-Flagler
-
-Toss Up D → Lean R
-
-Margin Move:
--0.089
-
-
-
 Franklin
 
-Toss Up D → Toss Up R
+Toss Up R → Lean R
 
 Margin Move:
--0.026
+-0.011
 
 
 
-Highlands
+Jackson
 
-Toss Up D → Toss Up R
-
-Margin Move:
--0.023
-
-
-
-Indian River
-
-Likely R → Safe R
+Toss Up R → Lean R
 
 Margin Move:
--0.039
+-0.032
+
+
+
+Manatee
+
+Lean R → Likely R
+
+Margin Move:
+-0.006
+
+
+
+Monroe
+
+Toss Up R → Lean R
+
+Margin Move:
+-0.009
 
 
 
 Okeechobee
 
-Safe R → Likely R
-
-Margin Move:
-+0.014
-
-
-
-Pasco
-
-Lean D → Toss Up D
-
-Margin Move:
--0.034
-
-
-
-Seminole
-
-Likely D → Lean D
-
-Margin Move:
--0.020
-
-
-
-Sumter
-
 Likely R → Safe R
 
 Margin Move:
--0.017
-
-
-
-Wakulla
-
-Likely R → Lean R
-
-Margin Move:
-+0.025
+-0.006
 
 
 
@@ -149,46 +113,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️3 PM Florida EV & VBM Update
+🗳️7 PM Florida EV & VBM Update
 
-New votes have been cast in 59 counties over the last hour, with the largest update coming from Miami-Dade County.
+New votes have been cast in 58 counties over the last hour, with the largest update coming from Pinellas County.
 
-🔵 DEM: +49,897
-🔴 REP: +53,435
-🟣 OTHER: +26,238
-🟢 TOTAL: +129,570
+🔵 DEM: +28,663
+🔴 REP: +23,954
+🟣 OTHER: +13,682
+🟢 TOTAL: +66,299
 
-🔵 Democrats lead by 46,417 votes statewide.
+🔵 Democrats lead by 51,126 votes statewide.
 
-🔴 Margin Change: -0.67% toward Republicans
+🔴 Margin Change: +0.10% toward Democrats
 
 Largest County Updates
 
 
-🥇Miami-Dade County
+🥇Pinellas County
 
-🔵 DEM: +7,783
-🔴 REP: +6,206
-🟣 OTHER: +4,889
-🟢 TOTAL: +18,878
-
-
-
-🥈Orange County
-
-🔵 DEM: +4,175
-🔴 REP: +2,517
-🟣 OTHER: +2,005
-🟢 TOTAL: +8,697
+🔵 DEM: +2,641
+🔴 REP: +3,182
+🟣 OTHER: +1,710
+🟢 TOTAL: +7,533
 
 
 
-🥉Broward County
+🥈Broward County
 
-🔵 DEM: +4,695
-🔴 REP: +2,133
-🟣 OTHER: +1,636
-🟢 TOTAL: +8,464
+🔵 DEM: +4,015
+🔴 REP: +1,427
+🟣 OTHER: +1,497
+🟢 TOTAL: +6,939
+
+
+
+🥉Miami-Dade County
+
+🔵 DEM: +2,450
+🔴 REP: +1,890
+🟣 OTHER: +1,481
+🟢 TOTAL: +5,821
 
 
 

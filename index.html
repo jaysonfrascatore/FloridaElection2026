@@ -950,7 +950,15 @@
   .bt-ch{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:13px; margin-bottom:6px; }
   .bt-cg{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
   .bt-mc{ display:flex; flex-direction:column; font-size:12.5px; min-width:0; } .bt-mk{ font:600 9.5px var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
-    @media (max-width:640px){ .bt-mob{ display:block; } .bt-card{ padding:7px 10px; margin-bottom:5px; } .bt-ch{ margin-bottom:4px; font-size:12.5px; } .bt-mc{ font-size:12px; } .bt-pct{ font-size:10px; line-height:1.15; } }
+    @media (min-width:761px){
+    .bt-head{ font-size:12.5px; } .bt-hint{ font-size:14px; }
+    .bt-mob .bt-card{ padding:15px 18px; margin-bottom:10px; border-radius:11px; }
+    .bt-mob .bt-ch{ font-size:19px; margin-bottom:10px; align-items:center; } .bt-mob .bt-ch > span{ font-size:19px; }
+    .bt-mob .bt-cg{ gap:12px; }
+    .bt-mob .bt-mk{ font-size:12px; } .bt-mob .bt-mc{ font-size:22px; font-weight:600; } .bt-mob .bt-pct{ font-size:14px; font-weight:500; margin-top:1px; }
+    .bt-dot{ width:9px; height:9px; margin-right:9px; }
+  }
+  @media (max-width:640px){ .bt-mob{ display:block; } .bt-card{ padding:7px 10px; margin-bottom:5px; } .bt-ch{ margin-bottom:4px; font-size:12.5px; } .bt-mc{ font-size:12px; } .bt-pct{ font-size:10px; line-height:1.15; } }
   .bt-t{ table-layout:auto; } .bt-t th,.bt-t td{ overflow:visible !important; text-overflow:clip !important; } .bt-t thead th{ position:static; cursor:default; } .bt-t tbody tr{ transition:none; } .bt-t td:first-child{ width:34%; } .bt-t tr.cur td:first-child{ box-shadow:inset 3px 0 0 #caffbf; } .bt-t tr.cur td{ background:rgba(202,255,191,.09) !important; }
   .bt-t{ width:100%; border-collapse:collapse; } .bt-t th,.bt-t td{ padding:5px 8px; text-align:right; border-bottom:1px solid #212a3b; white-space:nowrap; } .bt-t th:first-child,.bt-t td:first-child{ text-align:left; } .bt-t th{ font:600 10px var(--mono); color:var(--muted); text-transform:uppercase; } .bt-t tr.cur td{ background:rgba(138,201,38,.10); }
   .map-side-legend .ev-n{ color:var(--muted); font-weight:400; }

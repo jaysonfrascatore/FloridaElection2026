@@ -2928,23 +2928,23 @@ function evSideLegendHtml(counties){
 // Reads the DEM/REP/NPA/OTHER x VBM/EV/ED columns the tracker CSV already carries. The default
 // "All ballots" view is untouched; the buttons stay hidden until those columns have any ballots in them.
 const BT_LABELS = { all:'Vote Totals', vbm:'Mail only', ev:'Early Vote only', ed:'Election Day Vote' };
-let btView = 'all', btHas = false, btStat = null, btCounties = {};
+let btView = 'all', btHas = false, btStat = null, btCounties = {}, btCovered = 0;
 function btLoad(rows){
   try{
     const K = { vbm:'VBM', ev:'EV', ed:'ED' };
     const stat = { vbm:[0,0,0], ev:[0,0,0], ed:[0,0,0] };
-    const next = {};
+    const next = {}, covered = new Set();
     Object.keys(K).forEach(k => {
       const t = K[k], fake = [];
       rows.forEach(r => {
         const d = num(pick(r,['DEM '+t])), rp = num(pick(r,['REP '+t])), n = num(pick(r,['NPA '+t])), o = num(pick(r,['OTHER '+t]));
         if(!(d+rp+n+o)) return;
-        stat[k][0] += d; stat[k][1] += rp; stat[k][2] += n + o;
+        stat[k][0] += d; stat[k][1] += rp; stat[k][2] += n + o; covered.add(pick(r,['Code']));
         fake.push({ County:pick(r,['County_x','County','County_y']), Code:pick(r,['Code']), Timestamp:pick(r,['Timestamp']), DEM:d, REP:rp, NPA:n, IND:0, OTHER:o, TOTAL:d+rp+n+o });
       });
       next[k] = fillMissingCountiesAtZero(buildCountyRecords(fake));
     });
-    btCounties = next; btStat = stat;
+    btCounties = next; btStat = stat; btCovered = covered.size;
     btHas = Object.keys(stat).some(k => stat[k][0] + stat[k][1] + stat[k][2] > 0);
   }catch(e){ btHas = false; btCounties = {}; btStat = null; }
   if(!btHas) btView = 'all';
@@ -2959,7 +2959,11 @@ function btRender(){
   const f = n => n.toLocaleString();
   const row = (k, l) => { const x = btStat[k], t = x[0]+x[1]+x[2];
     return `<tr class="${btView===k?'cur':''}"><td>${l}</td><td style="color:#4f8fd0">${f(x[0])}</td><td style="color:#d9695d">${f(x[1])}</td><td style="color:#b86fe0">${f(x[2])}</td><td><b>${f(t)}</b></td></tr>`; };
-  document.getElementById('btSummary').innerHTML = `<table class="bt-t"><thead><tr><th>Statewide</th><th>DEM</th><th>REP</th><th>NPA/Other</th><th>Total</th></tr></thead><tbody>${row('vbm','Vote by Mail')}${row('ev','Early Vote')}${row('ed','Election Day')}</tbody></table>`;
+  const tt = [0,1,2].map(i => btStat.vbm[i] + btStat.ev[i] + btStat.ed[i]);
+  const totalRow = `<tr class="${btView==='all'?'cur':''}"><td><b>Total Vote</b></td><td style="color:#4f8fd0"><b>${f(tt[0])}</b></td><td style="color:#d9695d"><b>${f(tt[1])}</b></td><td style="color:#b86fe0"><b>${f(tt[2])}</b></td><td><b>${f(tt[0]+tt[1]+tt[2])}</b></td></tr>`;
+  const reporting = COUNTIES.filter(c => c.total > 0).length;
+  const note = btCovered < reporting ? `<div style="margin-top:6px;font-size:11px;color:var(--muted)">Type split covers ${btCovered} of ${reporting} reporting counties so far; the rest fill in once they have it.</div>` : '';
+  document.getElementById('btSummary').innerHTML = `<table class="bt-t"><thead><tr><th>Statewide</th><th>DEM</th><th>REP</th><th>NPA/Other</th><th>Total</th></tr></thead><tbody>${row('vbm','Vote by Mail')}${row('ev','Early Vote')}${row('ed','Election Day')}${totalRow}</tbody></table>${note}`;
 }
 const METRICS = {
   // "Primary Election" — pinned to the frozen snapshot (STATIC_DVR_COUNTIES), never

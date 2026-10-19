@@ -925,14 +925,25 @@
   }
   #evToggleBtn{ background:#8ac926; color:#0a0e17; border:0; border-radius:8px; padding:9px 14px; font:600 12px Inter, sans-serif; cursor:pointer; }
   #evToggleBtn:hover{ filter:brightness(1.08); }
-  .bt-b{ background:#151b28; border:1px solid #2b3550; color:#e9edf5; border-radius:8px; padding:7px 12px; font:600 12px Inter,sans-serif; cursor:pointer; } .bt-b.act{ background:#caffbf; color:#0a0e17; border-color:#caffbf; }
+  .bt-b-unused{ background:#151b28; border:1px solid #2b3550; color:#e9edf5; border-radius:8px; padding:7px 12px; font:600 12px Inter,sans-serif; cursor:pointer; } .bt-b.act{ background:#caffbf; color:#0a0e17; border-color:#caffbf; }
   .bt-pct{ display:block; font-size:10.5px; color:var(--muted); }
-  .bt-mob{ display:none; }
+  .bt-desk{ display:none; } .bt-mob{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; } .bt-mob .bt-card{ margin:0; padding:10px 12px; }
+  .bt-head{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; font:600 10px var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:.08em; } .bt-hint{ letter-spacing:.04em; text-transform:none; font-weight:500; color:#caffbf; opacity:.85; }
+  .bt-card, .bt-t tbody tr{ cursor:pointer; -webkit-tap-highlight-color:transparent; } .bt-t tbody tr:hover td{ background:rgba(255,255,255,.04); } .bt-card:hover{ border-color:#35435f; } .bt-card:focus-visible, .bt-t tbody tr:focus-visible{ outline:2px solid #caffbf; outline-offset:-2px; }
+  .bt-dot{ display:inline-block; width:7px; height:7px; border-radius:50%; background:#caffbf; margin-right:7px; vertical-align:middle; }
+  .shift-details{ margin-top:14px; border:1px solid var(--border); border-radius:10px; background:rgba(255,255,255,.02); padding:0 12px; }
+  .shift-details > summary{ list-style:none; cursor:pointer; display:flex; align-items:center; gap:10px; padding:11px 0; -webkit-tap-highlight-color:transparent; } .shift-details > summary::-webkit-details-marker{ display:none; }
+  .shift-details .sd-t{ font:600 12px Inter,sans-serif; color:#e9edf5; } .shift-details .sd-s{ font:600 9.5px var(--mono); text-transform:uppercase; letter-spacing:.05em; color:var(--muted); border:1px solid #2b3550; border-radius:999px; padding:2px 8px; } .shift-details .sd-s.on{ color:#0a0e17; background:#caffbf; border-color:#caffbf; }
+  .shift-details .sd-c{ margin-left:auto; width:8px; height:8px; border-right:2px solid var(--muted); border-bottom:2px solid var(--muted); transform:rotate(45deg); transition:transform .15s; margin-top:-3px; } .shift-details[open] .sd-c{ transform:rotate(-135deg); margin-top:3px; }
+  .shift-details[open]{ padding-bottom:14px; }
   .bt-card{ border:1px solid #212a3b; border-radius:8px; padding:8px 10px; margin:0 0 6px; background:#101624; } .bt-card.cur{ border-color:#caffbf; background:rgba(202,255,191,.07); }
   .bt-ch{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:13px; margin-bottom:6px; }
   .bt-cg{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
   .bt-mc{ display:flex; flex-direction:column; font-size:12.5px; min-width:0; } .bt-mk{ font:600 9.5px var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
-  @media (max-width:640px){ .bt-desk{ display:none; } .bt-mob{ display:block; } }
+  @media (min-width:921px){ .bt-mob{ grid-template-columns:repeat(4,minmax(0,1fr)); } #btView.bt-wide{ margin:2px 0 14px !important; } }
+  @media (min-width:641px){ .bt-mob .bt-ch{ flex-direction:column; align-items:flex-start; gap:2px; margin-bottom:8px; } .bt-mob .bt-ch > b{ white-space:nowrap; font-size:13.5px; } .bt-mob .bt-ch > span{ font-size:13px; white-space:nowrap; } }
+  @media (max-width:640px){ .bt-mob{ display:block; } .bt-card{ padding:7px 10px; margin-bottom:5px; } .bt-ch{ margin-bottom:4px; font-size:12.5px; } .bt-mc{ font-size:12px; } .bt-pct{ font-size:10px; line-height:1.15; } }
+  .bt-t{ table-layout:auto; } .bt-t th,.bt-t td{ overflow:visible !important; text-overflow:clip !important; } .bt-t thead th{ position:static; cursor:default; } .bt-t tbody tr{ transition:none; } .bt-t td:first-child{ width:34%; } .bt-t tr.cur td:first-child{ box-shadow:inset 3px 0 0 #caffbf; } .bt-t tr.cur td{ background:rgba(202,255,191,.09) !important; }
   .bt-t{ width:100%; border-collapse:collapse; } .bt-t th,.bt-t td{ padding:5px 8px; text-align:right; border-bottom:1px solid #212a3b; white-space:nowrap; } .bt-t th:first-child,.bt-t td:first-child{ text-align:left; } .bt-t th{ font:600 10px var(--mono); color:var(--muted); text-transform:uppercase; } .bt-t tr.cur td{ background:rgba(138,201,38,.10); }
   .map-side-legend .ev-n{ color:var(--muted); font-weight:400; }
   .map-side-legend .ev-note{ font-size:10.5px; color:var(--muted); margin-top:8px; line-height:1.4; max-width:190px; }
@@ -1147,11 +1158,6 @@
           </button>
         </div>
       </div>
-      <div id="btView" style="display:none;margin:2px 0 10px">
-        <div style="font:600 10px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">View the map by ballot type</div>
-        <div id="btBtns" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-        <div id="btSummary" style="margin-top:8px;font-size:12px;overflow-x:auto"></div>
-      </div>
       <div id="evToggleWrap" style="display:none;margin:2px 0 10px"><button id="evToggleBtn" type="button">Click for Early Voting Window Map</button></div>
       <div class="npa-slider-wrap" id="turnoutSliderWrap" style="display:none;">
         <div class="npa-slider-label">
@@ -1169,7 +1175,9 @@
         <input type="range" id="historySlider" class="adj-slider" min="0" max="1" step="1" value="1">
         <div class="npa-slider-ends"><span id="historySliderStartLabel">Earliest</span><span>Live</span></div>
 
-        <div class="shift-slider-row" style="margin-top:16px;">
+        <details class="shift-details" id="shiftDetails">
+        <summary><span class="sd-t">Party Shift Sliders</span><span class="sd-s" id="shiftSummaryState">Not in use</span><span class="sd-c" aria-hidden="true"></span></summary>
+        <div class="shift-slider-row" style="margin-top:14px;">
           <div class="shift-slider-badge" id="shiftSliderBadge">Shift Slider Not Yet In Use</div>
           <button id="shiftSliderResetBtn" title="Reset the shift sliders back to their defaults">Reset Shift Sliders</button>
         </div>
@@ -1198,6 +1206,12 @@
           <span>Statewide leader margin</span>
           <span class="val" id="npaStatewideMargin">&mdash;</span>
         </div>
+        </details>
+      </div>
+
+      <div id="btView" style="display:none;margin:4px 0 12px">
+        <div class="bt-head"><span>Splits</span><span class="bt-hint">Click a split to view the data and each map</span></div>
+        <div id="btSummary" style="margin-top:8px;font-size:12px"></div>
       </div>
 
       <!-- #mapZoomRow: #map itself is untouched (same element/CSS as
@@ -1770,9 +1784,10 @@ let repLoyalty = 95;
 // at least once (tracked here), regardless of where the sliders land.
 let shiftSliderActive = false;
 
+function setShiftChip(on){ const c = document.getElementById('shiftSummaryState'); if(c){ c.textContent = on ? 'In use' : 'Not in use'; c.classList.toggle('on', !!on); } }
 function activateShiftSlider(){
   if(shiftSliderActive) return;
-  shiftSliderActive = true;
+  shiftSliderActive = true; setShiftChip(true);
   const badge = document.getElementById('shiftSliderBadge');
   if(badge){
     badge.textContent = 'Shift Slider Activated';
@@ -1810,6 +1825,7 @@ function resetShiftSliders(){
     badge.textContent = 'Shift Slider Not Yet In Use';
     badge.classList.remove('active');
   }
+  setShiftChip(false);
   const resetBtn = document.getElementById('shiftSliderResetBtn');
   if(resetBtn) resetBtn.classList.remove('visible');
 
@@ -2960,9 +2976,6 @@ function btRender(){
   const box = document.getElementById('btView'); if(!box) return;
   const on = btHas && currentMetric === 'demrepnpa';
   box.style.display = on ? 'block' : 'none'; if(!on) return;
-  document.getElementById('btBtns').innerHTML = Object.keys(BT_LABELS).map(k =>
-    `<button type="button" class="bt-b${btView===k?' act':''}" data-k="${k}">${BT_LABELS[k]}</button>`).join('');
-  document.querySelectorAll('#btBtns button').forEach(b => b.onclick = () => { btView = b.dataset.k; if(zoomedCounty){ refreshZoomedCountyView(); } else { renderMap(); renderTable(); } });
   const f = n => n.toLocaleString();
   const rows = btTableRows();                       // Total Vote, Mail, Early, Election Day (same numbers as the screenshot)
   const BL = '#4f8fd0', RD = '#d9695d', PU = '#b86fe0';
@@ -2970,14 +2983,31 @@ function btRender(){
   const marg = (r, t) => { if(!t) return { text:'\u2014', color:'' }; const m = (r.d - r.r) / t * 100, l = formatMarginLabel(m); return { text:l, color: l === 'Even' ? '' : (m > 0 ? BL : RD) }; };
   const cell = (v, t, c) => `<td><span style="color:${c}">${f(v)}</span><span class="bt-pct">${pc(v, t)}</span></td>`;
   const desk = rows.map((r, i) => { const t = r.d + r.r + r.n, m = marg(r, t);
-    return `<tr class="${btView===r.key?'cur':''}"><td>${i===0?'<b>'+r.label+'</b>':r.label}</td>${cell(r.d,t,BL)}${cell(r.r,t,RD)}${cell(r.n,t,PU)}<td><b>${f(t)}</b></td><td style="color:${m.color}"><b>${m.text}</b></td></tr>`; }).join('');
+    return `<tr class="${btView===r.key?'cur':''}" data-k="${r.key}" tabindex="0" role="button" aria-pressed="${btView===r.key}"><td>${btView===r.key?'<span class="bt-dot"></span>':''}${i===0?'<b>'+r.label+'</b>':r.label}</td>${cell(r.d,t,BL)}${cell(r.r,t,RD)}${cell(r.n,t,PU)}<td><b>${f(t)}</b></td><td style="color:${m.color}"><b>${m.text}</b></td></tr>`; }).join('');
   const mob = rows.map(r => { const t = r.d + r.r + r.n, m = marg(r, t);
     const p = (lab, v, c) => `<div class="bt-mc"><span class="bt-mk">${lab}</span><span style="color:${c}">${f(v)}</span><span class="bt-pct">${pc(v, t)}</span></div>`;
-    return `<div class="bt-card${btView===r.key?' cur':''}"><div class="bt-ch"><b>${r.label}</b><span><b>${f(t)}</b> <span style="color:${m.color}"><b>${m.text}</b></span></span></div><div class="bt-cg">${p('DEM', r.d, BL)}${p('REP', r.r, RD)}${p('NPA/Other', r.n, PU)}</div></div>`; }).join('');
+    return `<div class="bt-card${btView===r.key?' cur':''}" data-k="${r.key}" tabindex="0" role="button" aria-pressed="${btView===r.key}"><div class="bt-ch"><b>${btView===r.key?'<span class="bt-dot"></span>':''}${r.label}</b><span><b>${f(t)}</b> <span style="color:${m.color}"><b>${m.text}</b></span></span></div><div class="bt-cg">${p('DEM', r.d, BL)}${p('REP', r.r, RD)}${p('NPA/Other', r.n, PU)}</div></div>`; }).join('');
   const reporting = COUNTIES.filter(c => c.total > 0).length;
   const note = btCovered < reporting ? `<div style="margin-top:6px;font-size:11px;color:var(--muted)">Type split covers ${btCovered} of ${reporting} reporting counties so far; the rest fill in once they have it.</div>` : '';
   document.getElementById('btSummary').innerHTML = `<table class="bt-t bt-desk"><thead><tr><th>Statewide</th><th>DEM</th><th>REP</th><th>NPA/Other</th><th>Total</th><th>Margin</th></tr></thead><tbody>${desk}</tbody></table><div class="bt-mob">${mob}</div>${note}`;
+  const pick = el => { const k = el.dataset.k; if(!k || k === btView) return; btView = k; if(zoomedCounty){ refreshZoomedCountyView(); } else { renderMap(); renderTable(); } };
+  document.querySelectorAll('#btSummary [data-k]').forEach(el => {
+    el.onclick = () => pick(el);
+    el.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); pick(el); } };
+  });
 }
+// Wide screens: the "Splits" cards get their own full-width row above the map/table
+// (4 across). When the page is one column (phones/tablets) they sit just above the map.
+function placeBtView(){
+  const bt = document.getElementById('btView'), grid = document.getElementById('liveGrid');
+  if(!bt || !grid) return;
+  const wide = window.matchMedia('(min-width: 921px)').matches;
+  if(wide){ if(bt.nextElementSibling !== grid) grid.parentNode.insertBefore(bt, grid); }
+  else { const row = document.getElementById('mapZoomRow'); if(row && bt.nextElementSibling !== row) row.parentNode.insertBefore(bt, row); }
+  bt.classList.toggle('bt-wide', wide);
+}
+placeBtView();
+window.matchMedia('(min-width: 921px)').addEventListener('change', placeBtView);
 const METRICS = {
   // "Primary Election" — pinned to the frozen snapshot (STATIC_DVR_COUNTIES), never
   // touched by the live auto-refresh.

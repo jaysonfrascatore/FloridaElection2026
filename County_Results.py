@@ -1607,6 +1607,20 @@ for county_name, county_code in COUNTIES.items():
 
     }
 
+    # NEW: the same ballots, kept apart by type (vote by mail / early /
+    # Election Day) and party group. IND is folded into OTHER here, the
+    # same way Broward's own OTHER group works. These feed the "view by
+    # ballot type" buttons; they never feed any total, check or rating.
+    type_detail = {
+
+        f"{grp} {kind}": 0
+
+        for grp in ("DEM", "REP", "NPA", "OTHER")
+
+        for kind in ("VBM", "EV", "ED")
+
+    }
+
 
     index_url = (
         f"{BASE_URL}"
@@ -1739,6 +1753,21 @@ for county_name, county_code in COUNTIES.items():
                     totals["OTHER"] += ballots
 
 
+                # NEW: record the type split (runs only after the totals
+                # above were updated, so it can never change them).
+                type_group = (
+                    party
+                    if party in ("DEM", "REP", "NPA")
+                    else "OTHER"
+                )
+
+                type_detail[f"{type_group} VBM"] += mail
+
+                type_detail[f"{type_group} EV"] += early
+
+                type_detail[f"{type_group} ED"] += election_day
+
+
         except Exception:
 
             continue
@@ -1755,7 +1784,9 @@ for county_name, county_code in COUNTIES.items():
         "Code":
             county_code,
 
-        **totals
+        **totals,
+
+        **type_detail
 
     })
 

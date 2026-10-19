@@ -5117,7 +5117,7 @@ function liveResultsSummary(){
   }
 
   return {
-    metricTitle: (METRICS[currentMetric] && METRICS[currentMetric].title) || 'Florida Vote Tracker',
+    metricTitle: (currentMetric === 'demrepnpa' && typeof btView !== 'undefined' && btView !== 'all') ? 'General Election \u2014 ' + BT_LABELS[btView] : ((METRICS[currentMetric] && METRICS[currentMetric].title) || 'Florida Vote Tracker'),
     totalVotes, totalD, totalR, totalNPA: totalNpaOther,
     leader, voteLead, marginPct, statewideTie, npaLead, asOfText,
     countiesReporting, marginMoveCount,
@@ -6095,6 +6095,57 @@ function drawKeyOnCanvas(ctx, x, bottomY, scale, title, subtitle, rows){
   return top;
 }
 
+// General Election screenshot footer when ballot-type data exists: Total Vote plus Mail / Early / Election Day,
+// each with DEM, REP, NPA/Other, the total and the margin (D+ / R+). Replaces the "top 3 counties" list.
+function btTableRows(){
+  const sum = list => list.reduce((a, c) => { a.d += c.dem; a.r += c.rep; a.n += c.ind + c.npa + c.other; return a; }, { d:0, r:0, n:0 });
+  const all = sum(COUNTIES);
+  const mk = (label, x, key) => ({ label, key, d:x.d, r:x.r, n:x.n });
+  return [
+    mk('Total Vote', all, 'all'),
+    mk('Vote by Mail', { d:btStat.vbm[0], r:btStat.vbm[1], n:btStat.vbm[2] }, 'vbm'),
+    mk('Early Vote', { d:btStat.ev[0], r:btStat.ev[1], n:btStat.ev[2] }, 'ev'),
+    mk('Election Day Vote', { d:btStat.ed[0], r:btStat.ed[1], n:btStat.ed[2] }, 'ed')
+  ];
+}
+function drawTypeTableFooter(ctx, footerY0, width, scale){
+  const rows = btTableRows();
+  const reporting = COUNTIES.filter(c => c.total > 0).length;
+  const sans = 'Inter, Arial, sans-serif', mono = 'IBM Plex Mono, monospace';
+  const BLUE = '#5b9bd9', RED = '#d4675a', PURPLE = '#c77dff', NEUTRAL = '#e9edf5', GRAY = '#7c879c';
+  const X = { label:24, d:320, r:450, n:590, t:740, m:876 };
+  ctx.fillStyle = '#d8b466';
+  ctx.font = `600 ${Math.round(14*scale)}px ${sans}`;
+  ctx.textAlign = 'left';
+  ctx.fillText('Ballots by type:', 24*scale, footerY0 + 58*scale);
+  if(btCovered < reporting){
+    ctx.fillStyle = GRAY; ctx.font = `${Math.round(11*scale)}px ${sans}`; ctx.textAlign = 'right';
+    ctx.fillText(`Type split covers ${btCovered} of ${reporting} reporting counties so far`, 876*scale, footerY0 + 58*scale);
+    ctx.textAlign = 'left';
+  }
+  ctx.fillStyle = GRAY; ctx.font = `600 ${Math.round(11*scale)}px ${mono}`;
+  [['DEM', X.d], ['REP', X.r], ['NPA/OTHER', X.n], ['TOTAL', X.t], ['MARGIN', X.m]].forEach(([t, x]) => { ctx.textAlign = 'right'; ctx.fillText(t, x*scale, footerY0 + 78*scale); });
+  ctx.textAlign = 'left';
+  rows.forEach((r, i) => {
+    const y = footerY0 + (98 + i*22)*scale;
+    const tot = r.d + r.r + r.n;
+    if(btView === r.key){ ctx.fillStyle = 'rgba(202,255,191,0.10)'; ctx.fillRect(16*scale, y - 15*scale, 868*scale, 21*scale); }
+    ctx.fillStyle = NEUTRAL; ctx.font = `${i === 0 ? '700' : '600'} ${Math.round(14*scale)}px ${sans}`; ctx.textAlign = 'left';
+    ctx.fillText(r.label, X.label*scale, y);
+    ctx.font = `${Math.round(14*scale)}px ${sans}`; ctx.textAlign = 'right';
+    ctx.fillStyle = BLUE; ctx.fillText(fmt(r.d), X.d*scale, y);
+    ctx.fillStyle = RED; ctx.fillText(fmt(r.r), X.r*scale, y);
+    ctx.fillStyle = PURPLE; ctx.fillText(fmt(r.n), X.n*scale, y);
+    ctx.fillStyle = NEUTRAL; ctx.font = `700 ${Math.round(14*scale)}px ${sans}`; ctx.fillText(fmt(tot), X.t*scale, y);
+    const m = tot ? (r.d - r.r) / tot * 100 : 0, label = tot ? formatMarginLabel(m) : '\u2014';
+    ctx.fillStyle = label === 'Even' || label === '\u2014' ? NEUTRAL : (m > 0 ? BLUE : RED);
+    ctx.fillText(label, X.m*scale, y);
+  });
+  ctx.textAlign = 'left';
+  const allTotal = rows[0].d + rows[0].r + rows[0].n;
+  drawStatewideTurnoutBar(ctx, { totalVotes: allTotal }, footerY0 + 194*scale, width, scale);
+}
+
 async function exportStatewidePng(btn, opts = {}){
   const originalText = btn.textContent;
   btn.textContent = 'Rendering\u2026';
@@ -6214,11 +6265,17 @@ async function exportStatewidePng(btn, opts = {}){
 
       ctx.fillStyle = '#e9edf5';
       ctx.font = `600 ${Math.round(15*scale)}px Inter, Arial, sans-serif`;
-      ctx.fillText(
-        `Margin move: ${summary.marginMoveCount} counties with a rating change \u00b7 Counties updated: ${summary.countiesUpdated}`,
+      const typeTableOn = isGeneral && btHas && !historicalTickFor(currentMetric);
+      // The "Margin move / Counties updated" line belongs to the Vote Totals screenshot only; Mail / Early / Election Day screenshots leave it off.
+      if(!(typeTableOn && btView !== 'all')) ctx.fillText(
+        `Margin move: ${typeTableOn ? COUNTIES.filter(c => c.ratingChanged).length : summary.marginMoveCount} counties with a rating change \u00b7 Counties updated: ${typeTableOn ? COUNTIES.filter(c => c.totalNew).length : summary.countiesUpdated}`,
         24*scale, footerY0 + 30*scale
       );
 
+      const useTypeTable = isGeneral && btHas && !historicalTickFor(currentMetric);
+      if(useTypeTable){
+        drawTypeTableFooter(ctx, footerY0, canvas.width, scale);
+      }else{
       ctx.fillStyle = '#d8b466';
       ctx.font = `600 ${Math.round(14*scale)}px Inter, Arial, sans-serif`;
       ctx.fillText('Top 3 counties by votes added:', 24*scale, footerY0 + 58*scale);
@@ -6236,7 +6293,8 @@ async function exportStatewidePng(btn, opts = {}){
         ctx.fillText('No additional votes at this time.', 24*scale, footerY0 + 82*scale);
       }
 
-      if(SHOW_TURNOUT){
+      }   // end of top-3 block (skipped when the type table is drawn instead)
+      if(SHOW_TURNOUT && !useTypeTable){
         // Positioned dynamically below however many top-3 lines actually
         // got drawn above (1 to 3, or 1 for "No additional votes"), so it
         // never collides with that block regardless of how many counties

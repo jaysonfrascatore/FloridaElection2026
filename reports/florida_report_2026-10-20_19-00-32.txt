@@ -1,0 +1,150 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Election ID:
+FL-2026-General
+
+Run Time:
+Updated at October 20th, 2026 at 7:00pm Eastern Time
+
+Counties Loaded:
+67 / 67
+
+Updated Counties:
+51
+
+Unchanged Counties:
+False
+
+Rejected County Updates:
+0
+
+STATEWIDE TOTALS
+=================================
+
+DEM:
+577,903
+
+REP:
+518,729
+
+OTHER:
+285,986
+
+TOTAL:
+1,382,618
+
+STATEWIDE SUMMARY
+=================================
+
+🔵 Democrats lead by 59,174 votes statewide.
+
+Margin Change:
++0.20% toward Democrats
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +32,352
+🔴 REP: +25,180
+🟣 OTHER: +13,942
+🟢 TOTAL: +71,474
+
+REJECTED COUNTY UPDATES
+=================================
+
+
+No county updates were rejected.
+
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+DeSoto
+
+Lean R → Likely R
+
+Margin Move:
+-0.021
+
+
+
+Franklin
+
+Toss Up D → Toss Up R
+
+Margin Move:
+-0.005
+
+
+
+Hendry
+
+Safe R → Likely R
+
+Margin Move:
++0.017
+
+
+
+Polk
+
+Toss Up R → Toss Up D
+
+Margin Move:
++0.008
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️7 PM Florida EV & VBM Update
+
+New votes have been cast in 51 counties over the last hour, with the largest update coming from Broward County.
+
+🔵 DEM: +32,352
+🔴 REP: +25,180
+🟣 OTHER: +13,942
+🟢 TOTAL: +71,474
+
+🔵 Democrats lead by 59,174 votes statewide.
+
+🔴 Margin Change: +0.20% toward Democrats
+
+Largest County Updates
+
+
+🥇Broward County
+
+🔵 DEM: +7,553
+🔴 REP: +1,878
+🟣 OTHER: +2,262
+🟢 TOTAL: +11,693
+
+
+
+🥈Sarasota County
+
+🔵 DEM: +2,848
+🔴 REP: +2,793
+🟣 OTHER: +1,393
+🟢 TOTAL: +7,034
+
+
+
+🥉Miami-Dade County
+
+🔵 DEM: +2,280
+🔴 REP: +2,133
+🟣 OTHER: +1,493
+🟢 TOTAL: +5,906
+
+
+
+#Florida #EarlyVoting #VoteByMail

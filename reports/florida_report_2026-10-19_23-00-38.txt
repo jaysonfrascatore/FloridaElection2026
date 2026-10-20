@@ -1,0 +1,123 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Election ID:
+FL-2026-General
+
+Run Time:
+Updated at October 19th, 2026 at 11:00pm Eastern Time
+
+Counties Loaded:
+67 / 67
+
+Updated Counties:
+17
+
+Unchanged Counties:
+True
+
+Rejected County Updates:
+0
+
+STATEWIDE TOTALS
+=================================
+
+DEM:
+462,277
+
+REP:
+409,499
+
+OTHER:
+230,944
+
+TOTAL:
+1,102,720
+
+STATEWIDE SUMMARY
+=================================
+
+🔵 Democrats lead by 52,778 votes statewide.
+
+Margin Change:
++0.07% toward Democrats
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +5,033
+🔴 REP: +3,381
+🟣 OTHER: +1,933
+🟢 TOTAL: +10,347
+
+REJECTED COUNTY UPDATES
+=================================
+
+
+No county updates were rejected.
+
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+Lake
+
+Lean D → Toss Up R
+
+Margin Move:
+-0.051
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️11 PM Florida EV & VBM Update
+
+New votes have been cast in 17 counties over the last hour, with the largest update coming from Lake County.
+
+🔵 DEM: +5,033
+🔴 REP: +3,381
+🟣 OTHER: +1,933
+🟢 TOTAL: +10,347
+
+🔵 Democrats lead by 52,778 votes statewide.
+
+🔴 Margin Change: +0.07% toward Democrats
+
+Largest County Updates
+
+
+🥇Lake County
+
+🔵 DEM: +1,864
+🔴 REP: +2,522
+🟣 OTHER: +955
+🟢 TOTAL: +5,341
+
+
+
+🥈Palm Beach County
+
+🔵 DEM: +1,963
+🔴 REP: +384
+🟣 OTHER: +525
+🟢 TOTAL: +2,872
+
+
+
+🥉Orange County
+
+🔵 DEM: +518
+🔴 REP: +140
+🟣 OTHER: +238
+🟢 TOTAL: +896
+
+
+
+#Florida #EarlyVoting #VoteByMail

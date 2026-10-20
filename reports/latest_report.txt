@@ -7,16 +7,16 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 19th, 2026 at 7:02pm Eastern Time
+Updated at October 19th, 2026 at 11:00pm Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-58
+17
 
 Unchanged Counties:
-False
+True
 
 Rejected County Updates:
 0
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-457,244
+462,277
 
 REP:
-406,118
+409,499
 
 OTHER:
-229,011
+230,944
 
 TOTAL:
-1,092,373
+1,102,720
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 51,126 votes statewide.
+🔵 Democrats lead by 52,778 votes statewide.
 
 Margin Change:
-+0.10% toward Democrats
++0.07% toward Democrats
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +28,663
-🔴 REP: +23,954
-🟣 OTHER: +13,682
-🟢 TOTAL: +66,299
+🔵 DEM: +5,033
+🔴 REP: +3,381
+🟣 OTHER: +1,933
+🟢 TOTAL: +10,347
 
 REJECTED COUNTY UPDATES
 =================================
@@ -64,48 +64,12 @@ RATING / FORECAST CHANGES
 =================================
 
 
-Franklin
+Lake
 
-Toss Up R → Lean R
-
-Margin Move:
--0.011
-
-
-
-Jackson
-
-Toss Up R → Lean R
+Lean D → Toss Up R
 
 Margin Move:
--0.032
-
-
-
-Manatee
-
-Lean R → Likely R
-
-Margin Move:
--0.006
-
-
-
-Monroe
-
-Toss Up R → Lean R
-
-Margin Move:
--0.009
-
-
-
-Okeechobee
-
-Likely R → Safe R
-
-Margin Move:
--0.006
+-0.051
 
 
 
@@ -113,46 +77,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️7 PM Florida EV & VBM Update
+🗳️11 PM Florida EV & VBM Update
 
-New votes have been cast in 58 counties over the last hour, with the largest update coming from Pinellas County.
+New votes have been cast in 17 counties over the last hour, with the largest update coming from Lake County.
 
-🔵 DEM: +28,663
-🔴 REP: +23,954
-🟣 OTHER: +13,682
-🟢 TOTAL: +66,299
+🔵 DEM: +5,033
+🔴 REP: +3,381
+🟣 OTHER: +1,933
+🟢 TOTAL: +10,347
 
-🔵 Democrats lead by 51,126 votes statewide.
+🔵 Democrats lead by 52,778 votes statewide.
 
-🔴 Margin Change: +0.10% toward Democrats
+🔴 Margin Change: +0.07% toward Democrats
 
 Largest County Updates
 
 
-🥇Pinellas County
+🥇Lake County
 
-🔵 DEM: +2,641
-🔴 REP: +3,182
-🟣 OTHER: +1,710
-🟢 TOTAL: +7,533
-
-
-
-🥈Broward County
-
-🔵 DEM: +4,015
-🔴 REP: +1,427
-🟣 OTHER: +1,497
-🟢 TOTAL: +6,939
+🔵 DEM: +1,864
+🔴 REP: +2,522
+🟣 OTHER: +955
+🟢 TOTAL: +5,341
 
 
 
-🥉Miami-Dade County
+🥈Palm Beach County
 
-🔵 DEM: +2,450
-🔴 REP: +1,890
-🟣 OTHER: +1,481
-🟢 TOTAL: +5,821
+🔵 DEM: +1,963
+🔴 REP: +384
+🟣 OTHER: +525
+🟢 TOTAL: +2,872
+
+
+
+🥉Orange County
+
+🔵 DEM: +518
+🔴 REP: +140
+🟣 OTHER: +238
+🟢 TOTAL: +896
 
 
 

@@ -1,0 +1,204 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Election ID:
+FL-2026-General
+
+Run Time:
+Updated at October 20th, 2026 at 11:02am Eastern Time
+
+Counties Loaded:
+67 / 67
+
+Updated Counties:
+52
+
+Unchanged Counties:
+True
+
+Rejected County Updates:
+0
+
+STATEWIDE TOTALS
+=================================
+
+DEM:
+494,370
+
+REP:
+439,402
+
+OTHER:
+246,248
+
+TOTAL:
+1,180,020
+
+STATEWIDE SUMMARY
+=================================
+
+🔵 Democrats lead by 54,968 votes statewide.
+
+Margin Change:
+-0.08% toward Republicans
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +32,093
+🔴 REP: +29,903
+🟣 OTHER: +15,304
+🟢 TOTAL: +77,300
+
+REJECTED COUNTY UPDATES
+=================================
+
+
+No county updates were rejected.
+
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+Duval
+
+Safe D → Likely D
+
+Margin Move:
+-0.020
+
+
+
+Escambia
+
+Lean R → Likely R
+
+Margin Move:
+-0.012
+
+
+
+Flagler
+
+Lean R → Likely R
+
+Margin Move:
+-0.019
+
+
+
+Franklin
+
+Lean R → Toss Up R
+
+Margin Move:
++0.017
+
+
+
+Hendry
+
+Likely R → Safe R
+
+Margin Move:
+-0.043
+
+
+
+Madison
+
+Safe D → Likely D
+
+Margin Move:
+-0.011
+
+
+
+Pasco
+
+Toss Up D → Toss Up R
+
+Margin Move:
+-0.020
+
+
+
+Sarasota
+
+Lean D → Toss Up D
+
+Margin Move:
+-0.017
+
+
+
+Taylor
+
+Likely R → Safe R
+
+Margin Move:
+-0.026
+
+
+
+Volusia
+
+Toss Up R → Lean R
+
+Margin Move:
+-0.012
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️11 AM Florida EV & VBM Update
+
+New votes have been cast in 52 counties over the last hour, with the largest update coming from Hillsborough County.
+
+🔵 DEM: +32,093
+🔴 REP: +29,903
+🟣 OTHER: +15,304
+🟢 TOTAL: +77,300
+
+🔵 Democrats lead by 54,968 votes statewide.
+
+🔴 Margin Change: -0.08% toward Republicans
+
+Largest County Updates
+
+
+🥇Hillsborough County
+
+🔵 DEM: +4,362
+🔴 REP: +3,486
+🟣 OTHER: +2,087
+🟢 TOTAL: +9,935
+
+
+
+🥈Miami-Dade County
+
+🔵 DEM: +3,116
+🔴 REP: +2,168
+🟣 OTHER: +1,511
+🟢 TOTAL: +6,795
+
+
+
+🥉Pinellas County
+
+🔵 DEM: +2,923
+🔴 REP: +1,918
+🟣 OTHER: +1,184
+🟢 TOTAL: +6,025
+
+
+
+#Florida #EarlyVoting #VoteByMail

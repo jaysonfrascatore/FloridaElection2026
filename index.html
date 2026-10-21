@@ -4398,9 +4398,21 @@ function splitDropShareLine(){
   const sum = dm + de + dd;
   if(!sum) return '';
   const pct = v => (v / sum * 100).toFixed(2) + '%';
-  if(dd > 0) return `\u{1F7E2} This drop was ${pct(dm)} Mail, ${pct(de)} In Person Early Vote and ${pct(dd)} Election Day.`;
-  const mail = (dm / sum * 100).toFixed(2);
-  return `\u{1F7E2} This drop was ${mail}% Mail and ${(100 - parseFloat(mail)).toFixed(2)}% In Person Early Vote.`;
+  const mailLine = `\u{1F4EC} Mail: ${fmt(dm)} ballots`;
+  const ipevLine = `\u{1F4C5} In Person Early Vote: ${fmt(de)} ballots`;
+  const edLine = `\u{1F5F3}\u{FE0F} Election Day: ${fmt(dd)} ballots`;
+  // Biggest share first
+  const parts = [{v: dm, n: 'Mail', l: mailLine}, {v: de, n: 'In Person Early Vote', l: ipevLine}];
+  if(dd > 0) parts.push({v: dd, n: 'Election Day', l: edLine});
+  parts.sort((x, y) => y.v - x.v);
+  let head;
+  if(dd > 0){
+    head = `\u{1F7E2} This drop was ${parts.map(p => pct(p.v) + ' ' + p.n).join(', ').replace(/, ([^,]*)$/, ' and $1')}.`;
+  } else {
+    const top = (parts[0].v / sum * 100).toFixed(2);
+    head = `\u{1F7E2} This drop was ${top}% ${parts[0].n} and ${(100 - parseFloat(top)).toFixed(2)}% ${parts[1].n}.`;
+  }
+  return head + '\n' + parts.map(p => p.l).join('\n');
 }
 function splitHeadline(label, info){
   if(!info.leader) return `\u{1F7E1} ${label}: Even`;

@@ -9503,14 +9503,42 @@ function anShiftKey(pts){
 
 // The polls live right here. To add one, add a line to the right race below.
 const AN_POLLS_DEFAULT = {
- "updated": "2026-10-18",
- "note": "sponsor: \"R\" or \"D\" marks polls released by a party-aligned sponsor; they count at reduced weight. Dates for some governor polls are release dates.",
+ "updated": "2026-10-21",
+ "note": "sponsor: \"R\" or \"D\" marks polls released by a party-aligned sponsor; they count at reduced weight. \"added\" is the day a poll was put on this page: it counts in the forecast, and shows up under \"what changed\", from that day (its weight still ages from the fieldwork end date). Dates for some governor polls are release dates.",
  "races": {
   "governor": {
    "title": "Governor",
    "dem": "Jolly",
    "rep": "Donalds",
    "polls": [
+    {
+     "pollster": "UNF PORL",
+     "start": "2026-10-12",
+     "end": "2026-10-19",
+     "added": "2026-10-21",
+     "n": 1471,
+     "pop": "LV",
+     "dem": 47,
+     "rep": 49,
+     "other": null,
+     "undecided": 4,
+     "moe": 2.81,
+     "source": "https://www.wokv.com/news/local/unf-poll-shows-donalds-moody-holding-narrow-leads-governor-senate-races/IKHLVBJINFAW3KUW5UEX3V4D2Q/"
+    },
+    {
+     "pollster": "ActiVote",
+     "start": "2026-10-01",
+     "end": "2026-10-19",
+     "added": "2026-10-21",
+     "n": 400,
+     "pop": "LV",
+     "dem": 48.3,
+     "rep": 51.7,
+     "other": 0,
+     "undecided": 0,
+     "moe": 4.9,
+     "source": "https://www.activote.net/polls/2026/fl-governor/"
+    },
     {
      "pollster": "St. Pete Polls (Florida Politics)",
      "start": "2026-10-05",
@@ -9743,6 +9771,20 @@ const AN_POLLS_DEFAULT = {
    "rep": "Moody",
    "polls": [
     {
+     "pollster": "UNF PORL",
+     "start": "2026-10-12",
+     "end": "2026-10-19",
+     "added": "2026-10-21",
+     "n": 1471,
+     "pop": "LV",
+     "dem": 45,
+     "rep": 49,
+     "other": null,
+     "undecided": 5,
+     "moe": 2.81,
+     "source": "https://www.wokv.com/news/local/unf-poll-shows-donalds-moody-holding-narrow-leads-governor-senate-races/IKHLVBJINFAW3KUW5UEX3V4D2Q/"
+    },
+    {
      "pollster": "ActiVote",
      "start": "2026-09-27",
      "end": "2026-10-15",
@@ -9967,11 +10009,15 @@ function anFmtDate(iso){
 }
 
 // ---- polls ----
+// A poll counts from the day it was ADDED to the page (p.added), not just from the day its fieldwork ended, so a poll that
+// finished a couple of days ago still shows up as a change on the day it arrives. Its weight still ages from the fieldwork end date.
+function anPollKnown(p){ const e = anIsoWall(p.end), a = p.added ? anIsoWall(p.added) : 0; return Math.max(e, a); }
 function anPollAvg(polls, asOfWall){
   let sw = 0, sd = 0, sr = 0, n = 0, latest = null;
   polls.forEach(p => {
     const end = anIsoWall(p.end);
     if(end > asOfWall) return;
+    if(p.added && anIsoWall(p.added) > asOfWall) return;   // not on the page yet that day (see anPollKnown)
     const age = Math.max(0, (asOfWall - end) / AN_DAY);
     const w = Math.pow(0.5, age / AN_POLL_HALF_LIFE_DAYS) * Math.sqrt(Math.min(p.n || 600, 1500) / 600) * (p.sponsor ? AN_SPONSOR_WEIGHT : 1);
     sw += w; sd += w * p.dem; sr += w * p.rep; n++;
@@ -10932,7 +10978,7 @@ function anRaceDelta(M, race, dayA, dayB){
   const k = 1 - AN_OTHER_SHARE, m = M.models[race], S = m.series;
   const a = S.find(p => p.day === dayA), b = S.find(p => p.day === dayB);
   if(!a || !b) return null;
-  const fresh = m.info.polls.filter(p => anIsoWall(p.end) > dayA && anIsoWall(p.end) <= dayB)
+  const fresh = m.info.polls.filter(p => anPollKnown(p) > dayA && anPollKnown(p) <= dayB)
     .sort((x, y) => anIsoWall(y.end) - anIsoWall(x.end));
   return { m, info:m.info, f0:a.t * k, f1:b.t * k, p0:(a.pollD - a.pollR) / 100, p1:(b.pollD - b.pollR) / 100,
     u0:a.f, u1:b.f, w0:a.w, w1:b.w, fresh };
@@ -11000,11 +11046,11 @@ function anChangeWindow(M, dayA, dayB, live){
   if(!d) return '';
   const r0 = ratingLabelForMargin(d.f0), r1 = ratingLabelForMargin(d.f1);
   const rows = [];
-  if(big(d.f0, d.f1) || r0 !== r1) rows.push(`<div class="ch-row"><b>Forecast:</b> ${P(d.f0, d.f1)} (${r0 === r1 ? r1 + ', no change in rating' : r0 + ' <span class="arr">→</span> ' + r1})</div>`);
-  if(big(d.p0, d.p1)) rows.push(`<div class="ch-row"><b>Polling average:</b> ${P(d.p0, d.p1)}</div>`);
+  if(big(d.f0, d.f1) || r0 !== r1 || d.fresh.length) rows.push(`<div class="ch-row"><b>Forecast:</b> ${P(d.f0, d.f1)} (${r0 === r1 ? r1 + ', no change in rating' : r0 + ' <span class="arr">→</span> ' + r1})</div>`);
+  if(big(d.p0, d.p1) || d.fresh.length) rows.push(`<div class="ch-row"><b>Polling average:</b> ${P(d.p0, d.p1)}</div>`);
   if(d.fresh.length) rows.push(`<div class="ch-row"><b>${d.fresh.length === 1 ? 'New poll' : 'New polls'}:</b> ${d.fresh.slice(0, 4).map(p => `${p.pollster}, ${L((p.dem - p.rep) / 100)}`).join('; ')}</div>`);
   if(!rows.length) return none('No meaningful change: the forecast stayed in the same rating and moved less than half a point.');
-  const moved = big(d.f0, d.f1) || r0 !== r1 || big(d.p0, d.p1);
+  const moved = big(d.f0, d.f1) || r0 !== r1 || big(d.p0, d.p1) || d.fresh.length > 0;
   return `<div class="an-change">${head}${rows.join('')}${moved ? `<div class="ch-why"><b>Why:</b> ${anWhyText(d) || 'No new polls came in; the move comes from the updated electorate.'}</div>` : ''}</div>`;
 }
 // Two blocks: the completed 7 pm to 7 pm summary, and (until the next 7 pm update) what has moved since the last one.

@@ -1,0 +1,123 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Election ID:
+FL-2026-General
+
+Run Time:
+Updated at October 20th, 2026 at 11:01pm Eastern Time
+
+Counties Loaded:
+67 / 67
+
+Updated Counties:
+15
+
+Unchanged Counties:
+True
+
+Rejected County Updates:
+0
+
+STATEWIDE TOTALS
+=================================
+
+DEM:
+583,482
+
+REP:
+523,200
+
+OTHER:
+288,342
+
+TOTAL:
+1,395,024
+
+STATEWIDE SUMMARY
+=================================
+
+🔵 Democrats lead by 60,282 votes statewide.
+
+Margin Change:
++0.03% toward Democrats
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +5,579
+🔴 REP: +4,471
+🟣 OTHER: +2,356
+🟢 TOTAL: +12,406
+
+REJECTED COUNTY UPDATES
+=================================
+
+
+No county updates were rejected.
+
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+Lake
+
+Toss Up R → Lean R
+
+Margin Move:
+-0.051
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️11 PM Florida EV & VBM Update
+
+New votes have been cast in 15 counties over the last hour, with the largest update coming from Lake County.
+
+🔵 DEM: +5,579
+🔴 REP: +4,471
+🟣 OTHER: +2,356
+🟢 TOTAL: +12,406
+
+🔵 Democrats lead by 60,282 votes statewide.
+
+🔴 Margin Change: +0.03% toward Democrats
+
+Largest County Updates
+
+
+🥇Lake County
+
+🔵 DEM: +1,617
+🔴 REP: +2,826
+🟣 OTHER: +1,064
+🟢 TOTAL: +5,507
+
+
+
+🥈Palm Beach County
+
+🔵 DEM: +2,300
+🔴 REP: +519
+🟣 OTHER: +570
+🟢 TOTAL: +3,389
+
+
+
+🥉Seminole County
+
+🔵 DEM: +430
+🔴 REP: +428
+🟣 OTHER: +282
+🟢 TOTAL: +1,140
+
+
+
+#Florida #EarlyVoting #VoteByMail

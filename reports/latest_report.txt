@@ -7,16 +7,16 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 20th, 2026 at 7:00pm Eastern Time
+Updated at October 20th, 2026 at 11:01pm Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-51
+15
 
 Unchanged Counties:
-False
+True
 
 Rejected County Updates:
 0
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-577,903
+583,482
 
 REP:
-518,729
+523,200
 
 OTHER:
-285,986
+288,342
 
 TOTAL:
-1,382,618
+1,395,024
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 59,174 votes statewide.
+🔵 Democrats lead by 60,282 votes statewide.
 
 Margin Change:
-+0.20% toward Democrats
++0.03% toward Democrats
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +32,352
-🔴 REP: +25,180
-🟣 OTHER: +13,942
-🟢 TOTAL: +71,474
+🔵 DEM: +5,579
+🔴 REP: +4,471
+🟣 OTHER: +2,356
+🟢 TOTAL: +12,406
 
 REJECTED COUNTY UPDATES
 =================================
@@ -64,39 +64,12 @@ RATING / FORECAST CHANGES
 =================================
 
 
-DeSoto
+Lake
 
-Lean R → Likely R
-
-Margin Move:
--0.021
-
-
-
-Franklin
-
-Toss Up D → Toss Up R
+Toss Up R → Lean R
 
 Margin Move:
--0.005
-
-
-
-Hendry
-
-Safe R → Likely R
-
-Margin Move:
-+0.017
-
-
-
-Polk
-
-Toss Up R → Toss Up D
-
-Margin Move:
-+0.008
+-0.051
 
 
 
@@ -104,46 +77,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️7 PM Florida EV & VBM Update
+🗳️11 PM Florida EV & VBM Update
 
-New votes have been cast in 51 counties over the last hour, with the largest update coming from Broward County.
+New votes have been cast in 15 counties over the last hour, with the largest update coming from Lake County.
 
-🔵 DEM: +32,352
-🔴 REP: +25,180
-🟣 OTHER: +13,942
-🟢 TOTAL: +71,474
+🔵 DEM: +5,579
+🔴 REP: +4,471
+🟣 OTHER: +2,356
+🟢 TOTAL: +12,406
 
-🔵 Democrats lead by 59,174 votes statewide.
+🔵 Democrats lead by 60,282 votes statewide.
 
-🔴 Margin Change: +0.20% toward Democrats
+🔴 Margin Change: +0.03% toward Democrats
 
 Largest County Updates
 
 
-🥇Broward County
+🥇Lake County
 
-🔵 DEM: +7,553
-🔴 REP: +1,878
-🟣 OTHER: +2,262
-🟢 TOTAL: +11,693
-
-
-
-🥈Sarasota County
-
-🔵 DEM: +2,848
-🔴 REP: +2,793
-🟣 OTHER: +1,393
-🟢 TOTAL: +7,034
+🔵 DEM: +1,617
+🔴 REP: +2,826
+🟣 OTHER: +1,064
+🟢 TOTAL: +5,507
 
 
 
-🥉Miami-Dade County
+🥈Palm Beach County
 
-🔵 DEM: +2,280
-🔴 REP: +2,133
-🟣 OTHER: +1,493
-🟢 TOTAL: +5,906
+🔵 DEM: +2,300
+🔴 REP: +519
+🟣 OTHER: +570
+🟢 TOTAL: +3,389
+
+
+
+🥉Seminole County
+
+🔵 DEM: +430
+🔴 REP: +428
+🟣 OTHER: +282
+🟢 TOTAL: +1,140
 
 
 

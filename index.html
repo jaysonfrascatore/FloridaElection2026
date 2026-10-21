@@ -4385,6 +4385,23 @@ function splitTextInfo(key){
   }
   return info;
 }
+// How this drop (the votes added since the previous run) divides between Mail and In Person Early
+// Voting, from the change in each split's statewide total. Election Day is only mentioned if it
+// actually added votes. Left out when there is no previous run to compare to.
+function splitDropShareLine(){
+  if(!btHas || !btStat || !btPrev) return '';
+  const cur = k => btStat[k] ? btStat[k][0] + btStat[k][1] + btStat[k][2] : 0;
+  const prv = k => btPrev[k] ? btPrev[k][0] + btPrev[k][1] + btPrev[k][2] : null;
+  if(prv('vbm') === null || prv('ev') === null) return '';
+  const dm = cur('vbm') - prv('vbm'), de = cur('ev') - prv('ev'), dd = btPrev.ed ? cur('ed') - prv('ed') : 0;
+  if(dm < 0 || de < 0 || dd < 0) return '';            // a rollback or fix: don't describe it as a split
+  const sum = dm + de + dd;
+  if(!sum) return '';
+  const pct = v => (v / sum * 100).toFixed(2) + '%';
+  if(dd > 0) return `\u{1F7E2} This drop was ${pct(dm)} Mail, ${pct(de)} In Person Early Vote and ${pct(dd)} Election Day.`;
+  const mail = (dm / sum * 100).toFixed(2);
+  return `\u{1F7E2} This drop was ${mail}% Mail and ${(100 - parseFloat(mail)).toFixed(2)}% In Person Early Vote.`;
+}
 function splitHeadline(label, info){
   if(!info.leader) return `\u{1F7E1} ${label}: Even`;
   const e = info.leader === 'Democrats' ? '\u{1F535}' : '\u{1F534}';
@@ -4538,7 +4555,7 @@ function buildTweetSections(){
   const vbmInfo = splitTextInfo('vbm'), evInfo = splitTextInfo('ev');
   // The splits card: Mail first, then In Person Early Voting. Left out when there is no split data yet.
   const splitsCard = (vbmInfo || evInfo)
-    ? 'Splits:\n\n' + [
+    ? 'Splits:\n\n' + (splitDropShareLine() ? splitDropShareLine() + '\n\n' : '') + [
         vbmInfo ? splitBlockText('Vote by Mail', 'VBM', vbmInfo) : '',
         evInfo ? splitBlockText('In Person Early Voting', 'IPEV', evInfo) : ''
       ].filter(Boolean).join('\n\n')
@@ -4549,7 +4566,7 @@ function buildTweetSections(){
 Statewide Total Votes:
 ${statewideLines}
 
-${fmt(totalNewTotal)} new VBM ballots across ${countiesUpdatedCount} counties have been counted, with the largest update coming from ${topCountyName} County.
+${fmt(totalNewTotal)} new VBM + IPEV ballots across ${countiesUpdatedCount} counties have been counted, with the largest update coming from ${topCountyName} County.
 
 Latest Drop:
 ${dropLines}

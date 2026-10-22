@@ -938,6 +938,7 @@
   .bt-b-unused{ background:#151b28; border:1px solid #2b3550; color:#e9edf5; border-radius:8px; padding:7px 12px; font:600 12px Inter,sans-serif; cursor:pointer; } .bt-b.act{ background:#caffbf; color:#0a0e17; border-color:#caffbf; }
   .bt-pct{ display:block; font-size:10.5px; color:var(--muted); }
   .bt-desk{ display:none; } .bt-mob{ display:block; }
+  .bt-upd{ margin-top:8px; font:500 11.5px var(--mono); color:var(--muted); letter-spacing:.02em; }
   .bt-head{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; font:600 10px var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:.08em; } .bt-hint{ letter-spacing:.04em; text-transform:none; font-weight:500; color:#caffbf; opacity:.85; }
   .bt-card, .bt-t tbody tr{ cursor:pointer; -webkit-tap-highlight-color:transparent; } .bt-t tbody tr:hover td{ background:rgba(255,255,255,.04); } .bt-card:hover{ border-color:#35435f; } .bt-card:focus-visible, .bt-t tbody tr:focus-visible{ outline:2px solid #caffbf; outline-offset:-2px; }
   .bt-lead{ color:#6ee7a0; font-weight:600; font-size:.74em; margin-left:6px; white-space:nowrap; letter-spacing:0; }
@@ -1252,6 +1253,7 @@
         <div class="map-side-legend" id="mapSideLegend"></div>
         <div id="countyZoomInfoPanel">
           <div id="countyZoomInfoText"></div>
+          <div class="bt-upd" id="countyLastUpdated" style="display:none;"></div>
           <div class="turnout-bar-wrap" id="countyTurnoutWrap" style="display:none;">
             <div class="turnout-bar-label">
               <span>Turnout (est.)</span>
@@ -2434,13 +2436,15 @@ async function loadLatestCSV(isManualRefresh){
     // Previous run's Mail / Early Vote / Election Day totals (saved by the script) -- only used
     // for the split text's "increase/decrease" and "move toward" lines. It is ignored unless it
     // belongs to the same run as the rows on screen, and a missing file just means no comparison.
-    btPrev = null;
+    btPrev = null; btChanged = null; btRunStamp = '';
     try{
       const sp = await fetch('data/split_previous.json?t=' + Date.now(), { cache:'no-store' });
       if(sp.ok){
         const j = await sp.json();
         const stamp = rows && rows[0] && (rows[0]['Timestamp'] || rows[0]['Last Updated']);
         if(j && j.previous && (!j.run_time || !stamp || j.run_time === stamp)) btPrev = j.previous;
+        if(j && j.last_changed && (!j.run_time || !stamp || j.run_time === stamp)) btChanged = j.last_changed;
+        btRunStamp = stamp || '';
       }
     }catch(e){ btPrev = null; }
     buildCounties(rows);
@@ -3004,6 +3008,7 @@ function evSideLegendHtml(counties){
 // "All ballots" view is untouched; the buttons stay hidden until those columns have any ballots in them.
 const BT_LABELS = { all:'Vote Totals', vbm:'Mail only', ev:'Early Vote only', ed:'Election Day Vote' };
 let btView = 'all', btHas = false, btStat = null, btCounties = {}, btCovered = 0;
+let btChanged = null, btRunStamp = '';   // data/split_previous.json: when each split last changed ({vbm,ev,ed}), and the run time of the rows on screen
 let btPrev = null;   // previous run's statewide split totals { vbm:[D,R,NPA+Other], ev:[...], ed:[...] } from data/split_previous.json, or null
 function btLoad(rows){
   try{
@@ -3024,6 +3029,16 @@ function btLoad(rows){
     btHas = Object.keys(stat).some(k => stat[k][0] + stat[k][1] + stat[k][2] > 0);
   }catch(e){ btHas = false; btCounties = {}; btStat = null; }
   if(!btHas) btView = 'all';
+}
+// "Last updated 9:57 AM, October 22, 2026" for whichever split is selected: Total Vote uses the run time,
+// Mail / Early Vote / Election Day use when that split's statewide total last changed (data/split_previous.json).
+// Empty when there is no time to show yet (the first run after this was added, for a split that has not changed since).
+function btLastUpdatedText(){
+  if(!btHas || currentMetric !== 'demrepnpa') return '';
+  const raw = btView === 'all' ? (btRunStamp || clockLastRunText) : (btChanged && btChanged[btView]);
+  const d = raw ? parseHistoryTimestamp(raw) : null;
+  if(!d) return '';
+  return 'Last updated ' + d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' }) + ', ' + d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
 }
 function btRender(){
   const box = document.getElementById('btView'); if(!box) return;
@@ -3046,7 +3061,8 @@ function btRender(){
     return `<div class="bt-card${btView===r.key?' cur':''}" data-k="${r.key}" tabindex="0" role="button" aria-pressed="${btView===r.key}"><div class="bt-ch"><b>${btView===r.key?'<span class="bt-dot"></span>':''}${r.label}</b><span><b>${f(t)}</b> <span style="color:${m.color}"><b>${m.text}</b></span></span></div><div class="bt-cg${lead ? ' has-lead' : ''}">${cells}</div></div>`; }).join('');
   const reporting = COUNTIES.filter(c => c.total > 0).length;
   const note = btCovered < reporting ? `<div style="margin-top:6px;font-size:11px;color:var(--muted)">Type split covers ${btCovered} of ${reporting} reporting counties so far; the rest fill in once they have it.</div>` : '';
-  document.getElementById('btSummary').innerHTML = `<table class="bt-t bt-desk"><thead><tr><th>Statewide</th><th>DEM</th><th>REP</th><th>NPA/Other</th><th>Total</th><th>Margin</th></tr></thead><tbody>${desk}</tbody></table><div class="bt-mob">${mob}</div>${note}`;
+  const lu = zoomedCounty ? '' : btLastUpdatedText();   // inside a county the line sits under the county data instead
+  document.getElementById('btSummary').innerHTML = `<table class="bt-t bt-desk"><thead><tr><th>Statewide</th><th>DEM</th><th>REP</th><th>NPA/Other</th><th>Total</th><th>Margin</th></tr></thead><tbody>${desk}</tbody></table><div class="bt-mob">${mob}</div>${note}${lu ? `<div class="bt-upd">${lu}</div>` : ''}`;
   const pick = el => { const k = el.dataset.k; if(!k || k === btView) return; btView = k; if(zoomedCounty){ refreshZoomedCountyView(); btRender(); } else { renderMap(); renderTable(); } };   // btRender redraws the highlight; renderMap does it itself when not zoomed
   document.querySelectorAll('#btSummary [data-k]').forEach(el => {
     el.onclick = () => pick(el);
@@ -7918,6 +7934,9 @@ async function renderZoomedCountyMap(c){
 // reflects the shift-slider-active breakdown when relevant.
 function renderCountyZoomInfoPanel(c){
   document.getElementById('countyZoomInfoText').innerHTML = tooltipText([c])[0];
+  const luEl = document.getElementById('countyLastUpdated'), luTxt = btLastUpdatedText();
+  luEl.textContent = luTxt; luEl.style.display = luTxt ? 'block' : 'none';
+  document.querySelectorAll('#btSummary .bt-upd').forEach(e => { e.style.display = 'none'; });   // inside a county the line lives under the county data instead
 
   const turnoutWrap = document.getElementById('countyTurnoutWrap');
   const reg = SIM_REG[c.county];

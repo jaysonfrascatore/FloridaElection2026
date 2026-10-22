@@ -7,16 +7,16 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 21st, 2026 at 7:00pm Eastern Time
+Updated at October 21st, 2026 at 11:01pm Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-55
+17
 
 Unchanged Counties:
-False
+True
 
 Rejected County Updates:
 0
@@ -25,21 +25,21 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-690,828
+695,692
 
 REP:
-636,863
+640,935
 
 OTHER:
-344,030
+346,111
 
 TOTAL:
-1,671,721
+1,682,738
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 53,965 votes statewide.
+🔵 Democrats lead by 54,757 votes statewide.
 
 Margin Change:
 +0.02% toward Democrats
@@ -47,10 +47,10 @@ Margin Change:
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +27,234
-🔴 REP: +24,508
-🟣 OTHER: +12,990
-🟢 TOTAL: +64,732
+🔵 DEM: +4,864
+🔴 REP: +4,072
+🟣 OTHER: +2,081
+🟢 TOTAL: +11,017
 
 REJECTED COUNTY UPDATES
 =================================
@@ -64,12 +64,12 @@ RATING / FORECAST CHANGES
 =================================
 
 
-Jefferson
+Lake
 
-Lean D → Toss Up D
+Lean R → Likely R
 
 Margin Move:
--0.013
+-0.030
 
 
 
@@ -77,46 +77,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️7 PM Florida EV & VBM Update
+🗳️11 PM Florida EV & VBM Update
 
-New votes have been cast in 55 counties over the last hour, with the largest update coming from Broward County.
+New votes have been cast in 17 counties over the last hour, with the largest update coming from Lake County.
 
-🔵 DEM: +27,234
-🔴 REP: +24,508
-🟣 OTHER: +12,990
-🟢 TOTAL: +64,732
+🔵 DEM: +4,864
+🔴 REP: +4,072
+🟣 OTHER: +2,081
+🟢 TOTAL: +11,017
 
-🔵 Democrats lead by 53,965 votes statewide.
+🔵 Democrats lead by 54,757 votes statewide.
 
 🔴 Margin Change: +0.02% toward Democrats
 
 Largest County Updates
 
 
-🥇Broward County
+🥇Lake County
 
-🔵 DEM: +5,200
-🔴 REP: +1,943
-🟣 OTHER: +2,016
-🟢 TOTAL: +9,159
-
-
-
-🥈Miami-Dade County
-
-🔵 DEM: +2,197
-🔴 REP: +2,362
-🟣 OTHER: +1,567
-🟢 TOTAL: +6,126
+🔵 DEM: +1,573
+🔴 REP: +2,682
+🟣 OTHER: +1,046
+🟢 TOTAL: +5,301
 
 
 
-🥉Orange County
+🥈Palm Beach County
 
-🔵 DEM: +2,291
-🔴 REP: +1,089
-🟣 OTHER: +1,002
-🟢 TOTAL: +4,382
+🔵 DEM: +1,748
+🔴 REP: +457
+🟣 OTHER: +473
+🟢 TOTAL: +2,678
+
+
+
+🥉Polk County
+
+🔵 DEM: +621
+🔴 REP: +533
+🟣 OTHER: +251
+🟢 TOTAL: +1,405
 
 
 

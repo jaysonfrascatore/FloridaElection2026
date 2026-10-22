@@ -2952,8 +2952,44 @@ try:
 
             split_previous = None
 
+    # When each split (Mail / Early Vote / Election Day) last changed:
+    # this run's statewide total vs the previous run's. Unchanged splits
+    # keep the time saved in the old file (read BEFORE it is overwritten).
+    split_file = os.path.join(DATA_DIR, "split_previous.json")
+
+    old_changed = {}
+
+    try:
+
+        with open(split_file, "r", encoding="utf-8") as old_file:
+
+            old_changed = json.load(old_file).get("last_changed") or {}
+
+    except Exception:
+
+        old_changed = {}
+
+    last_changed = {}
+
+    for key, suffix in [("vbm", "VBM"), ("ev", "EV"), ("ed", "ED")]:
+
+        cur_total = int(
+            sum(
+                pd.to_numeric(df[f"{col} {suffix}"], errors="coerce").fillna(0).sum()
+                for col in ["DEM", "REP", "NPA", "OTHER"]
+            )
+        )
+
+        if split_previous is not None and cur_total != sum(split_previous[key]):
+
+            last_changed[key] = RUN_TIME
+
+        else:
+
+            last_changed[key] = old_changed.get(key)
+
     with open(
-        os.path.join(DATA_DIR, "split_previous.json"),
+        split_file,
         "w",
         encoding="utf-8"
     ) as file:
@@ -2961,7 +2997,8 @@ try:
         json.dump(
             {
                 "run_time": RUN_TIME,
-                "previous": split_previous
+                "previous": split_previous,
+                "last_changed": last_changed
             },
             file,
             indent=2

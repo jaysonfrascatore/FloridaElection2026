@@ -1701,7 +1701,7 @@
   </details>
   <details class="panel an-method" id="anMethod" open>
     <summary><h3>Methodology: how this forecast is built</h3></summary>
-    <p>Each update (the 7 p.m. ET run) the model rebuilds the forecast in a fixed order. It starts with the live count by registered party, which sets each county's expected final turnout (its 2018, 2022 and 2024 average, nudged 15% by this year's early-vote pace) and the party mix of the voters still to come. The history side is each county's average two-party result in those three elections, weighted by projected turnout, then adjusted for how independents and each party's own voters are polling against their exit-poll baselines (about 49% Democratic among independents, 95% Democratic and 94% Republican loyalty). The polling side averages every poll: a poll's weight halves every 14 days, grows with sample size, and counts 60% if a party or campaign sponsored it, the same for Democratic and Republican sponsors, while independent pollsters count in full. The statewide target blends the two, with polls at about 84% of the weight today and rising toward 90% on Election Day, and a small campaign-money term (the same rule as the House, at most 1.5 points, from FEC filings for the Senate and press-reported state filings for Governor) is added to the fundamentals only, since polls already reflect spending, and one statewide shift then sets each county's result. For the House, each district starts from its 2024 presidential result on the new map, gets the same statewide swing (lopsided districts move less), and then a small campaign-money adjustment of at most 1.5 points from FEC filings (mostly through July 29), with money a candidate put in counted at half weight; only FL-08 and FL-09 have district polls, which carry a quarter of the weight. The weights are judgment calls that have not been tested against past elections, the forecast is a single number with no error range, and the exit-poll baselines come from the NBC (2018) and Edison/CNN (2022) exit polls and a 2024 table that does not name its pollster.</p>
+    <p>Each update (the 7 p.m. ET run) the model rebuilds the forecast in a fixed order. It starts with the live count by registered party, which sets each county's expected final turnout (its 2018, 2022 and 2024 average, nudged 15% by this year's early-vote pace) and the party mix of the voters still to come. The history side is each county's average two-party result in those three elections, weighted by projected turnout, then adjusted for how independents and each party's own voters are polling against their exit-poll baselines (about 49% Democratic among independents, 95% Democratic and 94% Republican loyalty). The polling side averages every poll: a poll's weight halves every 14 days, grows with sample size, and counts 60% if the pollster or sponsor is party-aligned and 35% if it is an internal poll released or paid for by a candidate or campaign, the same for Democratic and Republican polls, while nonpartisan pollsters count in full. The statewide target blends the two, with polls at about 84% of the weight today and rising toward 90% on Election Day, and a small campaign-money term (the same rule as the House, at most 1.5 points, from FEC filings for the Senate and press-reported state filings for Governor) is added to the fundamentals only, since polls already reflect spending, and one statewide shift then sets each county's result. For the House, each district starts from its 2024 presidential result on the new map, gets the same statewide swing (lopsided districts move less), and then a small campaign-money adjustment of at most 1.5 points from FEC filings (mostly through July 29), with money a candidate put in counted at half weight; only FL-08 and FL-09 have district polls, which carry a quarter of the weight. The weights are judgment calls that have not been tested against past elections, the forecast is a single number with no error range, and the exit-poll baselines come from the NBC (2018) and Edison/CNN (2022) exit polls and a 2024 table that does not name its pollster.</p>
   </details>
 </div>
 
@@ -2561,7 +2561,7 @@ function buildCountyRecords(rows){
 // ============================================================
 // NEXT-UPDATE COUNTDOWN
 // ------------------------------------------------------------
-// Counts down to the next scheduled update: 11:00 AM, 3:00 PM or 7:00 PM
+// Counts down to the next scheduled update: 11:00 AM, 3:00 PM, 7:00 PM or 11:00 PM
 // Eastern. Red while it's far off, yellow when it's getting close, green
 // when it's almost here. When the clock hits the update time it stops and
 // shows a green "Preparing Update..." and STAYS there until new data comes
@@ -2569,7 +2569,7 @@ function buildCountyRecords(rows){
 // the following slot. The next slot is always "the first slot after the
 // latest data's time", so a late scrape can never make it count backwards.
 // ============================================================
-const NEXT_UPDATE_HOURS_ET = [11, 15, 19];
+const NEXT_UPDATE_HOURS_ET = [11, 15, 19, 23];
 const CLOCK_RED_ABOVE_MIN = 120;      // more than this far off: red
 const CLOCK_YELLOW_ABOVE_MIN = 30;    // between this and the red cutoff: yellow; closer: green
 let clockLastRunWall = null;          // latest data time, as Eastern wall-clock ms
@@ -6281,8 +6281,8 @@ function drawTypeTableFooter(ctx, footerY0, width, scale){
   const rows = btTableRows();
   const reporting = COUNTIES.filter(c => c.total > 0).length;
   const sans = 'Inter, Arial, sans-serif', mono = 'IBM Plex Mono, monospace';
-  const BLUE = '#5b9bd9', RED = '#d4675a', PURPLE = '#c77dff', NEUTRAL = '#e9edf5', GRAY = '#7c879c';
-  const X = { label:24, d:320, r:450, n:590, t:740, m:876 };
+  const BLUE = '#5b9bd9', RED = '#d4675a', PURPLE = '#c77dff', NEUTRAL = '#e9edf5', GRAY = '#7c879c', TOTAL_GREEN = '#80ed99';
+  const X = { label:24, d:300, r:410, n:535, t:640, p:770, m:880 };
   ctx.fillStyle = '#d8b466';
   ctx.font = `600 ${Math.round(14*scale)}px ${sans}`;
   ctx.textAlign = 'left';
@@ -6293,8 +6293,9 @@ function drawTypeTableFooter(ctx, footerY0, width, scale){
     ctx.textAlign = 'left';
   }
   ctx.fillStyle = GRAY; ctx.font = `600 ${Math.round(11*scale)}px ${mono}`;
-  [['DEM', X.d], ['REP', X.r], ['NPA/OTHER', X.n], ['TOTAL', X.t], ['MARGIN', X.m]].forEach(([t, x]) => { ctx.textAlign = 'right'; ctx.fillText(t, x*scale, footerY0 + 78*scale); });
+  [['DEM', X.d], ['REP', X.r], ['NPA/OTHER', X.n], ['TOTAL', X.t], ['SPLIT PERCENTAGES', X.p], ['MARGIN', X.m]].forEach(([t, x]) => { ctx.textAlign = 'right'; ctx.fillStyle = t === 'TOTAL' ? TOTAL_GREEN : GRAY; ctx.fillText(t, x*scale, footerY0 + 78*scale); });
   ctx.textAlign = 'left';
+  const allTot = rows[0].d + rows[0].r + rows[0].n;
   rows.forEach((r, i) => {
     const y = footerY0 + (98 + i*22)*scale;
     const tot = r.d + r.r + r.n;
@@ -6305,13 +6306,16 @@ function drawTypeTableFooter(ctx, footerY0, width, scale){
     ctx.fillStyle = BLUE; ctx.fillText(fmt(r.d), X.d*scale, y);
     ctx.fillStyle = RED; ctx.fillText(fmt(r.r), X.r*scale, y);
     ctx.fillStyle = PURPLE; ctx.fillText(fmt(r.n), X.n*scale, y);
-    ctx.fillStyle = NEUTRAL; ctx.font = `700 ${Math.round(14*scale)}px ${sans}`; ctx.fillText(fmt(tot), X.t*scale, y);
+    ctx.fillStyle = TOTAL_GREEN; ctx.font = `700 ${Math.round(14*scale)}px ${sans}`; ctx.fillText(fmt(tot), X.t*scale, y);
+    // share of the Total Vote row (left blank on the Total Vote row itself, so nobody reads it as 200%)
+    ctx.fillStyle = NEUTRAL; ctx.font = `${Math.round(14*scale)}px ${sans}`;
+    if(i > 0) ctx.fillText(allTot ? (tot / allTot * 100).toFixed(2) + '%' : '\u2014', X.p*scale, y);
     const m = tot ? (r.d - r.r) / tot * 100 : 0, label = tot ? formatMarginLabel(m) : '\u2014';
     ctx.fillStyle = label === 'Even' || label === '\u2014' ? NEUTRAL : (m > 0 ? BLUE : RED);
     ctx.fillText(label, X.m*scale, y);
   });
   ctx.textAlign = 'left';
-  const allTotal = rows[0].d + rows[0].r + rows[0].n;
+  const allTotal = allTot;
   drawStatewideTurnoutBar(ctx, { totalVotes: allTotal }, footerY0 + 194*scale, width, scale);
 }
 
@@ -9380,7 +9384,10 @@ const AN_ELECTION_UTC = Date.UTC(2026, 10, 3);     // Nov 3, 2026
 const AN_OTHER_SHARE = 0.015;                      // share of votes for candidates other than the two major-party nominees
 const AN_PAST_TWO_PARTY_SHARE = 0.99;              // past D+R votes as a share of all votes (the history tables hold D and R only)
 const AN_POLL_HALF_LIFE_DAYS = 14;
-const AN_SPONSOR_WEIGHT = 0.6;                    // polls from party-aligned sponsors count at 60%
+const AN_SPONSOR_WEIGHT = 0.6;                    // polls from party-aligned pollsters or sponsors count at 60% of a nonpartisan poll
+const AN_INTERNAL_WEIGHT = 0.35;                  // internal polls (released or paid for by a candidate or campaign) count at 35%
+// weight multiplier for a poll: 1 = nonpartisan, AN_SPONSOR_WEIGHT = party-aligned (sponsor 'D' or 'R'), AN_INTERNAL_WEIGHT = internal ("internal": true)
+function anSponsorMult(p){ return p.internal ? AN_INTERNAL_WEIGHT : (p.sponsor ? AN_SPONSOR_WEIGHT : 1); }
 // Fixed model settings (there are no dials on the page).
 const AN_TURNOUT_W = { y18:1, y22:1, y24:1 };      // weight of each past race in the turnout blend
 const AN_PACE_WEIGHT = 0.15;                       // how much a county's 2026 early pace vs. the rest of the state moves its turnout
@@ -9504,13 +9511,43 @@ function anShiftKey(pts){
 // The polls live right here. To add one, add a line to the right race below.
 const AN_POLLS_DEFAULT = {
  "updated": "2026-10-21",
- "note": "sponsor: \"R\" or \"D\" marks polls released by a party-aligned sponsor; they count at reduced weight. \"added\" is the day a poll was put on this page: it counts in the forecast, and shows up under \"what changed\", from that day (its weight still ages from the fieldwork end date). Dates for some governor polls are release dates.",
+ "note": "sponsor: \"R\" or \"D\" marks polls from a party-aligned pollster or sponsor; they count at 60% weight. \"internal\": true marks a poll released or paid for by a candidate or campaign; it counts at 35%. \"added\" is the day a poll was put on this page: it counts in the forecast, and shows up under \"what changed\", from that day (its weight still ages from the fieldwork end date). Dates for some governor polls are release dates.",
  "races": {
   "governor": {
    "title": "Governor",
    "dem": "Jolly",
    "rep": "Donalds",
    "polls": [
+    {
+     "pollster": "co/efficient",
+     "start": "2026-10-18",
+     "end": "2026-10-20",
+     "sponsor": "R",
+     "added": "2026-10-21",
+     "n": 1014,
+     "pop": "LV",
+     "dem": 40,
+     "rep": 49,
+     "other": null,
+     "undecided": 11,
+     "moe": 3.06,
+     "source": "https://flvoicenews.com/poll-donalds-moody-hold-strong-leads-in-new-co-efficient-survey/"
+    },
+    {
+     "pollster": "MDW / EDGE Communications",
+     "start": "2026-10-04",
+     "end": "2026-10-10",
+     "sponsor": "D",
+     "added": "2026-10-21",
+     "n": 2351,
+     "pop": "LV",
+     "dem": 43.8,
+     "rep": 45.9,
+     "other": null,
+     "undecided": 10.3,
+     "moe": 2.8,
+     "source": "https://www.mdwcomm.com/media/florida-statewide-poll-october-2026.html"
+    },
     {
      "pollster": "UNF PORL",
      "start": "2026-10-12",
@@ -9715,6 +9752,7 @@ const AN_POLLS_DEFAULT = {
      "pollster": "Edge Research / MDW",
      "start": "2026-04-13",
      "end": "2026-04-13",
+     "sponsor": "D",
      "n": 1834,
      "pop": "LV",
      "dem": 41,
@@ -9770,6 +9808,36 @@ const AN_POLLS_DEFAULT = {
    "dem": "Nixon",
    "rep": "Moody",
    "polls": [
+    {
+     "pollster": "co/efficient",
+     "start": "2026-10-18",
+     "end": "2026-10-20",
+     "sponsor": "R",
+     "added": "2026-10-21",
+     "n": 1014,
+     "pop": "LV",
+     "dem": 40,
+     "rep": 48,
+     "other": 2,
+     "undecided": 11,
+     "moe": 3.06,
+     "source": "https://flvoicenews.com/poll-donalds-moody-hold-strong-leads-in-new-co-efficient-survey/"
+    },
+    {
+     "pollster": "MDW / EDGE Communications",
+     "start": "2026-10-04",
+     "end": "2026-10-10",
+     "sponsor": "D",
+     "added": "2026-10-21",
+     "n": 2351,
+     "pop": "LV",
+     "dem": 42.4,
+     "rep": 47.6,
+     "other": null,
+     "undecided": 10,
+     "moe": 2.8,
+     "source": "https://www.mdwcomm.com/media/florida-statewide-poll-october-2026.html"
+    },
     {
      "pollster": "UNF PORL",
      "start": "2026-10-12",
@@ -10019,7 +10087,7 @@ function anPollAvg(polls, asOfWall){
     if(end > asOfWall) return;
     if(p.added && anIsoWall(p.added) > asOfWall) return;   // not on the page yet that day (see anPollKnown)
     const age = Math.max(0, (asOfWall - end) / AN_DAY);
-    const w = Math.pow(0.5, age / AN_POLL_HALF_LIFE_DAYS) * Math.sqrt(Math.min(p.n || 600, 1500) / 600) * (p.sponsor ? AN_SPONSOR_WEIGHT : 1);
+    const w = Math.pow(0.5, age / AN_POLL_HALF_LIFE_DAYS) * Math.sqrt(Math.min(p.n || 600, 1500) / 600) * anSponsorMult(p);
     sw += w; sd += w * p.dem; sr += w * p.rep; n++;
     if(latest === null || end > latest) latest = end;
   });
@@ -10034,7 +10102,7 @@ function anNpaAvg(race, asOfWall){
     const end = anIsoWall(p.end);
     if(end > asOfWall) return;
     const age = Math.max(0, (asOfWall - end) / AN_DAY);
-    const w = Math.pow(0.5, age / AN_NPA_HALF_LIFE_DAYS) * (p.sponsor ? AN_SPONSOR_WEIGHT : 1);
+    const w = Math.pow(0.5, age / AN_NPA_HALF_LIFE_DAYS) * anSponsorMult(p);
     sw += w; sv += w * p.dem / (p.dem + p.rep); n++;
   });
   if(!sw) return null;
@@ -10048,7 +10116,7 @@ function anLoyAvg(race, asOfWall){
   (AN_LOYAL_POLLS[race] || []).forEach(p => {
     const end = anIsoWall(p.end);
     if(end > asOfWall) return;
-    const decay = Math.pow(0.5, Math.max(0, (asOfWall - end) / AN_DAY) / AN_LOYAL_HALF_LIFE_DAYS) * (p.sponsor ? AN_SPONSOR_WEIGHT : 1);
+    const decay = Math.pow(0.5, Math.max(0, (asOfWall - end) / AN_DAY) / AN_LOYAL_HALF_LIFE_DAYS) * anSponsorMult(p);
     if(p.dd && p.dr && p.nd){ const w = p.nd * decay; acc.d.w += w; acc.d.v += w * p.dd / (p.dd + p.dr); acc.d.n++; }
     if(p.rr && p.rd && p.nr){ const w = p.nr * decay; acc.r.w += w; acc.r.v += w * p.rr / (p.rr + p.rd); acc.r.n++; }
   });
@@ -10573,7 +10641,7 @@ function anRenderHouseDetail(H){
       `<td class="num-d">${p.dem}%</td><td class="num-r">${p.rep}%</td><td class="${mg > 0 ? 'num-d' : (mg < 0 ? 'num-r' : '')}">${anMarginLabel(mg)}</td></tr>`;
   }).join('');
   const polls = pollRows
-    ? `<div class="table-hint" style="margin-top:14px">District polls (they carry ${Math.round(AN_HOUSE_POLL_WEIGHT * 100)}% of this forecast; party-sponsored polls count at ${Math.round(AN_SPONSOR_WEIGHT * 100)}% of normal weight)</div><div class="table-wrap"><table class="an-poll-table"><thead><tr><th>Dates</th><th>Pollster</th><th class="an-hm">Sample</th><th>${r.dem.split(' ').slice(-1)[0]} (D)</th><th>${(r.rep || '—').split(' ').slice(-1)[0]} (R)</th><th>Margin</th></tr></thead><tbody>${pollRows}</tbody></table></div>`
+    ? `<div class="table-hint" style="margin-top:14px">District polls (they carry ${Math.round(AN_HOUSE_POLL_WEIGHT * 100)}% of this forecast; party-aligned polls count at ${Math.round(AN_SPONSOR_WEIGHT * 100)}% of normal weight, internal polls at ${Math.round(AN_INTERNAL_WEIGHT * 100)}%)</div><div class="table-wrap"><table class="an-poll-table"><thead><tr><th>Dates</th><th>Pollster</th><th class="an-hm">Sample</th><th>${r.dem.split(' ').slice(-1)[0]} (D)</th><th>${(r.rep || '—').split(' ').slice(-1)[0]} (R)</th><th>Margin</th></tr></thead><tbody>${pollRows}</tbody></table></div>`
     : `<div class="table-hint" style="margin-top:14px">No public polls of this district. The forecast comes from the district's 2024 result, the statewide swing and a small fundraising adjustment.</div>`;
   document.getElementById('anHouseDetail').innerHTML =
     `<div class="an-race-head"><h2>${anDistLabel(r.d)}: ${r.dem} (D) vs ${r.rep || 'no Republican'} (R)</h2>` +
@@ -10889,7 +10957,7 @@ function anRenderPollTable(race, m){
     const oth = [p.other != null ? `${p.other}% other` : null, p.undecided != null ? `${p.undecided}% undecided` : null].filter(Boolean).join(' · ') || '—';
     return `<tr>
       <td><span class="an-hm">${anFmtDate(p.start)} – </span>${anFmtDate(p.end)}</td>
-      <td><div class="an-pn">${p.source ? `<a href="${p.source}" target="_blank" rel="noopener">${p.pollster}</a>` : p.pollster}${p.sponsor ? ` <span style="opacity:.65">(${p.sponsor}-aligned)</span>` : ''}</div></td>
+      <td><div class="an-pn">${p.source ? `<a href="${p.source}" target="_blank" rel="noopener">${p.pollster}</a>` : p.pollster}${p.internal ? ` <span style="opacity:.65">(${p.sponsor ? p.sponsor + ' ' : ''}internal)</span>` : (p.sponsor ? ` <span style="opacity:.65">(${p.sponsor}-aligned)</span>` : '')}</div></td>
       <td class="an-hm">${p.n ? fmt(p.n) + ' ' : ''}${p.pop || ''}${p.moe ? ` ±${p.moe}` : ''}</td>
       <td class="num-d">${p.dem}%</td><td class="num-r">${p.rep}%</td>
       <td class="an-hm" style="color:var(--muted)">${oth}</td>
@@ -10948,7 +11016,7 @@ function anRenderNpa(M, only){
     const n = AN_NPA_POLLS[race];
     if(!m.npa) return `<div class="an-npa-card"><b>${info.title}</b><br>No NPA breakdowns yet; the fundamentals are unadjusted.</div>`;
     const poll = m.npa.nu * 100, hist = M.nuHist * 100;
-    const list = n.map(p => `<li>${p.pollster} (${anFmtDate(p.end)}${p.approx ? ', approx.' : ''}${p.sponsor ? ', ' + p.sponsor + '-aligned' : ''}): ${info.dem} ${p.dem}% · ${info.rep} ${p.rep}%</li>`).join('');
+    const list = n.map(p => `<li>${p.pollster} (${anFmtDate(p.end)}${p.approx ? ', approx.' : ''}${p.internal ? ', ' + (p.sponsor ? p.sponsor + ' ' : '') + 'internal' : (p.sponsor ? ', ' + p.sponsor + '-aligned' : '')}): ${info.dem} ${p.dem}% · ${info.rep} ${p.rep}%</li>`).join('');
     return `<div class="an-npa-card"><b>${info.title}: ${info.dem} vs ${info.rep}</b>` +
       `<div class="big">NPA voters: <span class="num-d">${poll.toFixed(0)}% ${info.dem}</span> / <span class="num-r">${(100 - poll).toFixed(0)}% ${info.rep}</span></div>` +
       `The 2018, 2022 and 2024 exit polls imply about ${hist.toFixed(0)}% ${info.dem}. That ${poll >= hist ? 'better' : 'worse'} showing for ${info.dem} among NPA voters (${(Math.abs(m.npaGap) * 100).toFixed(1)} points of the NPA vote, and NPA voters are ${(M.partyShare.n * 100).toFixed(0)}% of projected ballots) moves the fundamentals from ${anMarginLabel(M.fundamentals)} to ${anMarginLabel(M.fundamentals + 2 * m.npaGap * M.partyShare.n)}.<ul>${list}</ul>` +

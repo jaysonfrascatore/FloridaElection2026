@@ -880,7 +880,7 @@
     .sim-editor .sim-editor-sub{ font-size:9.5px; }
     .sim-editor .sim-row{ font-size:10.5px; }
     .sim-checkpoint{ padding:9px 10px; font-size:10.5px; }
-    #simMap{ height:320px !important; }
+    #simMap{ height:340px !important; }
 
     footer{ font-size:10px; }
   }
@@ -1529,7 +1529,7 @@
         <button data-rating="Safe D" style="color:#3d6fd9;">Safe D</button>
       </div>
       <div class="sim-map-wrap">
-        <div id="simMap" style="height:480px;"></div>
+        <div id="simMap" style="height:560px;"></div>
         <div class="sim-map-status" id="simMapStatus">
           <div class="sim-map-status-msg loading" id="simMapStatusMsg">Loading map&hellip;</div>
           <button class="sim-btn" id="simMapRetryBtn" style="display:none;">Try again</button>
@@ -3047,7 +3047,7 @@ function btRender(){
   const reporting = COUNTIES.filter(c => c.total > 0).length;
   const note = btCovered < reporting ? `<div style="margin-top:6px;font-size:11px;color:var(--muted)">Type split covers ${btCovered} of ${reporting} reporting counties so far; the rest fill in once they have it.</div>` : '';
   document.getElementById('btSummary').innerHTML = `<table class="bt-t bt-desk"><thead><tr><th>Statewide</th><th>DEM</th><th>REP</th><th>NPA/Other</th><th>Total</th><th>Margin</th></tr></thead><tbody>${desk}</tbody></table><div class="bt-mob">${mob}</div>${note}`;
-  const pick = el => { const k = el.dataset.k; if(!k || k === btView) return; btView = k; if(zoomedCounty){ refreshZoomedCountyView(); } else { renderMap(); renderTable(); } };
+  const pick = el => { const k = el.dataset.k; if(!k || k === btView) return; btView = k; if(zoomedCounty){ refreshZoomedCountyView(); btRender(); } else { renderMap(); renderTable(); } };   // btRender redraws the highlight; renderMap does it itself when not zoomed
   document.querySelectorAll('#btSummary [data-k]').forEach(el => {
     el.onclick = () => pick(el);
     el.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); pick(el); } };
@@ -7184,7 +7184,7 @@ async function renderSimMap(){
     showscale:false
   };
   const layout = {
-    geo:{ scope:'usa', fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' },
+    geo:Object.assign({ scope:'usa', fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, window.matchMedia('(max-width: 640px)').matches ? { scope:'world', projection:{ type:'mercator' } } : {}),   // phones: same bigger Florida as the live map
     paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)',
     margin:{t:10,b:10,l:10,r:10}, font:{family:'Inter, sans-serif'}
   };
@@ -7722,15 +7722,9 @@ document.getElementById('simDownloadPngBtn').addEventListener('click', async () 
   btn.disabled = true;
   try{
     const summary = simStatewideSummary();
-    const mapDataUrl = await Plotly.toImage('simMap', { format:'png', width:900, height:560, scale:2 });
-
-    const img = new Image();
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
-      img.onerror = reject;
-      img.src = mapDataUrl;
-    });
-
+    // Same map pipeline as the other tabs: 900 x 528 at 2x, cropped to Florida, so the map fills the same space.
+    const simTrace = Object.assign({}, document.getElementById('simMap').data[0], { showscale:false });
+    const img = await renderMetricMapCanvas('sim', null, 900, 528, 2, [simTrace]);
     const headerH = 156;
     const footerH = 34;
     const canvas = document.createElement('canvas');
@@ -7774,6 +7768,8 @@ document.getElementById('simDownloadPngBtn').addEventListener('click', async () 
     );
 
     ctx.drawImage(img, 0, headerH*scale);
+    // Rating key at the map's lower left, same as the General Election screenshots.
+    drawKeyOnCanvas(ctx, 24*scale, headerH*scale + img.height - 24*scale, scale, 'COUNTY RATING', '', RATING_KEY_ROWS);
 
     drawSourceCredit(ctx, 24*scale, headerH*scale + img.height + footerH*scale - 12*scale, scale);
 
@@ -9510,7 +9506,7 @@ function anShiftKey(pts){
 
 // The polls live right here. To add one, add a line to the right race below.
 const AN_POLLS_DEFAULT = {
- "updated": "2026-10-21",
+ "updated": "2026-10-22",
  "note": "sponsor: \"R\" or \"D\" marks polls from a party-aligned pollster or sponsor; they count at 60% weight. \"internal\": true marks a poll released or paid for by a candidate or campaign; it counts at 35%. \"added\" is the day a poll was put on this page: it counts in the forecast, and shows up under \"what changed\", from that day (its weight still ages from the fieldwork end date). Dates for some governor polls are release dates.",
  "races": {
   "governor": {
@@ -9518,6 +9514,20 @@ const AN_POLLS_DEFAULT = {
    "dem": "Jolly",
    "rep": "Donalds",
    "polls": [
+    {
+     "pollster": "Stetson University",
+     "start": "2026-10-01",
+     "end": "2026-10-09",
+     "added": "2026-10-22",
+     "n": null,
+     "pop": "LV",
+     "dem": 41,
+     "rep": 52,
+     "other": 3,
+     "undecided": 5,
+     "moe": null,
+     "source": "https://floridianpress.com/?p=99351"
+    },
     {
      "pollster": "co/efficient",
      "start": "2026-10-18",
@@ -9606,6 +9616,7 @@ const AN_POLLS_DEFAULT = {
      "pollster": "James Madison Institute / Targoz",
      "start": "2026-09-28",
      "end": "2026-10-04",
+     "sponsor": "R",
      "n": 857,
      "pop": "LV",
      "dem": 42,
@@ -9672,6 +9683,7 @@ const AN_POLLS_DEFAULT = {
      "pollster": "James Madison Institute",
      "start": "2026-08-06",
      "end": "2026-08-06",
+     "sponsor": "R",
      "n": 1026,
      "pop": "LV",
      "dem": 38,
@@ -9809,6 +9821,20 @@ const AN_POLLS_DEFAULT = {
    "rep": "Moody",
    "polls": [
     {
+     "pollster": "Stetson University",
+     "start": "2026-10-01",
+     "end": "2026-10-09",
+     "added": "2026-10-22",
+     "n": null,
+     "pop": "LV",
+     "dem": 41,
+     "rep": 52,
+     "other": 2,
+     "undecided": 6,
+     "moe": null,
+     "source": "https://floridianpress.com/?p=99351"
+    },
+    {
      "pollster": "co/efficient",
      "start": "2026-10-18",
      "end": "2026-10-20",
@@ -9895,6 +9921,7 @@ const AN_POLLS_DEFAULT = {
      "pollster": "James Madison Institute / Targoz",
      "start": "2026-09-28",
      "end": "2026-10-04",
+     "sponsor": "R",
      "n": 857,
      "pop": "LV",
      "dem": 42,

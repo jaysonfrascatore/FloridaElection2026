@@ -1,0 +1,186 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Election ID:
+FL-2026-General
+
+Run Time:
+Updated at October 22nd, 2026 at 3:00pm Eastern Time
+
+Counties Loaded:
+67 / 67
+
+Updated Counties:
+63
+
+Unchanged Counties:
+False
+
+Rejected County Updates:
+0
+
+STATEWIDE TOTALS
+=================================
+
+DEM:
+775,310
+
+REP:
+741,343
+
+OTHER:
+391,137
+
+TOTAL:
+1,907,790
+
+STATEWIDE SUMMARY
+=================================
+
+🔵 Democrats lead by 33,967 votes statewide.
+
+Margin Change:
+-0.58% toward Republicans
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +50,943
+🔴 REP: +64,548
+🟣 OTHER: +28,561
+🟢 TOTAL: +144,052
+
+REJECTED COUNTY UPDATES
+=================================
+
+
+No county updates were rejected.
+
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+Escambia
+
+Likely R → Safe R
+
+Margin Move:
+-0.013
+
+
+
+Franklin
+
+Toss Up R → Lean R
+
+Margin Move:
+-0.029
+
+
+
+Hamilton
+
+Likely R → Safe R
+
+Margin Move:
+-0.005
+
+
+
+Highlands
+
+Likely R → Safe R
+
+Margin Move:
+-0.076
+
+
+
+Jackson
+
+Lean R → Likely R
+
+Margin Move:
+-0.071
+
+
+
+Marion
+
+Toss Up R → Lean R
+
+Margin Move:
+-0.060
+
+
+
+Monroe
+
+Lean R → Likely R
+
+Margin Move:
+-0.012
+
+
+
+Pinellas
+
+Lean D → Toss Up D
+
+Margin Move:
+-0.007
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️3 PM Florida EV & VBM Update
+
+New votes have been cast in 63 counties over the last hour, with the largest update coming from Broward County.
+
+🔵 DEM: +50,943
+🔴 REP: +64,548
+🟣 OTHER: +28,561
+🟢 TOTAL: +144,052
+
+🔵 Democrats lead by 33,967 votes statewide.
+
+🔴 Margin Change: -0.58% toward Republicans
+
+Largest County Updates
+
+
+🥇Broward County
+
+🔵 DEM: +7,304
+🔴 REP: +3,203
+🟣 OTHER: +2,803
+🟢 TOTAL: +13,310
+
+
+
+🥈Miami-Dade County
+
+🔵 DEM: +4,314
+🔴 REP: +4,393
+🟣 OTHER: +2,797
+🟢 TOTAL: +11,504
+
+
+
+🥉Palm Beach County
+
+🔵 DEM: +3,777
+🔴 REP: +3,377
+🟣 OTHER: +2,294
+🟢 TOTAL: +9,448
+
+
+
+#Florida #EarlyVoting #VoteByMail

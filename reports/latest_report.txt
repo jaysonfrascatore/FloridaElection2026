@@ -7,56 +7,65 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 21st, 2026 at 11:01pm Eastern Time
+Updated at October 22nd, 2026 at 11:01am Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-17
+56
 
 Unchanged Counties:
 True
 
 Rejected County Updates:
-0
+1
 
 STATEWIDE TOTALS
 =================================
 
 DEM:
-695,692
+724,367
 
 REP:
-640,935
+676,795
 
 OTHER:
-346,111
+362,576
 
 TOTAL:
-1,682,738
+1,763,738
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 54,757 votes statewide.
+🔵 Democrats lead by 47,572 votes statewide.
 
 Margin Change:
-+0.02% toward Democrats
+-0.35% toward Republicans
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +4,864
-🔴 REP: +4,072
-🟣 OTHER: +2,081
-🟢 TOTAL: +11,017
+🔵 DEM: +28,675
+🔴 REP: +35,860
+🟣 OTHER: +16,465
+🟢 TOTAL: +81,000
 
 REJECTED COUNTY UPDATES
 =================================
 
 
-No county updates were rejected.
+Broward (DROP)
+
+Previous Accepted:
+117,660
+
+Scraped:
+66,328
+
+Action:
+Previous county data retained.
 
 
 
@@ -64,12 +73,66 @@ RATING / FORECAST CHANGES
 =================================
 
 
-Lake
+DeSoto
 
-Lean R → Likely R
+Likely R → Safe R
 
 Margin Move:
--0.030
+-0.073
+
+
+
+Hernando
+
+Toss Up R → Lean R
+
+Margin Move:
+-0.031
+
+
+
+Highlands
+
+Toss Up R → Likely R
+
+Margin Move:
+-0.070
+
+
+
+Marion
+
+Lean D → Toss Up R
+
+Margin Move:
+-0.045
+
+
+
+Pinellas
+
+Toss Up D → Lean D
+
+Margin Move:
++0.004
+
+
+
+Sarasota
+
+Toss Up R → Lean R
+
+Margin Move:
+-0.009
+
+
+
+St. Johns
+
+Likely R → Safe R
+
+Margin Move:
+-0.019
 
 
 
@@ -77,46 +140,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️11 PM Florida EV & VBM Update
+🗳️11 AM Florida EV & VBM Update
 
-New votes have been cast in 17 counties over the last hour, with the largest update coming from Lake County.
+New votes have been cast in 56 counties over the last hour, with the largest update coming from Hillsborough County.
 
-🔵 DEM: +4,864
-🔴 REP: +4,072
-🟣 OTHER: +2,081
-🟢 TOTAL: +11,017
+🔵 DEM: +28,675
+🔴 REP: +35,860
+🟣 OTHER: +16,465
+🟢 TOTAL: +81,000
 
-🔵 Democrats lead by 54,757 votes statewide.
+🔵 Democrats lead by 47,572 votes statewide.
 
-🔴 Margin Change: +0.02% toward Democrats
+🔴 Margin Change: -0.35% toward Republicans
 
 Largest County Updates
 
 
-🥇Lake County
+🥇Hillsborough County
 
-🔵 DEM: +1,573
-🔴 REP: +2,682
-🟣 OTHER: +1,046
-🟢 TOTAL: +5,301
-
-
-
-🥈Palm Beach County
-
-🔵 DEM: +1,748
-🔴 REP: +457
-🟣 OTHER: +473
-🟢 TOTAL: +2,678
+🔵 DEM: +4,345
+🔴 REP: +3,702
+🟣 OTHER: +2,290
+🟢 TOTAL: +10,337
 
 
 
-🥉Polk County
+🥈Miami-Dade County
 
-🔵 DEM: +621
-🔴 REP: +533
-🟣 OTHER: +251
-🟢 TOTAL: +1,405
+🔵 DEM: +3,673
+🔴 REP: +3,085
+🟣 OTHER: +2,213
+🟢 TOTAL: +8,971
+
+
+
+🥉Pinellas County
+
+🔵 DEM: +2,631
+🔴 REP: +2,170
+🟣 OTHER: +1,243
+🟢 TOTAL: +6,044
 
 
 

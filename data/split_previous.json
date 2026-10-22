@@ -1,20 +1,25 @@
 {
-  "run_time": "Updated at October 21st, 2026 at 11:01pm",
+  "run_time": "Updated at October 22nd, 2026 at 11:01am",
   "previous": {
     "vbm": [
-      481810,
-      404737,
-      238847
+      484798,
+      405959,
+      239735
     ],
     "ev": [
-      209018,
-      232126,
-      105183
+      210894,
+      234976,
+      106376
     ],
     "ed": [
       0,
       0,
       0
     ]
+  },
+  "last_changed": {
+    "vbm": "Updated at October 22nd, 2026 at 11:01am",
+    "ev": "Updated at October 22nd, 2026 at 11:01am",
+    "ed": null
   }
 }

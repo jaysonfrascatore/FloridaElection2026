@@ -1,15 +1,15 @@
 {
-  "run_time": "Updated at October 23rd, 2026 at 11:01am",
+  "run_time": "Updated at October 23rd, 2026 at 3:00pm",
   "previous": {
     "vbm": [
-      522637,
-      437390,
-      258912
+      538723,
+      451910,
+      267398
     ],
     "ev": [
-      283039,
-      333432,
-      147194
+      301197,
+      360204,
+      158779
     ],
     "ed": [
       0,
@@ -18,8 +18,8 @@
     ]
   },
   "last_changed": {
-    "vbm": "Updated at October 23rd, 2026 at 11:01am",
-    "ev": "Updated at October 23rd, 2026 at 11:01am",
+    "vbm": "Updated at October 23rd, 2026 at 3:00pm",
+    "ev": "Updated at October 23rd, 2026 at 3:00pm",
     "ed": null
   }
 }

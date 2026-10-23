@@ -7,13 +7,13 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 23rd, 2026 at 11:01am Eastern Time
+Updated at October 23rd, 2026 at 3:00pm Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-60
+62
 
 Unchanged Counties:
 False
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-839,920
+890,035
 
 REP:
-812,114
+881,776
 
 OTHER:
-426,177
+456,703
 
 TOTAL:
-2,078,211
+2,228,514
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 27,806 votes statewide.
+🔵 Democrats lead by 8,259 votes statewide.
 
 Margin Change:
--0.26% toward Republicans
+-0.61% toward Republicans
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +34,244
-🔴 REP: +41,292
-🟣 OTHER: +20,071
-🟢 TOTAL: +95,607
+🔵 DEM: +50,115
+🔴 REP: +69,662
+🟣 OTHER: +30,526
+🟢 TOTAL: +150,303
 
 REJECTED COUNTY UPDATES
 =================================
@@ -64,39 +64,30 @@ RATING / FORECAST CHANGES
 =================================
 
 
-Hamilton
-
-Safe R → Likely R
-
-Margin Move:
-+0.009
-
-
-
-Jackson
+Brevard
 
 Likely R → Safe R
 
 Margin Move:
--0.004
+-0.011
 
 
 
-Jefferson
+Pasco
 
-Toss Up D → Toss Up R
-
-Margin Move:
--0.017
-
-
-
-Manatee
-
-Likely R → Safe R
+Lean R → Likely R
 
 Margin Move:
 -0.008
+
+
+
+Wakulla
+
+Lean R → Likely R
+
+Margin Move:
+-0.018
 
 
 
@@ -104,46 +95,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️11 AM Florida EV & VBM Update
+🗳️3 PM Florida EV & VBM Update
 
-New votes have been cast in 60 counties over the last hour, with the largest update coming from Miami-Dade County.
+New votes have been cast in 62 counties over the last hour, with the largest update coming from Broward County.
 
-🔵 DEM: +34,244
-🔴 REP: +41,292
-🟣 OTHER: +20,071
-🟢 TOTAL: +95,607
+🔵 DEM: +50,115
+🔴 REP: +69,662
+🟣 OTHER: +30,526
+🟢 TOTAL: +150,303
 
-🔵 Democrats lead by 27,806 votes statewide.
+🔵 Democrats lead by 8,259 votes statewide.
 
-🔴 Margin Change: -0.26% toward Republicans
+🔴 Margin Change: -0.61% toward Republicans
 
 Largest County Updates
 
 
-🥇Miami-Dade County
+🥇Broward County
 
-🔵 DEM: +4,445
-🔴 REP: +3,973
-🟣 OTHER: +2,929
-🟢 TOTAL: +11,347
-
-
-
-🥈Hillsborough County
-
-🔵 DEM: +4,429
-🔴 REP: +3,841
-🟣 OTHER: +2,416
-🟢 TOTAL: +10,686
+🔵 DEM: +5,285
+🔴 REP: +2,349
+🟣 OTHER: +2,134
+🟢 TOTAL: +9,768
 
 
 
-🥉Lee County
+🥈Miami-Dade County
 
-🔵 DEM: +1,448
-🔴 REP: +2,968
-🟣 OTHER: +1,287
-🟢 TOTAL: +5,703
+🔵 DEM: +3,557
+🔴 REP: +3,793
+🟣 OTHER: +2,351
+🟢 TOTAL: +9,701
+
+
+
+🥉Palm Beach County
+
+🔵 DEM: +3,683
+🔴 REP: +3,475
+🟣 OTHER: +2,196
+🟢 TOTAL: +9,354
 
 
 

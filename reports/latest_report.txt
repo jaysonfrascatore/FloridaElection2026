@@ -7,16 +7,16 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 22nd, 2026 at 11:01pm Eastern Time
+Updated at October 23rd, 2026 at 11:01am Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-14
+60
 
 Unchanged Counties:
-True
+False
 
 Rejected County Updates:
 0
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-805,676
+839,920
 
 REP:
-770,822
+812,114
 
 OTHER:
-406,106
+426,177
 
 TOTAL:
-1,982,604
+2,078,211
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 34,854 votes statewide.
+🔵 Democrats lead by 27,806 votes statewide.
 
 Margin Change:
-+0.04% toward Democrats
+-0.26% toward Republicans
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +2,347
-🔴 REP: +865
-🟣 OTHER: +850
-🟢 TOTAL: +4,062
+🔵 DEM: +34,244
+🔴 REP: +41,292
+🟣 OTHER: +20,071
+🟢 TOTAL: +95,607
 
 REJECTED COUNTY UPDATES
 =================================
@@ -64,7 +64,39 @@ RATING / FORECAST CHANGES
 =================================
 
 
-No rating changes detected.
+Hamilton
+
+Safe R → Likely R
+
+Margin Move:
++0.009
+
+
+
+Jackson
+
+Likely R → Safe R
+
+Margin Move:
+-0.004
+
+
+
+Jefferson
+
+Toss Up D → Toss Up R
+
+Margin Move:
+-0.017
+
+
+
+Manatee
+
+Likely R → Safe R
+
+Margin Move:
+-0.008
 
 
 
@@ -72,46 +104,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️11 PM Florida EV & VBM Update
+🗳️11 AM Florida EV & VBM Update
 
-New votes have been cast in 14 counties over the last hour, with the largest update coming from Palm Beach County.
+New votes have been cast in 60 counties over the last hour, with the largest update coming from Miami-Dade County.
 
-🔵 DEM: +2,347
-🔴 REP: +865
-🟣 OTHER: +850
-🟢 TOTAL: +4,062
+🔵 DEM: +34,244
+🔴 REP: +41,292
+🟣 OTHER: +20,071
+🟢 TOTAL: +95,607
 
-🔵 Democrats lead by 34,854 votes statewide.
+🔵 Democrats lead by 27,806 votes statewide.
 
-🔴 Margin Change: +0.04% toward Democrats
+🔴 Margin Change: -0.26% toward Republicans
 
 Largest County Updates
 
 
-🥇Palm Beach County
+🥇Miami-Dade County
 
-🔵 DEM: +1,389
-🔴 REP: +366
-🟣 OTHER: +433
-🟢 TOTAL: +2,188
-
-
-
-🥈Orange County
-
-🔵 DEM: +370
-🔴 REP: +132
-🟣 OTHER: +178
-🟢 TOTAL: +680
+🔵 DEM: +4,445
+🔴 REP: +3,973
+🟣 OTHER: +2,929
+🟢 TOTAL: +11,347
 
 
 
-🥉Leon County
+🥈Hillsborough County
 
-🔵 DEM: +355
-🔴 REP: +122
-🟣 OTHER: +79
-🟢 TOTAL: +556
+🔵 DEM: +4,429
+🔴 REP: +3,841
+🟣 OTHER: +2,416
+🟢 TOTAL: +10,686
+
+
+
+🥉Lee County
+
+🔵 DEM: +1,448
+🔴 REP: +2,968
+🟣 OTHER: +1,287
+🟢 TOTAL: +5,703
 
 
 

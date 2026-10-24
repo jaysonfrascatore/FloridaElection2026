@@ -1154,7 +1154,7 @@
         </div>
         <div class="sub" id="dpSub"></div>
       </div>
-      <div class="stat-card"><div class="v" id="statInd">&mdash;</div><div class="k">IND + NPA + Other</div></div>
+      <div class="stat-card" id="pollsCloseCard"><div class="v" id="pcTime" style="color:#fff;">&mdash;</div><div class="k" id="pcLabel">Polls close Tue, Nov 3 &middot; 7:00 PM ET</div></div>
       <div class="stat-card"><div class="v" id="statMoved">&mdash;</div><div class="k">Rating changes</div></div>
       <div class="stat-card"><div class="v" id="statUpdated">&mdash;</div><div class="k">Most recent update</div></div>
       <div class="stat-card stat-card-clickable" id="statNetGainCard" title="Jump to the statewide historical trend">
@@ -2657,6 +2657,22 @@ function tickNextUpdateClock(){
   timeEl.textContent = nextUpdateClockText(sec);
 }
 setInterval(tickNextUpdateClock, 250);
+
+// Countdown to poll closing: 7:00 PM Eastern on Election Day (Nov 3, 2026). Uses the Eastern wall clock like the update
+// countdown above, so it is right wherever the page is opened.
+const POLLS_CLOSE_WALL = Date.UTC(2026, 10, 3, 19, 0, 0);
+function tickPollsClose(){
+  const el = document.getElementById('pcTime'); if(!el) return;
+  const diff = POLLS_CLOSE_WALL - easternWallNowMs();
+  const lab = document.getElementById('pcLabel');
+  if(diff <= 0){ el.textContent = 'Polls closed'; lab.textContent = 'Polls closed Tue, Nov 3 \u00b7 7:00 PM ET'; return; }
+  const sec = Math.floor(diff / 1000), d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600), m = Math.floor(sec % 3600 / 60), x = sec % 60;
+  const p2 = n => String(n).padStart(2, '0');
+  el.textContent = d + 'd ' + p2(h) + ':' + p2(m) + ':' + p2(x);
+  lab.textContent = 'Polls close Tue, Nov 3 \u00b7 7:00 PM ET';
+}
+setInterval(tickPollsClose, 1000);
+tickPollsClose();
 // Wide screens: park the countdown in the big slot at the very top of the page; phones keep it in the tab row.
 function placeClock(){
   const box = document.getElementById('nextUpdateClock'), top = document.getElementById('clockTop'), sb = document.querySelector('.controls .search-box');
@@ -2824,7 +2840,6 @@ function renderStats(){
   labelNPA.textContent = 'NPA/Other ' + fmt(totalNpaOther) + ' (' + pct(npaOtherShare) + ')';
 
   document.getElementById('statTotal').textContent = fmt(total);
-  document.getElementById('statInd').textContent = fmt(totalNpaOther);
   document.getElementById('statMoved').textContent = activeCounties.filter(c=>c.ratingChanged).length;
   // Uses runTimestamp (written fresh on every run) rather than
   // lastUpdated (which freezes on purpose when a county's data hasn't

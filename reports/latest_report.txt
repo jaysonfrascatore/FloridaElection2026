@@ -7,16 +7,16 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 23rd, 2026 at 7:00pm Eastern Time
+Updated at October 23rd, 2026 at 11:00pm Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-59
+13
 
 Unchanged Counties:
-False
+True
 
 Rejected County Updates:
 0
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-923,579
+925,943
 
 REP:
-915,218
+915,930
 
 OTHER:
-475,081
+475,869
 
 TOTAL:
-2,313,878
+2,317,742
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 8,361 votes statewide.
+🔵 Democrats lead by 10,013 votes statewide.
 
 Margin Change:
--0.01% toward Republicans
++0.04% toward Democrats
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +33,544
-🔴 REP: +33,442
-🟣 OTHER: +18,378
-🟢 TOTAL: +85,364
+🔵 DEM: +2,364
+🔴 REP: +712
+🟣 OTHER: +788
+🟢 TOTAL: +3,864
 
 REJECTED COUNTY UPDATES
 =================================
@@ -72,46 +72,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️7 PM Florida EV & VBM Update
+🗳️11 PM Florida EV & VBM Update
 
-New votes have been cast in 59 counties over the last hour, with the largest update coming from Broward County.
+New votes have been cast in 13 counties over the last hour, with the largest update coming from Palm Beach County.
 
-🔵 DEM: +33,544
-🔴 REP: +33,442
-🟣 OTHER: +18,378
-🟢 TOTAL: +85,364
+🔵 DEM: +2,364
+🔴 REP: +712
+🟣 OTHER: +788
+🟢 TOTAL: +3,864
 
-🔵 Democrats lead by 8,361 votes statewide.
+🔵 Democrats lead by 10,013 votes statewide.
 
-🔴 Margin Change: -0.01% toward Republicans
+🔴 Margin Change: +0.04% toward Democrats
 
 Largest County Updates
 
 
-🥇Broward County
+🥇Palm Beach County
 
-🔵 DEM: +6,219
-🔴 REP: +2,656
-🟣 OTHER: +2,924
-🟢 TOTAL: +11,799
-
-
-
-🥈Orange County
-
-🔵 DEM: +3,869
-🔴 REP: +2,007
-🟣 OTHER: +1,838
-🟢 TOTAL: +7,714
+🔵 DEM: +1,527
+🔴 REP: +346
+🟣 OTHER: +489
+🟢 TOTAL: +2,362
 
 
 
-🥉Miami-Dade County
+🥈Leon County
 
-🔵 DEM: +2,425
-🔴 REP: +2,586
-🟣 OTHER: +1,787
-🟢 TOTAL: +6,798
+🔵 DEM: +297
+🔴 REP: +125
+🟣 OTHER: +66
+🟢 TOTAL: +488
+
+
+
+🥉Orange County
+
+🔵 DEM: +228
+🔴 REP: +91
+🟣 OTHER: +96
+🟢 TOTAL: +415
 
 
 

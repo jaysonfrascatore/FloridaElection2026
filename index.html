@@ -923,6 +923,11 @@
     transition:background .2s, border-color .2s, color .2s;
   }
   #countyZoomPngBtn:hover{ border-color:var(--gold); }
+  #dayViewSelect{
+    background:var(--panel-2); border:1px solid var(--border); color:var(--text);
+    padding:7px 10px; border-radius:8px; cursor:pointer; font-family:var(--mono); font-size:11px;
+  }
+  #dayViewSelect:hover{ border-color:var(--gold); }
   #countyZoomPngBtn.visible{ display:inline-flex; }
   #mapZoomRow{ display:flex; gap:14px; align-items:stretch; position:relative; }
   /* Total Turnout's key: sits over the open water at the map's lower left
@@ -1155,7 +1160,16 @@
         <div class="sub" id="dpSub"></div>
       </div>
       <div class="stat-card" id="pollsCloseCard"><div class="v" id="pcTime" style="color:#fff;">&mdash;</div><div class="k" id="pcLabel">Polls close Tue, Nov 3 &middot; 7:00 PM ET</div></div>
-      <div class="stat-card"><div class="v" id="statMoved">&mdash;</div><div class="k">Rating changes</div></div>
+      <div class="stat-card" id="partyTurnoutCard">
+        <div class="k">Registered voters who have voted</div>
+        <div class="net-gain-row">
+          <span style="color:#5b9bd9;">DEM <b id="ptDem">&mdash;</b></span>
+          <span style="color:#d4675a;">REP <b id="ptRep">&mdash;</b></span>
+          <span style="color:#c77dff;">NPA/Other <b id="ptOther">&mdash;</b></span>
+          <span class="net-gain-total">LIVE TURNOUT <b id="ptTotal">&mdash;</b></span>
+        </div>
+        <div class="sub" id="ptSub"></div>
+      </div>
       <div class="stat-card"><div class="v" id="statUpdated">&mdash;</div><div class="k">Most recent update</div></div>
       <div class="stat-card stat-card-clickable" id="statNetGainCard" title="Jump to the statewide historical trend">
         <div class="k">Last update net gain</div>
@@ -1195,6 +1209,7 @@
       <div class="map-header-row">
         <h2 id="mapTitle">Rating by county</h2>
         <div style="display:flex; gap:8px; align-items:center;">
+          <select id="dayViewSelect" title="Map the whole state, or the votes counted on a single day" style="display:none;"><option value="full">Full Statewide</option><option value="today">Today only</option></select>
           <button id="countyZoomPngBtn" title="Download a PNG of this county's map, data, and trend charts">
             <span>&#8681;</span> Download PNG
           </button>
@@ -2262,6 +2277,7 @@ function historicalTickFor(metric){
 }
 function activeCountiesFor(metric){
   const i = historicalIndexFor(metric);
+  if(metric === 'demrepnpa' && btDayActive() && btDayCounties[btView] && !(i !== null && historicalSnapshots[i])) return btDayCounties[btView];
   if(metric === 'demrepnpa' && btView !== 'all' && btCounties[btView] && !(i !== null && historicalSnapshots[i])) return btCounties[btView];
   if(i !== null && historicalSnapshots[i]){
     return historicalSnapshots[i];
@@ -2840,7 +2856,7 @@ function renderStats(){
   labelNPA.textContent = 'NPA/Other ' + fmt(totalNpaOther) + ' (' + pct(npaOtherShare) + ')';
 
   document.getElementById('statTotal').textContent = fmt(total);
-  document.getElementById('statMoved').textContent = activeCounties.filter(c=>c.ratingChanged).length;
+  renderPartyTurnoutCard();
   // Uses runTimestamp (written fresh on every run) rather than
   // lastUpdated (which freezes on purpose when a county's data hasn't
   // actually changed) -- this box is meant to answer "did it just
@@ -3039,6 +3055,93 @@ function evSideLegendHtml(counties){
     `<div class="ev-note">Brown Stripes: The county starts on the colors shown. A brown stripe indicates that the Early Voting period ends on November 1st.</div>`;
 }
 
+
+// ---- Party turnout card: share of each party's registered voters who have voted ----
+function renderPartyTurnoutCard(){
+  try{
+    let rD = 0, rR = 0, rN = 0, vD = 0, vR = 0, vN = 0;
+    COUNTIES.forEach(c => {
+      const r = SIM_REG[c.county]; if(!r) return;
+      const reg = r[0], repS = r[1], demS = r[2];
+      rR += reg * repS / 100; rD += reg * demS / 100; rN += reg * Math.max(0, 100 - repS - demS) / 100;
+      vD += c.dem; vR += c.rep; vN += c.ind + c.npa + c.other;
+    });
+    const p = (v, r) => r ? (v / r * 100).toFixed(2) + '%' : '—';
+    document.getElementById('ptDem').textContent = p(vD, rD);
+    document.getElementById('ptRep').textContent = p(vR, rR);
+    document.getElementById('ptOther').textContent = p(vN, rN);
+    document.getElementById('ptTotal').textContent = p(vD + vR + vN, rD + rR + rN);
+    document.getElementById('ptSub').textContent = 'Votes cast ÷ registered voters of that party';
+  }catch(e){}
+}
+
+// ---- Day view on the General Election map (Full Statewide / Today only / a past date) ----
+// Built from data/county_history_types.csv (each county's running Mail / Early / Election Day totals):
+// a day's votes = the county's total at the end of that day minus its total at the end of the day before.
+let btDaySel = 'full', btDayCounties = null, btDayStat = null, btTypeRows = null, btDayKeys = [];
+function btTodayKey(){ const d = new Date(easternWallNowMs()); return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); }
+function btKeyOf(date){ return date.getFullYear() * 10000 + (date.getMonth() + 1) * 100 + date.getDate(); }
+function btSelKey(){ return btDaySel === 'full' ? null : (btDaySel === 'today' ? btTodayKey() : parseInt(btDaySel, 10)); }
+function btDayActive(){ return btDaySel !== 'full' && !!btDayCounties; }
+function btKeyLabel(k, long){
+  const d = new Date(Math.floor(k / 10000), Math.floor(k / 100) % 100 - 1, k % 100);
+  const day = d.getDate(), sfx = (day % 100 >= 11 && day % 100 <= 13) ? 'th' : ({1:'st',2:'nd',3:'rd'}[day % 10] || 'th');
+  return d.toLocaleDateString('en-US', { month: long ? 'long' : 'short' }) + ' ' + day + (long ? sfx : '');
+}
+function btDayLabel(){ const k = btSelKey(); return (btDaySel === 'full' || !btDayCounties) ? '' : (btSelKey() === btTodayKey() ? 'Today only (' + btKeyLabel(k) + ')' : btKeyLabel(k) + ' only'); }
+function btFillDaySelect(){
+  const sel = document.getElementById('dayViewSelect'); if(!sel) return;
+  const today = btTodayKey(), past = btDayKeys.filter(k => k < today).sort((a, b) => b - a);
+  sel.innerHTML = '<option value="full">Full Statewide</option><option value="today">Today only</option>' + past.map(k => `<option value="${k}">${btKeyLabel(k, true)}</option>`).join('');
+  sel.value = Array.from(sel.options).some(o => o.value === btDaySel) ? btDaySel : 'full';
+  if(sel.value !== btDaySel) btDaySel = sel.value;
+}
+function btBuildDay(){
+  btDayCounties = null; btDayStat = null;
+  const key = btSelKey(); if(key === null || !btTypeRows) return;
+  const byCode = {};
+  btTypeRows.forEach(r => { (byCode[r.Code] = byCode[r.Code] || []).push(r); });
+  const F = ['DEM','REP','NPA','OTHER'], T = { vbm:'VBM', ev:'EV', ed:'ED' };
+  const atEnd = (rows, k) => { let best = null; rows.forEach(r => { if(r._k <= k) best = r; }); return best; };
+  const val = (r, f, t) => r ? num(r[f + ' ' + t]) : 0;
+  const per = {}, stat = { all:[0,0,0], vbm:[0,0,0], ev:[0,0,0], ed:[0,0,0] };
+  const fakes = { all:[], vbm:[], ev:[], ed:[] };
+  Object.keys(byCode).forEach(code => {
+    const rows = byCode[code], a = atEnd(rows, key), b = atEnd(rows, key - 1);
+    const acc = { all:{ DEM:0, REP:0, NPA:0, OTHER:0 } };
+    Object.keys(T).forEach(k => {
+      acc[k] = {};
+      F.forEach(f => { const v = Math.max(0, val(a, f, T[k]) - val(b, f, T[k])); acc[k][f] = v; acc.all[f] += v; });
+    });
+    Object.keys(acc).forEach(k => {
+      const x = acc[k], t = x.DEM + x.REP + x.NPA + x.OTHER; if(!t) return;
+      stat[k][0] += x.DEM; stat[k][1] += x.REP; stat[k][2] += x.NPA + x.OTHER;
+      fakes[k].push({ County:(a && a.County) || code, Code:code, Timestamp:(a && a.Timestamp) || '', DEM:x.DEM, REP:x.REP, NPA:x.NPA, IND:0, OTHER:x.OTHER, TOTAL:t });
+    });
+  });
+  const out = {};
+  Object.keys(fakes).forEach(k => { out[k] = fillMissingCountiesAtZero(buildCountyRecords(fakes[k])); });
+  btDayCounties = out; btDayStat = stat;
+}
+async function btDayRefresh(rerender){
+  const sel = document.getElementById('dayViewSelect');
+  try{
+    btTypeRows = await fetchCSV('data/county_history_types.csv');
+    btTypeRows.forEach(r => { const d = parseHistoryTimestamp(r.Timestamp); r._k = d ? btKeyOf(d) : 0; });
+    btTypeRows = btTypeRows.filter(r => r._k);
+    btDayKeys = Array.from(new Set(btTypeRows.map(r => r._k)));
+  }catch(e){ btTypeRows = null; btDayKeys = []; }
+  btFillDaySelect();
+  btBuildDay();
+  if(rerender){
+    if(zoomedCounty){ refreshZoomedCountyView(); btRender(); } else { renderMap(); renderTable(); }
+  }
+}
+(function(){
+  const sel = document.getElementById('dayViewSelect'); if(!sel) return;
+  sel.addEventListener('change', () => { btDaySel = sel.value; btBuildDay(); if(zoomedCounty){ refreshZoomedCountyView(); btRender(); } else { renderMap(); renderTable(); } });
+})();
+
 // ---- Ballot-type views on the General Election tab (vote by mail / early vote / Election Day) ----
 // Reads the DEM/REP/NPA/OTHER x VBM/EV/ED columns the tracker CSV already carries. The default
 // "All ballots" view is untouched; the buttons stay hidden until those columns have any ballots in them.
@@ -3070,7 +3173,7 @@ function btLoad(rows){
 // Mail / Early Vote / Election Day use when that split's statewide total last changed (data/split_previous.json).
 // Empty when there is no time to show yet (the first run after this was added, for a split that has not changed since).
 function btLastUpdatedText(){
-  if(!btHas || currentMetric !== 'demrepnpa') return '';
+  if(!btHas || currentMetric !== 'demrepnpa' || btDayActive()) return '';
   let raw;
   if(zoomedCounty){
     // Inside a county: when THAT county's selected split last changed (Total Vote = any split).
@@ -3104,7 +3207,7 @@ function btRender(){
     const cells = p(a[0], a[1], a[2], ld) + p(b[0], b[1], b[2]) + p('NPA/Other', r.n, PU);
     return `<div class="bt-card${btView===r.key?' cur':''}" data-k="${r.key}" tabindex="0" role="button" aria-pressed="${btView===r.key}"><div class="bt-ch"><b>${btView===r.key?'<span class="bt-dot"></span>':''}${r.label}</b><span><b>${f(t)}</b> <span style="color:${m.color}"><b>${m.text}</b></span></span></div><div class="bt-cg${lead ? ' has-lead' : ''}">${cells}</div></div>`; }).join('');
   const reporting = COUNTIES.filter(c => c.total > 0).length;
-  const note = btCovered < reporting ? `<div style="margin-top:6px;font-size:11px;color:var(--muted)">Type split covers ${btCovered} of ${reporting} reporting counties so far; the rest fill in once they have it.</div>` : '';
+  const note = (btCovered < reporting && !btDayActive()) ? `<div style="margin-top:6px;font-size:11px;color:var(--muted)">Type split covers ${btCovered} of ${reporting} reporting counties so far; the rest fill in once they have it.</div>` : '';
   const lu = zoomedCounty ? '' : btLastUpdatedText();   // inside a county the line sits under the county data instead
   document.getElementById('btSummary').innerHTML = `<table class="bt-t bt-desk"><thead><tr><th>Statewide</th><th>DEM</th><th>REP</th><th>NPA/Other</th><th>Total</th><th>Margin</th></tr></thead><tbody>${desk}</tbody></table><div class="bt-mob">${mob}</div>${note}${lu ? `<div class="bt-upd">${lu}</div>` : ''}`;
   const pick = el => { const k = el.dataset.k; if(!k || k === btView) return; btView = k; if(zoomedCounty){ refreshZoomedCountyView(); btRender(); } else { renderMap(); renderTable(); } };   // btRender redraws the highlight; renderMap does it itself when not zoomed
@@ -3468,7 +3571,9 @@ async function renderMap(){
   await ensureGeojson();
   const m = METRICS[currentMetric];
   const activeCounties = activeCountiesFor(currentMetric);
-  document.getElementById('mapTitle').textContent = m.title;
+  document.getElementById('mapTitle').textContent = m.title + (currentMetric === 'demrepnpa' && btDayLabel() ? ' \u2014 ' + btDayLabel() : '');
+  const dvs = document.getElementById('dayViewSelect');
+  if(dvs) dvs.style.display = (currentMetric === 'demrepnpa' && (btDayKeys.length || btDaySel !== 'full')) ? '' : 'none';
   btRender();
   document.getElementById('npaSliderWrap').style.display = (currentMetric === 'demrepnpa') ? 'block' : 'none';
   document.getElementById('turnoutSliderWrap').style.display = (currentMetric === 'total') ? 'block' : 'none';
@@ -4903,6 +5008,7 @@ function render(){
   renderStatewideHistoryCharts();
   renderVotesPerDay();
   renderDayPartyCard();
+  btDayRefresh(btDaySel !== 'full');
 }
 
 document.getElementById('refreshBtn').addEventListener('click', () => loadLatestCSV(true));
@@ -5390,7 +5496,7 @@ function liveResultsSummary(){
   }
 
   return {
-    metricTitle: (currentMetric === 'demrepnpa' && typeof btView !== 'undefined' && btView !== 'all') ? 'General Election \u2014 ' + BT_LABELS[btView] : ((METRICS[currentMetric] && METRICS[currentMetric].title) || 'Florida Vote Tracker'),
+    metricTitle: ((currentMetric === 'demrepnpa' && typeof btView !== 'undefined' && btView !== 'all') ? 'General Election \u2014 ' + BT_LABELS[btView] : ((METRICS[currentMetric] && METRICS[currentMetric].title) || 'Florida Vote Tracker')) + ((currentMetric === 'demrepnpa' && typeof btDayLabel === 'function' && btDayLabel()) ? ' \u2014 ' + btDayLabel() : ''),
     totalVotes, totalD, totalR, totalNPA: totalNpaOther,
     leader, voteLead, marginPct, statewideTie, npaLead, asOfText,
     countiesReporting, marginMoveCount,
@@ -6372,13 +6478,14 @@ function drawKeyOnCanvas(ctx, x, bottomY, scale, title, subtitle, rows){
 // each with DEM, REP, NPA/Other, the total and the margin (D+ / R+). Replaces the "top 3 counties" list.
 function btTableRows(){
   const sum = list => list.reduce((a, c) => { a.d += c.dem; a.r += c.rep; a.n += c.ind + c.npa + c.other; return a; }, { d:0, r:0, n:0 });
-  const all = sum(COUNTIES);
+  const all = btDayActive() ? { d:btDayStat.all[0], r:btDayStat.all[1], n:btDayStat.all[2] } : sum(COUNTIES);
   const mk = (label, x, key) => ({ label, key, d:x.d, r:x.r, n:x.n });
+  const BS = btDayActive() ? btDayStat : btStat;
   return [
     mk('Total Vote', all, 'all'),
-    mk('Vote by Mail', { d:btStat.vbm[0], r:btStat.vbm[1], n:btStat.vbm[2] }, 'vbm'),
-    mk('Early Vote', { d:btStat.ev[0], r:btStat.ev[1], n:btStat.ev[2] }, 'ev'),
-    mk('Election Day Vote', { d:btStat.ed[0], r:btStat.ed[1], n:btStat.ed[2] }, 'ed')
+    mk('Vote by Mail', { d:BS.vbm[0], r:BS.vbm[1], n:BS.vbm[2] }, 'vbm'),
+    mk('Early Vote', { d:BS.ev[0], r:BS.ev[1], n:BS.ev[2] }, 'ev'),
+    mk('Election Day Vote', { d:BS.ed[0], r:BS.ed[1], n:BS.ed[2] }, 'ed')
   ];
 }
 function drawTypeTableFooter(ctx, footerY0, width, scale){
@@ -6391,7 +6498,7 @@ function drawTypeTableFooter(ctx, footerY0, width, scale){
   ctx.font = `600 ${Math.round(14*scale)}px ${sans}`;
   ctx.textAlign = 'left';
   ctx.fillText('Ballots by type:', 24*scale, footerY0 + 58*scale);
-  if(btCovered < reporting){
+  if(btCovered < reporting && !btDayActive()){
     ctx.fillStyle = GRAY; ctx.font = `${Math.round(11*scale)}px ${sans}`; ctx.textAlign = 'right';
     ctx.fillText(`Type split covers ${btCovered} of ${reporting} reporting counties so far`, 876*scale, footerY0 + 58*scale);
     ctx.textAlign = 'left';

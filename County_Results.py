@@ -2988,6 +2988,96 @@ try:
 
             last_changed[key] = old_changed.get(key)
 
+    # The same thing for EVERY county: when did THIS county's Total /
+    # Mail / Early Vote / Election Day last change. A split that did not
+    # move this run keeps the time it had before (so an Early Vote that
+    # grew at 7pm and held still at 11pm still says 7pm).
+    old_county_changed = {}
+
+    try:
+
+        with open(split_file, "r", encoding="utf-8") as old_file:
+
+            old_county_changed = json.load(old_file).get("county_last_changed") or {}
+
+    except Exception:
+
+        old_county_changed = {}
+
+    def row_split_total(frame_row, suffix):
+
+        cols = (
+            ["DEM", "REP", "IND", "NPA", "OTHER"]
+            if suffix == ""
+            else [f"{c} {suffix}" for c in ["DEM", "REP", "NPA", "OTHER"]]
+        )
+
+        if any(c not in frame_row.index for c in cols):
+
+            return None
+
+        total_value = 0.0
+
+        for c in cols:
+
+            number = pd.to_numeric(frame_row[c], errors="coerce")
+
+            total_value += 0.0 if pd.isna(number) else float(number)
+
+        return total_value
+
+    county_last_changed = {}
+
+    for _, county_row in df.iterrows():
+
+        code = county_row["Code"]
+
+        old_entry = old_county_changed.get(code) or {}
+
+        prev_match = (
+            previous[previous["Code"] == code]
+            if previous is not None
+            else None
+        )
+
+        prev_row = (
+            prev_match.iloc[0]
+            if prev_match is not None and not prev_match.empty
+            else None
+        )
+
+        entry = {}
+
+        for key, suffix in [("all", ""), ("vbm", "VBM"), ("ev", "EV"), ("ed", "ED")]:
+
+            cur_value = row_split_total(county_row, suffix)
+
+            prev_value = (
+                row_split_total(prev_row, suffix)
+                if prev_row is not None
+                else None
+            )
+
+            if cur_value is None:
+
+                entry[key] = old_entry.get(key)
+
+            elif prev_row is None and previous is not None and cur_value > 0:
+
+                # County is new to this file (e.g. reopened after being
+                # closed): its votes just arrived.
+                entry[key] = RUN_TIME
+
+            elif prev_value is not None and cur_value != prev_value:
+
+                entry[key] = RUN_TIME
+
+            else:
+
+                entry[key] = old_entry.get(key)
+
+        county_last_changed[code] = entry
+
     with open(
         split_file,
         "w",
@@ -2998,7 +3088,8 @@ try:
             {
                 "run_time": RUN_TIME,
                 "previous": split_previous,
-                "last_changed": last_changed
+                "last_changed": last_changed,
+                "county_last_changed": county_last_changed
             },
             file,
             indent=2
@@ -3239,6 +3330,130 @@ except Exception as history_error:
         "\nWARNING: county history (full) logging failed -- "
         "everything else this run completed normally and was saved. "
         f"Error: {history_error}"
+    )
+
+
+# ============================================================
+# COUNTY HISTORY BY BALLOT TYPE (for the page's "by day" maps)
+# ------------------------------------------------------------
+# Writes data/county_history_types.csv: per county, the running Mail /
+# Early Vote / Election Day totals (DEM, REP, NPA, OTHER) at each run,
+# so the page can work out how many votes of each type a county added
+# on any single day. It is rebuilt from the archive/ files every run
+# (the same files the history backfill reads), so it is never out of
+# step, past days fill in on their own, and re-running a run can never
+# create duplicate rows. A county only gets a new row when one of its
+# type totals actually changed. Additive and wrapped in its own
+# try/except like the history blocks around it: if anything goes wrong
+# only this one file is skipped.
+# ============================================================
+
+COUNTY_HISTORY_TYPES_FILE = os.path.join(
+    DATA_DIR,
+    "county_history_types.csv"
+)
+
+try:
+
+    import glob
+
+    type_columns = [
+        f"{party} {suffix}"
+        for suffix in ("VBM", "EV", "ED")
+        for party in ("DEM", "REP", "NPA", "OTHER")
+    ]
+
+    type_archive_files = sorted(
+        glob.glob(
+            os.path.join(ARCHIVE_DIR, "florida_turnout_*.csv")
+        )
+    )
+
+    last_type_values = {}
+
+    type_history_rows = []
+
+    for archive_path in type_archive_files:
+
+        snapshot = pd.read_csv(archive_path)
+
+        if snapshot.empty:
+
+            continue
+
+        if any(col not in snapshot.columns for col in type_columns):
+
+            continue
+
+        snapshot_run_time = snapshot["Timestamp"].iloc[0]
+
+        snapshot_date = _parse_run_date(snapshot_run_time)
+
+        if snapshot_date is not None and snapshot_date < BACKFILL_START_DATE:
+
+            continue
+
+        for _, snap_row in snapshot.iterrows():
+
+            snap_code = snap_row["Code"]
+
+            snap_values = tuple(
+                int(
+                    pd.to_numeric(
+                        snap_row[col],
+                        errors="coerce"
+                    ) if pd.notna(
+                        pd.to_numeric(snap_row[col], errors="coerce")
+                    ) else 0
+                )
+                for col in type_columns
+            )
+
+            if last_type_values.get(snap_code) == snap_values:
+
+                continue
+
+            if snap_code not in last_type_values and not any(snap_values):
+
+                last_type_values[snap_code] = snap_values
+
+                continue
+
+            last_type_values[snap_code] = snap_values
+
+            history_row = {
+
+                "Timestamp": snapshot_run_time,
+                "Code": snap_code,
+                "County": _row_county_name(snap_row)
+
+            }
+
+            history_row.update(
+                dict(zip(type_columns, snap_values))
+            )
+
+            type_history_rows.append(history_row)
+
+    pd.DataFrame(
+        type_history_rows,
+        columns=["Timestamp", "Code", "County"] + type_columns
+    ).to_csv(
+        COUNTY_HISTORY_TYPES_FILE,
+        index=False
+    )
+
+    print(
+        f"\nCounty history (by ballot type): wrote "
+        f"{len(type_history_rows)} row(s) to {COUNTY_HISTORY_TYPES_FILE}"
+    )
+
+except Exception as type_history_error:
+
+    print(
+        "\nWARNING: county history (by ballot type) failed -- "
+        "everything else this run completed normally and was saved. "
+        f"Error: {type_history_error}"
     )
 
 
@@ -4247,4 +4462,3 @@ print(
 print(
     "================================="
 )
-

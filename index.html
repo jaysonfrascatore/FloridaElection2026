@@ -1147,10 +1147,10 @@
       <div class="stat-card" id="dayPartyCard">
         <div class="k" id="dpLabel">Votes counted today</div>
         <div class="net-gain-row">
-          <span style="color:#5b9bd9;">DEM <b id="dpDem">&mdash;</b></span>
-          <span style="color:#d4675a;">REP <b id="dpRep">&mdash;</b></span>
-          <span style="color:#c77dff;">NPA/Other <b id="dpOther">&mdash;</b></span>
-          <span class="net-gain-total">TOTAL <b id="dpTotal">&mdash;</b></span>
+          <span id="dpDemRow" style="color:#5b9bd9;">DEM <b id="dpDem">&mdash;</b></span>
+          <span id="dpRepRow" style="color:#d4675a;">REP <b id="dpRep">&mdash;</b></span>
+          <span id="dpOtherRow" style="color:#c77dff;">NPA/Other <b id="dpOther">&mdash;</b></span>
+          <span id="dpTotalRow" class="net-gain-total">TOTAL <b id="dpTotal">&mdash;</b></span>
         </div>
         <div class="sub" id="dpSub"></div>
       </div>
@@ -3913,6 +3913,12 @@ async function renderDayPartyCard(){
   const d = sum(u => u.dAdded), r = sum(u => u.rAdded), n = sum(u => u.nAdded), t = sum(u => u.added);
   const when = ups[ups.length - 1].time;
   document.getElementById('dpLabel').textContent = 'Votes counted ' + when.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+  // Whichever party added more votes that day is listed first (Dem first on a tie), then NPA/Other, then the total.
+  const dFirst = d >= r;
+  document.getElementById('dpDemRow').style.order = dFirst ? 1 : 2;
+  document.getElementById('dpRepRow').style.order = dFirst ? 2 : 1;
+  document.getElementById('dpOtherRow').style.order = 3;
+  document.getElementById('dpTotalRow').style.order = 4;
   document.getElementById('dpDem').textContent = fmt(d);
   document.getElementById('dpRep').textContent = fmt(r);
   document.getElementById('dpOther').textContent = fmt(n);

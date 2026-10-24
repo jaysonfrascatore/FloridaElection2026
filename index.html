@@ -632,6 +632,12 @@
   .vpd-bar{ height:5px; background:var(--panel-2); border-radius:3px; margin:6px 0 5px; overflow:hidden; }
   .vpd-bar span{ display:block; height:100%; background:var(--total-green); border-radius:3px; opacity:.85; }
   .vpd-row.neg .vpd-bar span{ background:var(--rep); }
+  .vpd-bar-party{ display:flex; }
+  .vpd-bar-party span{ border-radius:0; opacity:.9; }
+  .vpd-bar-party span.d{ background:var(--dem); } .vpd-bar-party span.n{ background:var(--npa); } .vpd-bar-party span.r{ background:var(--rep); }
+  .vpd-row.neg .vpd-bar-party span.d{ background:var(--dem); } .vpd-row.neg .vpd-bar-party span.r{ background:var(--rep); }
+  .vpd-party{ display:flex; flex-wrap:wrap; gap:2px 14px; font-family:var(--mono); font-size:11px; margin-bottom:4px; }
+  .vpd-party b{ font-weight:700; }
   .vpd-row.in-progress .vpd-bar span{ opacity:.45; }
   .vpd-detail{ font-family:var(--mono); font-size:10.5px; color:var(--muted-2); line-height:1.5; }
   .vpd-row.empty .vpd-votes b{ color:var(--muted-2); }
@@ -1138,7 +1144,16 @@
     </div>
     <div class="stat-cards">
       <div class="stat-card"><div class="v" id="statTotal">&mdash;</div><div class="k">Total votes</div><div class="sub" id="statTotalSub">&mdash;</div></div>
-      <div class="stat-card"><div class="v" id="statCounties">&mdash;</div><div class="k">Counties reporting</div></div>
+      <div class="stat-card" id="dayPartyCard">
+        <div class="k" id="dpLabel">Votes counted today</div>
+        <div class="net-gain-row">
+          <span style="color:#5b9bd9;">DEM <b id="dpDem">&mdash;</b></span>
+          <span style="color:#d4675a;">REP <b id="dpRep">&mdash;</b></span>
+          <span style="color:#c77dff;">NPA/Other <b id="dpOther">&mdash;</b></span>
+          <span class="net-gain-total">TOTAL <b id="dpTotal">&mdash;</b></span>
+        </div>
+        <div class="sub" id="dpSub"></div>
+      </div>
       <div class="stat-card"><div class="v" id="statInd">&mdash;</div><div class="k">IND + NPA + Other</div></div>
       <div class="stat-card"><div class="v" id="statMoved">&mdash;</div><div class="k">Rating changes</div></div>
       <div class="stat-card"><div class="v" id="statUpdated">&mdash;</div><div class="k">Most recent update</div></div>
@@ -1373,6 +1388,12 @@
             <option value="day">By day</option>
             <option value="week">By week (Mon&ndash;Sun)</option>
             <option value="weekday">By day of the week</option>
+          </select>
+        </label>
+        <label>Show
+          <select id="vpdShow">
+            <option value="total">Total votes</option>
+            <option value="party">Party breakdown</option>
           </select>
         </label>
         <label>Update time
@@ -2436,7 +2457,7 @@ async function loadLatestCSV(isManualRefresh){
     // Previous run's Mail / Early Vote / Election Day totals (saved by the script) -- only used
     // for the split text's "increase/decrease" and "move toward" lines. It is ignored unless it
     // belongs to the same run as the rows on screen, and a missing file just means no comparison.
-    btPrev = null; btChanged = null; btRunStamp = '';
+    btPrev = null; btChanged = null; btCountyChanged = null; btRunStamp = '';
     try{
       const sp = await fetch('data/split_previous.json?t=' + Date.now(), { cache:'no-store' });
       if(sp.ok){
@@ -2444,6 +2465,7 @@ async function loadLatestCSV(isManualRefresh){
         const stamp = rows && rows[0] && (rows[0]['Timestamp'] || rows[0]['Last Updated']);
         if(j && j.previous && (!j.run_time || !stamp || j.run_time === stamp)) btPrev = j.previous;
         if(j && j.last_changed && (!j.run_time || !stamp || j.run_time === stamp)) btChanged = j.last_changed;
+        if(j && j.county_last_changed && (!j.run_time || !stamp || j.run_time === stamp)) btCountyChanged = j.county_last_changed;
         btRunStamp = stamp || '';
       }
     }catch(e){ btPrev = null; }
@@ -2802,7 +2824,6 @@ function renderStats(){
   labelNPA.textContent = 'NPA/Other ' + fmt(totalNpaOther) + ' (' + pct(npaOtherShare) + ')';
 
   document.getElementById('statTotal').textContent = fmt(total);
-  document.getElementById('statCounties').textContent = activeCounties.filter(c=>c.total>0).length + ' / 67';
   document.getElementById('statInd').textContent = fmt(totalNpaOther);
   document.getElementById('statMoved').textContent = activeCounties.filter(c=>c.ratingChanged).length;
   // Uses runTimestamp (written fresh on every run) rather than
@@ -3008,7 +3029,7 @@ function evSideLegendHtml(counties){
 // "All ballots" view is untouched; the buttons stay hidden until those columns have any ballots in them.
 const BT_LABELS = { all:'Vote Totals', vbm:'Mail only', ev:'Early Vote only', ed:'Election Day Vote' };
 let btView = 'all', btHas = false, btStat = null, btCounties = {}, btCovered = 0;
-let btChanged = null, btRunStamp = '';   // data/split_previous.json: when each split last changed ({vbm,ev,ed}), and the run time of the rows on screen
+let btChanged = null, btCountyChanged = null, btRunStamp = '';   // data/split_previous.json: when each split last changed ({vbm,ev,ed}), and the run time of the rows on screen
 let btPrev = null;   // previous run's statewide split totals { vbm:[D,R,NPA+Other], ev:[...], ed:[...] } from data/split_previous.json, or null
 function btLoad(rows){
   try{
@@ -3035,7 +3056,15 @@ function btLoad(rows){
 // Empty when there is no time to show yet (the first run after this was added, for a split that has not changed since).
 function btLastUpdatedText(){
   if(!btHas || currentMetric !== 'demrepnpa') return '';
-  const raw = btView === 'all' ? (btRunStamp || clockLastRunText) : (btChanged && btChanged[btView]);
+  let raw;
+  if(zoomedCounty){
+    // Inside a county: when THAT county's selected split last changed (Total Vote = any split).
+    const z = COUNTIES.find(c => c.county === zoomedCounty);
+    const e = z && btCountyChanged && btCountyChanged[z.code];
+    raw = e && e[btView];
+  }else{
+    raw = btView === 'all' ? (btRunStamp || clockLastRunText) : (btChanged && btChanged[btView]);
+  }
   const d = raw ? parseHistoryTimestamp(raw) : null;
   if(!d) return '';
   return 'Last updated ' + d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' }) + ', ' + d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
@@ -3629,6 +3658,7 @@ var votesPerDayStale = true;       // needs a (re)load before it can be shown
 var votesPerDayFetching = false;
 var votesPerDayFailed = false;
 var votesPerDayCallId = 0;
+var votesPerDayShow = 'total';     // 'total' (green bars) | 'party' (blue / purple / red bars)
 var votesPerDayView = 'day';       // 'day' | 'week' | 'weekday'
 var votesPerDayHour = 'all';       // 'all' or an hour 0-23 as text
 var votesPerDayWeekday = 'all';    // 'all' or 0 (Sun) - 6 (Sat) as text
@@ -3648,7 +3678,10 @@ function votesAddedPerUpdate(rows){
   const start = findCurrentPeriodStart(totals);
   const out = [];
   for(let i = start; i < parsed.length; i++){
-    out.push({ time: parsed[i].time, total: totals[i], added: i === start ? totals[i] : totals[i] - totals[i - 1] });
+    const p = j => { const g = k => num(pick(parsed[j].r, [k])); return { d: g('DEM'), r: g('REP'), n: g('NPA/Other') }; };
+    const cur = p(i), prv = i === start ? { d: 0, r: 0, n: 0 } : p(i - 1);
+    out.push({ time: parsed[i].time, total: totals[i], added: i === start ? totals[i] : totals[i] - totals[i - 1],
+               dAdded: cur.d - prv.d, rAdded: cur.r - prv.r, nAdded: cur.n - prv.n });
   }
   return out;
 }
@@ -3692,13 +3725,14 @@ function groupVotesAdded(updates, options){
   const lastDay = vpdStartOfDay(updates[updates.length - 1].time);
   const days = [], byKey = {};
   for(let d = firstDay; d <= lastDay; d = vpdAddDays(d, 1)){
-    const rec = { date: d, key: vpdKeyOfDate(d), weekday: d.getDay(), votes: 0, updates: [] };
+    const rec = { date: d, key: vpdKeyOfDate(d), weekday: d.getDay(), votes: 0, d: 0, r: 0, n: 0, updates: [] };
     days.push(rec); byKey[rec.key] = rec;
   }
   updates.forEach(u => {
     if(!counts(u)) return;
     const rec = byKey[vpdKeyOfDate(u.time)];
     rec.votes += u.added;
+    rec.d += u.dAdded; rec.r += u.rAdded; rec.n += u.nAdded;
     rec.updates.push(u);
   });
   const kept = weekday === null ? days : days.filter(d => d.weekday === weekday);
@@ -3708,14 +3742,14 @@ function groupVotesAdded(updates, options){
     const weeks = new Map();
     kept.forEach(d => {
       const start = vpdWeekStart(d.date), key = vpdKeyOfDate(start);
-      if(!weeks.has(key)) weeks.set(key, { start, end: vpdAddDays(start, 6), votes: 0, updateCount: 0, dayCount: 0 });
+      if(!weeks.has(key)) weeks.set(key, { start, end: vpdAddDays(start, 6), votes: 0, d: 0, r: 0, n: 0, updateCount: 0, dayCount: 0 });
       const w = weeks.get(key);
-      w.votes += d.votes; w.updateCount += d.updates.length; w.dayCount++;
+      w.votes += d.votes; w.d += d.d; w.r += d.r; w.n += d.n; w.updateCount += d.updates.length; w.dayCount++;
     });
     rows = [...weeks.values()].map(w => {
       const inProgress = vpdKeyOfDate(w.start) <= todayKey && todayKey <= vpdKeyOfDate(w.end);
       const startsBeforeData = w.start < firstDay;
-      return { kind: 'week', start: w.start, end: w.end, votes: w.votes, updateCount: w.updateCount, dayCount: w.dayCount,
+      return { kind: 'week', start: w.start, end: w.end, votes: w.votes, d: w.d, r: w.r, n: w.n, updateCount: w.updateCount, dayCount: w.dayCount,
                inProgress, partialStart: startsBeforeData, complete: !inProgress && !startsBeforeData && vpdKeyOfDate(w.end) < todayKey };
     }).reverse();
   }else if(view === 'weekday'){
@@ -3725,6 +3759,7 @@ function groupVotesAdded(updates, options){
       const done = mine.filter(d => d.key < todayKey);
       const sumDone = done.reduce((a, d) => a + d.votes, 0);
       return { kind: 'weekday', weekday: wd, votes: mine.reduce((a, d) => a + d.votes, 0),
+               d: mine.reduce((a, x) => a + x.d, 0), r: mine.reduce((a, x) => a + x.r, 0), n: mine.reduce((a, x) => a + x.n, 0),
                updateCount: mine.reduce((a, d) => a + d.updates.length, 0),
                occurrences: mine.length, completeOccurrences: done.length,
                avg: done.length ? sumDone / done.length : null,
@@ -3732,7 +3767,7 @@ function groupVotesAdded(updates, options){
     });
   }else{
     rows = kept.slice().reverse().map(d => ({
-      kind: 'day', date: d.date, votes: d.votes, updates: d.updates, updateCount: d.updates.length,
+      kind: 'day', date: d.date, votes: d.votes, d: d.d, r: d.r, n: d.n, updates: d.updates, updateCount: d.updates.length,
       inProgress: d.key === todayKey, complete: d.key < todayKey
     }));
   }
@@ -3830,14 +3865,44 @@ function drawVotesPerDay(){
         (r.includesToday ? ' &middot; today\'s count so far isn\'t in the average' : '');
     }
     const width = r.votes === 0 ? 0 : Math.max(2, Math.round(Math.abs(r.votes) / biggest * 100));
-    return `<div class="vpd-row${r.votes < 0 ? ' neg' : ''}${r.inProgress ? ' in-progress' : ''}${r.updateCount === 0 ? ' empty' : ''}">
+    const party = votesPerDayShow === 'party';
+    // Party breakdown: the same bar, split blue (DEM) / purple (NPA/Other) / red (REP) by each party's share of the votes added.
+    const seg = v => r.votes === 0 ? 0 : Math.abs(v) / biggest * 100;
+    const bar = party
+      ? `<div class="vpd-bar vpd-bar-party"><span class="d" style="width:${seg(r.d)}%"></span><span class="n" style="width:${seg(r.n)}%"></span><span class="r" style="width:${seg(r.r)}%"></span></div>`
+      : `<div class="vpd-bar"><span style="width:${width}%"></span></div>`;
+    const partyLine = party
+      ? `<div class="vpd-party"><span style="color:var(--dem)">DEM <b>${fmt(r.d)}</b></span><span style="color:var(--npa)">NPA/Other <b>${fmt(r.n)}</b></span><span style="color:var(--rep)">REP <b>${fmt(r.r)}</b></span></div>`
+      : '';
+    return `<div class="vpd-row${r.votes < 0 ? ' neg' : ''}${r.inProgress ? ' in-progress' : ''}${r.updateCount === 0 ? ' empty' : ''}${party ? ' party' : ''}">
       <div class="vpd-main"><span class="vpd-date">${label}${tag}</span><span class="vpd-votes">Votes Counted: <b>${fmt(r.votes)}</b></span></div>
-      <div class="vpd-bar"><span style="width:${width}%"></span></div>
+      ${bar}${partyLine}
       <div class="vpd-detail">${detail}</div>
     </div>`;
   }).join('') || '<div class="county-detail-note">Nothing matches those filters.</div>';
 
   noteEl.textContent = 'Each update is counted on the day it was logged (Florida time). Weeks run Monday to Sunday. Days and weeks still in progress are marked "so far" and left out of the averages.';
+}
+
+// The top box: Democratic / Republican / NPA-Other votes counted on the day of the latest logged update (11 AM through 11 PM),
+// summed from statewide_history.csv. It keeps showing that day until the next day's first (11 AM) update changes the date.
+async function renderDayPartyCard(){
+  const card = document.getElementById('dayPartyCard'); if(!card) return;
+  let rows = null;
+  try{ rows = await fetchCSV(STATEWIDE_HISTORY_PATH); }catch(e){ rows = null; }
+  const ups = rows ? votesAddedPerUpdate(rows) : [];
+  if(!ups.length) return;                              // keep whatever is showing
+  const lastKey = vpdKeyOfDate(ups[ups.length - 1].time);
+  const day = ups.filter(u => vpdKeyOfDate(u.time) === lastKey);
+  const sum = f => day.reduce((a, u) => a + f(u), 0);
+  const d = sum(u => u.dAdded), r = sum(u => u.rAdded), n = sum(u => u.nAdded), t = sum(u => u.added);
+  const when = ups[ups.length - 1].time;
+  document.getElementById('dpLabel').textContent = 'Votes counted ' + when.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+  document.getElementById('dpDem').textContent = fmt(d);
+  document.getElementById('dpRep').textContent = fmt(r);
+  document.getElementById('dpOther').textContent = fmt(n);
+  document.getElementById('dpTotal').textContent = fmt(t);
+  document.getElementById('dpSub').textContent = `${day.length} ${day.length === 1 ? 'update' : 'updates'} \u00b7 latest ${vpdClockTime(when)}`;
 }
 
 // Loads the update history (when the panel is on screen) and draws it.
@@ -3863,9 +3928,10 @@ async function renderVotesPerDay(){
   drawVotesPerDay();
 }
 
-['vpdView', 'vpdTime', 'vpdDay'].forEach(id => {
+['vpdView', 'vpdTime', 'vpdDay', 'vpdShow'].forEach(id => {
   document.getElementById(id).addEventListener('change', e => {
     if(id === 'vpdView') votesPerDayView = e.target.value;
+    else if(id === 'vpdShow') votesPerDayShow = e.target.value;
     else if(id === 'vpdTime') votesPerDayHour = e.target.value;
     else votesPerDayWeekday = e.target.value;
     drawVotesPerDay();
@@ -4815,6 +4881,7 @@ function render(){
   // auto-refresh tick -- rather than being fetched once and cached.
   renderStatewideHistoryCharts();
   renderVotesPerDay();
+  renderDayPartyCard();
 }
 
 document.getElementById('refreshBtn').addEventListener('click', () => loadLatestCSV(true));

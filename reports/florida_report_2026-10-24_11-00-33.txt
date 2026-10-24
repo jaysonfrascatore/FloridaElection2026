@@ -1,0 +1,186 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Election ID:
+FL-2026-General
+
+Run Time:
+Updated at October 24th, 2026 at 11:00am Eastern Time
+
+Counties Loaded:
+67 / 67
+
+Updated Counties:
+67
+
+Unchanged Counties:
+False
+
+Rejected County Updates:
+0
+
+STATEWIDE TOTALS
+=================================
+
+DEM:
+953,547
+
+REP:
+946,682
+
+OTHER:
+490,498
+
+TOTAL:
+2,390,727
+
+STATEWIDE SUMMARY
+=================================
+
+🔵 Democrats lead by 6,865 votes statewide.
+
+Margin Change:
+-0.09% toward Republicans
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +27,604
+🔴 REP: +30,752
+🟣 OTHER: +14,629
+🟢 TOTAL: +72,985
+
+REJECTED COUNTY UPDATES
+=================================
+
+
+No county updates were rejected.
+
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+Franklin
+
+Lean R → Likely R
+
+Margin Move:
+-0.033
+
+
+
+Hamilton
+
+Likely R → Safe R
+
+Margin Move:
+-0.062
+
+
+
+Jefferson
+
+Toss Up R → Lean R
+
+Margin Move:
+-0.006
+
+
+
+Liberty
+
+Likely R → Safe R
+
+Margin Move:
+-0.057
+
+
+
+Madison
+
+Likely D → Toss Up D
+
+Margin Move:
+-0.089
+
+
+
+Miami-Dade
+
+Likely D → Lean D
+
+Margin Move:
+-0.004
+
+
+
+Volusia
+
+Lean R → Likely R
+
+Margin Move:
+-0.004
+
+
+
+Wakulla
+
+Likely R → Safe R
+
+Margin Move:
+-0.087
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️11 AM Florida EV & VBM Update
+
+New votes have been cast in 67 counties over the last hour, with the largest update coming from Hillsborough County.
+
+🔵 DEM: +27,604
+🔴 REP: +30,752
+🟣 OTHER: +14,629
+🟢 TOTAL: +72,985
+
+🔵 Democrats lead by 6,865 votes statewide.
+
+🔴 Margin Change: -0.09% toward Republicans
+
+Largest County Updates
+
+
+🥇Hillsborough County
+
+🔵 DEM: +4,042
+🔴 REP: +3,106
+🟣 OTHER: +1,965
+🟢 TOTAL: +9,113
+
+
+
+🥈Miami-Dade County
+
+🔵 DEM: +2,097
+🔴 REP: +2,399
+🟣 OTHER: +1,522
+🟢 TOTAL: +6,018
+
+
+
+🥉Pinellas County
+
+🔵 DEM: +2,461
+🔴 REP: +1,743
+🟣 OTHER: +1,086
+🟢 TOTAL: +5,290
+
+
+
+#Florida #EarlyVoting #VoteByMail

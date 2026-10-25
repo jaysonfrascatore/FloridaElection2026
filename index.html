@@ -907,6 +907,16 @@
     display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;
   }
   .map-header-row h2{ margin-bottom:0; }
+  .map-header-row{ flex-direction:column; align-items:stretch; gap:8px; }
+  .map-title-wrap{ flex:0 0 auto; min-width:0; }
+  #mapSubtitle{ font-family:var(--mono); font-size:11px; color:var(--gold); margin-top:3px; }
+  #mapSubtitle:empty{ display:none; }
+  .map-controls{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-start; }
+  #dayViewSelect{ min-width:0; max-width:100%; }
+  @media (max-width:640px){
+    #dayViewSelect{ flex:1 1 100%; min-width:0; max-width:100%; }
+    .map-controls button{ flex:1 1 auto; justify-content:center; white-space:nowrap; padding:7px 10px; }
+  }
   #countyZoomResetBtn{
     display:none; align-items:center; gap:6px;
     background:var(--panel-2); border:1px solid var(--border); color:var(--text);
@@ -1208,14 +1218,14 @@
   <div class="grid" id="liveGrid">
     <div class="panel">
       <div class="map-header-row">
-        <h2 id="mapTitle">Rating by county</h2>
-        <div style="display:flex; gap:8px; align-items:center;">
+        <div class="map-title-wrap"><h2 id="mapTitle">Rating by county</h2><div id="mapSubtitle"></div></div>
+        <div class="map-controls">
           <select id="dayViewSelect" title="Map the whole state, or the votes counted on a single day" style="display:none;"><option value="full">Full Statewide</option><option value="today">Today only</option></select>
-          <button id="countyZoomPngBtn" title="Download a PNG of this county's map, data, and trend charts">
-            <span>&#8681;</span> Download PNG
-          </button>
           <button id="countyZoomResetBtn" title="Return to the statewide map">
             <span>&#8635;</span> <span id="countyZoomResetLabel">Reset Zoom</span>
+          </button>
+          <button id="countyZoomPngBtn" title="Download a PNG of this county's map, data, and trend charts">
+            <span>&#8681;</span> Download PNG
           </button>
         </div>
       </div>
@@ -3831,7 +3841,8 @@ async function renderMap(){
   await ensureGeojson();
   const m = METRICS[currentMetric];
   const activeCounties = activeCountiesFor(currentMetric);
-  document.getElementById('mapTitle').textContent = m.title + (currentMetric === 'demrepnpa' && btDayLabel() ? ' \u2014 ' + btDayLabel() : '');
+  document.getElementById('mapTitle').textContent = m.title;
+  document.getElementById('mapSubtitle').textContent = (currentMetric === 'demrepnpa' && btDayLabel()) ? btDayLabel() : '';
   const dvs = document.getElementById('dayViewSelect');
   if(dvs) dvs.style.display = (currentMetric === 'demrepnpa' && (btDayKeys.length || btDaySel !== 'full')) ? '' : 'none';
   const rcb = document.getElementById('dailyRecapBtn');

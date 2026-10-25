@@ -7,16 +7,16 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 24th, 2026 at 11:00pm Eastern Time
+Updated at October 25th, 2026 at 11:00am Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-13
+66
 
 Unchanged Counties:
-True
+False
 
 Rejected County Updates:
 0
@@ -25,21 +25,21 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-1,035,058
+1,052,931
 
 REP:
-1,032,366
+1,049,209
 
 OTHER:
-535,543
+545,393
 
 TOTAL:
-2,602,967
+2,647,533
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 2,692 votes statewide.
+🔵 Democrats lead by 3,722 votes statewide.
 
 Margin Change:
 +0.02% toward Democrats
@@ -47,10 +47,10 @@ Margin Change:
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +2,751
-🔴 REP: +2,101
-🟣 OTHER: +1,309
-🟢 TOTAL: +6,161
+🔵 DEM: +17,873
+🔴 REP: +16,843
+🟣 OTHER: +9,850
+🟢 TOTAL: +44,566
 
 REJECTED COUNTY UPDATES
 =================================
@@ -64,7 +64,12 @@ RATING / FORECAST CHANGES
 =================================
 
 
-No rating changes detected.
+Brevard
+
+Safe R → Likely R
+
+Margin Move:
++0.004
 
 
 
@@ -72,46 +77,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️11 PM Florida EV & VBM Update
+🗳️11 AM Florida EV & VBM Update
 
-New votes have been cast in 13 counties over the last hour, with the largest update coming from Lake County.
+New votes have been cast in 66 counties over the last hour, with the largest update coming from Hillsborough County.
 
-🔵 DEM: +2,751
-🔴 REP: +2,101
-🟣 OTHER: +1,309
-🟢 TOTAL: +6,161
+🔵 DEM: +17,873
+🔴 REP: +16,843
+🟣 OTHER: +9,850
+🟢 TOTAL: +44,566
 
-🔵 Democrats lead by 2,692 votes statewide.
+🔵 Democrats lead by 3,722 votes statewide.
 
 🔴 Margin Change: +0.02% toward Democrats
 
 Largest County Updates
 
 
-🥇Lake County
+🥇Hillsborough County
 
-🔵 DEM: +1,269
-🔴 REP: +1,684
-🟣 OTHER: +813
-🟢 TOTAL: +3,766
-
-
-
-🥈Palm Beach County
-
-🔵 DEM: +1,060
-🔴 REP: +220
-🟣 OTHER: +330
-🟢 TOTAL: +1,610
+🔵 DEM: +2,975
+🔴 REP: +2,119
+🟣 OTHER: +1,509
+🟢 TOTAL: +6,603
 
 
 
-🥉Leon County
+🥈Miami-Dade County
 
-🔵 DEM: +215
-🔴 REP: +81
-🟣 OTHER: +44
-🟢 TOTAL: +340
+🔵 DEM: +1,723
+🔴 REP: +1,993
+🟣 OTHER: +1,261
+🟢 TOTAL: +4,977
+
+
+
+🥉Broward County
+
+🔵 DEM: +2,033
+🔴 REP: +823
+🟣 OTHER: +922
+🟢 TOTAL: +3,778
 
 
 

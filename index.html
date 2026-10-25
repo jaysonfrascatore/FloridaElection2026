@@ -1380,6 +1380,10 @@
           <h3 id="countyDetailShareLabel">Vote Share Over Time</h3>
           <div class="county-detail-chart" id="countyDetailShareChart"></div>
         </div>
+        <div class="county-detail-chart-wrap" id="countyMarginWrap" style="display:none;">
+          <h3>Margin Over Time</h3>
+          <div class="county-detail-chart" id="countyDetailMarginChart"></div>
+        </div>
       </div>
 
       <div class="tweet-carousel">
@@ -1453,7 +1457,7 @@
        tied to clicking a county). Reuses the same chart styling as the
        per-county trend view for consistency. -->
   <div class="panel" id="statewideHistoryPanel" style="margin-top:18px;">
-    <h2>Statewide Historical Trend</h2>
+    <h2 id="statewideTrendTitle">Statewide Historical Trend</h2>
     <div class="drop-board" id="largestDropsBoard">
       <div class="drop-board-empty">The largest statewide drops will be listed here once at least two updates have been logged.</div>
     </div>
@@ -1471,6 +1475,10 @@
     <div class="county-detail-chart-wrap">
       <h3>Vote Share Over Time</h3>
       <div class="county-detail-chart" id="statewideShareChart"></div>
+    </div>
+    <div class="county-detail-chart-wrap" id="statewideMarginWrap" style="display:none;">
+      <h3>Margin Over Time</h3>
+      <div class="county-detail-chart" id="statewideMarginChart"></div>
     </div>
   </div>
 
@@ -3147,7 +3155,7 @@ async function btDayRefresh(rerender){
   const sel = document.getElementById('dayViewSelect');
   try{
     btTypeRows = await fetchCSV('data/county_history_types.csv');
-    btTypeRows.forEach(r => { const d = parseHistoryTimestamp(r.Timestamp); r._k = d ? btKeyOf(d) : 0; });
+    btTypeRows.forEach(r => { const d = parseHistoryTimestamp(r.Timestamp); r._k = d ? btKeyOf(d) : 0; r._t = d; });
     btTypeRows = btTypeRows.filter(r => r._k);
     btDayKeys = Array.from(new Set(btTypeRows.map(r => r._k)));
   }catch(e){ btTypeRows = null; btDayKeys = []; }
@@ -3161,6 +3169,94 @@ async function btDayRefresh(rerender){
   const sel = document.getElementById('dayViewSelect'); if(!sel) return;
   sel.addEventListener('change', () => { btDaySel = sel.value; btBuildDay(); if(zoomedCounty){ refreshZoomedCountyView(); btRender(); } else { renderMap(); renderTable(); } });
 })();
+
+
+// ---- Trend charts for the selected ballot type / day (Statewide Historical Trend panel) ----
+// With Mail / Early Vote / Election Day or a single day selected, the panel's charts are built from
+// data/county_history_types.csv (each county's running type totals) instead of the all-ballots history.
+let btTrendKey = 'default', btTrendCall = 0, btCountyKey = '';
+function btCountyTrendKey(){ return [zoomedCounty, btTrendActive() ? btView + '|' + btDaySel + '|' + btTypeRows.length : 'default'].join('#'); }
+// A county's trend rows for the selected ballot type / day, shaped like county_history_full rows so the existing county charts can draw them.
+function btCountyRows(countyName){
+  const c = COUNTIES.find(x => x.county === countyName); if(!c) return [];
+  return btStatewideSeries(c.code).map(p => { const t = p.d + p.r + p.n;
+    return { _time:p.time, DEM:p.d, REP:p.r, NPA:p.n, OTHER:0, IND:0, 'DEM %':t ? p.d / t : 0, 'REP %':t ? p.r / t : 0, 'NPA/Other %':t ? p.n / t : 0, Note:'' }; });
+}
+function btTrendActive(){ return (btView !== 'all' || btDaySel !== 'full') && !!btTypeRows && btTypeRows.length > 0 && currentMetric === 'demrepnpa'; }
+function btStatewideSeries(code){
+  const T = btView === 'all' ? ['VBM','EV','ED'] : [{ vbm:'VBM', ev:'EV', ed:'ED' }[btView]];
+  const rows = btTypeRows.filter(r => !code || r.Code === code).sort((a, b) => a._t - b._t);
+  const last = {}, out = [];
+  let prev = null, i = 0;
+  while(i < rows.length){
+    const t = rows[i]._t.getTime();
+    while(i < rows.length && rows[i]._t.getTime() === t){
+      const r = rows[i]; let d = 0, rp = 0, n = 0;
+      T.forEach(x => { d += num(r['DEM ' + x]); rp += num(r['REP ' + x]); n += num(r['NPA ' + x]) + num(r['OTHER ' + x]); });
+      last[r.Code] = [d, rp, n]; i++;
+    }
+    let D = 0, R = 0, N = 0;
+    Object.keys(last).forEach(k => { D += last[k][0]; R += last[k][1]; N += last[k][2]; });
+    if(prev && prev[0] === D && prev[1] === R && prev[2] === N) continue;
+    prev = [D, R, N];
+    out.push({ time:new Date(t), d:D, r:R, n:N });
+  }
+  const key = btSelKey();
+  if(key === null) return out;
+  let base = { d:0, r:0, n:0 };
+  out.forEach(p => { if(btKeyOf(p.time) < key) base = p; });
+  const day = out.filter(p => btKeyOf(p.time) === key).map(p => ({ time:p.time, d:p.d - base.d, r:p.r - base.r, n:p.n - base.n }));
+  if(day.length) day.unshift({ time:new Date(Math.floor(key / 10000), Math.floor(key / 100) % 100 - 1, key % 100), d:0, r:0, n:0 });
+  return day;
+}
+async function renderTypeTrend(){
+  const cumEl = document.getElementById('statewideCumulativeChart'), shareEl = document.getElementById('statewideShareChart'), marEl = document.getElementById('statewideMarginChart');
+  if(!cumEl || !shareEl || !marEl) return;
+  const call = ++btTrendCall;
+  const pts = btStatewideSeries();
+  document.getElementById('statewideTrendTitle').textContent = 'Statewide Historical Trend — ' + (btView === 'all' ? 'Total Vote' : BT_LABELS[btView]) + (btDayLabel() ? ' — ' + btDayLabel() : '');
+  document.getElementById('largestDropsBoard').style.display = 'none';
+  document.getElementById('statewideMarginWrap').style.display = 'block';
+  if(pts.length < 2){
+    const msg = '<div class="county-detail-note">No votes of this type have been logged for this selection yet. The trend builds here as updates come in.</div>';
+    cumEl.innerHTML = msg; shareEl.innerHTML = ''; marEl.innerHTML = '';
+    document.getElementById('statewideWindowNote').style.display = 'none';
+    return;
+  }
+  document.getElementById('statewideWindowNote').style.display = '';
+  const times = pts.map(p => p.time), dem = pts.map(p => p.d), rep = pts.map(p => p.r), npaOther = pts.map(p => p.n);
+  const tot = pts.map(p => p.d + p.r + p.n);
+  const pc = (v, i) => tot[i] ? v / tot[i] * 100 : 0;
+  const demPct = dem.map(pc), repPct = rep.map(pc), npaPct = npaOther.map(pc);
+  const margin = pts.map((p, i) => pc(p.d - p.r, i));
+  lastStatewideCumulativeData = { times, dem, rep, npaOther };
+  await renderCumulativeChartWindowed('statewideCumulativeChart', 'statewideWindowNote', lastStatewideCumulativeData, statewideShowAllCumulative);
+  if(call !== btTrendCall) return;
+  const lineBase = { mode:'lines+markers', marker:{ size:6 }, line:{ width:2.5 } };
+  Plotly.newPlot(shareEl, [
+    { ...lineBase, x:times, y:demPct, name:'DEM %', line:{ color:'#5b9bd9', width:2.5 } },
+    { ...lineBase, x:times, y:repPct, name:'REP %', line:{ color:'#d4675a', width:2.5 } },
+    { ...lineBase, x:times, y:npaPct, name:'NPA/Other %', line:{ color:'#c77dff', width:2.5 } }
+  ], { ...COUNTY_DETAIL_CHART_LAYOUT_BASE, yaxis:{ ...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{ text:'%', font:{ size:10 } }, range:pctChartRange([demPct, repPct, npaPct]), autorange:false, ticksuffix:'%' } }, { displayModeBar:false, responsive:true });
+  attachSortedHoverTooltip(shareEl, fmtShareHoverValue);
+  const mTxt = margin.map(m => (m >= 0 ? 'D+' : 'R+') + Math.abs(m).toFixed(2));
+  Plotly.newPlot(marEl, [
+    { ...lineBase, x:times, y:margin, name:'Margin (D−R)', line:{ color:'#80ed99', width:2.5 }, text:mTxt, hovertemplate:'%{text}<extra></extra>' }
+  ], { ...COUNTY_DETAIL_CHART_LAYOUT_BASE, showlegend:false, yaxis:{ ...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{ text:'' }, tickformat:'.2f', ticksuffix:'%', zeroline:true, zerolinecolor:'#7c879c' } }, { displayModeBar:false, responsive:true });
+}
+// Called whenever the General Election map redraws: switches the trend panel between the type/day charts and the normal ones.
+function btSyncTrend(){
+  const key = btTrendActive() ? [btView, btDaySel, btTypeRows.length].join('|') : 'default';
+  if(key === btTrendKey) return;
+  btTrendKey = key;
+  if(key === 'default'){
+    document.getElementById('statewideTrendTitle').textContent = 'Statewide Historical Trend';
+    document.getElementById('largestDropsBoard').style.display = '';
+    document.getElementById('statewideMarginWrap').style.display = 'none';
+    document.getElementById('statewideWindowNote').style.display = '';
+    statewideHistoryCallId++; renderStatewideHistoryCharts(true);
+  }else renderTypeTrend();
+}
 
 // ---- Ballot-type views on the General Election tab (vote by mail / early vote / Election Day) ----
 // Reads the DEM/REP/NPA/OTHER x VBM/EV/ED columns the tracker CSV already carries. The default
@@ -3209,6 +3305,7 @@ function btLastUpdatedText(){
 }
 function btRender(){
   const box = document.getElementById('btView'); if(!box) return;
+  btSyncTrend();
   const on = btHas && currentMetric === 'demrepnpa';
   box.style.display = on ? 'block' : 'none'; if(!on) return;
   const f = n => n.toLocaleString();
@@ -8190,6 +8287,7 @@ function refreshZoomedCountyView(){
   if(!c) return;
   renderZoomedCountyMap(c);
   renderCountyZoomInfoPanel(c);
+  if(currentMetric === 'demrepnpa' && btCountyKey && btCountyTrendKey() !== btCountyKey) loadAndRenderCountyCharts(zoomedCounty).catch(() => {});
 }
 
 // ------------------------------------------------------------
@@ -8291,9 +8389,18 @@ async function loadAndRenderCountyCharts(countyName){
     .filter(r => r._time)
     .sort((a,b) => a._time - b._time);
 
-  document.getElementById('countyDetailCumulativeLabel').textContent = 'Cumulative Votes';
-  document.getElementById('countyDetailShareLabel').textContent = 'Vote Share Over Time';
+  const typeTrend = btTrendActive();
+  btCountyKey = btCountyTrendKey();
+  const typeSuffix = typeTrend ? ' \u2014 ' + (btView === 'all' ? 'Total Vote' : BT_LABELS[btView]) + (btDayLabel() ? ' \u2014 ' + btDayLabel() : '') : '';
+  document.getElementById('countyDetailCumulativeLabel').textContent = 'Cumulative Votes' + typeSuffix;
+  document.getElementById('countyDetailShareLabel').textContent = 'Vote Share Over Time' + typeSuffix;
+  document.getElementById('countyMarginWrap').style.display = typeTrend ? 'block' : 'none';
   renderLiveTurnoutTrack(countyName, rows).catch(() => {});
+  if(typeTrend){
+    document.getElementById('countyZoomBarChart').innerHTML = '';
+    await renderCountyDetailCharts(btCountyRows(countyName), true);
+    return;
+  }
   if(currentMetric === 'dropwinner'){
     // The bar chart (who won each drop) is still specific to Drop
     // Winners, but the two line charts now show the same vote-count/
@@ -9169,6 +9276,7 @@ let lastStatewideCumulativeData = null;
 const EV_LINE_COLOR = '#f7e89b';
 function evStartLine(countyName, times){
   const d = EV_DATA[countyName];
+  if(btDaySel !== 'full') return { shapes:[], annotations:[] };   // a single day's chart has no use for the 'early voting began' marker
   if(!d || !times || !times.length) return { shapes:[], annotations:[] };
   const [mo, dy] = d[0].split('/').map(Number);
   const x = new Date(2026, mo - 1, dy, 7, 0);   // polls open at 7:00 AM
@@ -9237,7 +9345,7 @@ async function renderCumulativeChartWindowed(elId, noteElId, data, showAll){
   if(noteEl) noteEl.style.display = (showAll || times.length <= CUMULATIVE_WINDOW_SIZE) ? 'none' : 'block';
 }
 
-async function renderCountyDetailCharts(countyRows){
+async function renderCountyDetailCharts(countyRows, typeMode){
   const cumulativeEl = document.getElementById('countyDetailCumulativeChart');
   const shareEl = document.getElementById('countyDetailShareChart');
 
@@ -9245,6 +9353,10 @@ async function renderCountyDetailCharts(countyRows){
     cumulativeEl.innerHTML = '<div class="county-detail-note">No historical data logged for this county yet. Once the tracker has run a few times, its trend will build here.</div>';
     shareEl.innerHTML = '';
     lastCountyCumulativeData = null;
+    if(typeMode){
+      cumulativeEl.innerHTML = '<div class="county-detail-note">No votes of this type have been logged for this county in this selection yet.</div>';
+      document.getElementById('countyDetailMarginChart').innerHTML = '';
+    }
     return;
   }
 
@@ -9281,6 +9393,14 @@ async function renderCountyDetailCharts(countyRows){
     yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:pctChartRange([demPct, repPct, npaOtherPct]), autorange:false, ticksuffix:'%'}
   }, {displayModeBar:false, responsive:true});
   attachSortedHoverTooltip(shareEl, fmtShareHoverValue, ratingLookup);
+  if(typeMode){
+    const margin = countyRows.map(r => (num(r.DEM) - num(r.REP)) / Math.max(1, num(r.DEM) + num(r.REP) + num(r.NPA)) * 100);
+    const mTxt = margin.map(m => (m >= 0 ? 'D+' : 'R+') + Math.abs(m).toFixed(2));
+    await Plotly.newPlot('countyDetailMarginChart', [
+      { ...lineBase, x:times, y:margin, name:'Margin (D\u2212R)', line:{ color:'#80ed99', width:2.5 }, text:mTxt, hovertemplate:'%{text}<extra></extra>' }
+    ], { ...COUNTY_DETAIL_CHART_LAYOUT_BASE, showlegend:false, shapes:evl2.shapes, annotations:evl2.annotations,
+      yaxis:{ ...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{ text:'' }, tickformat:'.2f', ticksuffix:'%', zeroline:true, zerolinecolor:'#7c879c' } }, { displayModeBar:false, responsive:true });
+  }
 }
 
 // ============================================================
@@ -9512,7 +9632,8 @@ async function refreshLargestDropsBoard(rows){
   }
 }
 
-async function renderStatewideHistoryCharts(){
+async function renderStatewideHistoryCharts(force){
+  if(!force && btTrendActive()){ renderTypeTrend(); return; }
   const cumulativeEl = document.getElementById('statewideCumulativeChart');
   const shareEl = document.getElementById('statewideShareChart');
   if(!cumulativeEl || !shareEl) return;

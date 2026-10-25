@@ -2054,9 +2054,20 @@ function categoryForNpaDisplay(c){
   }
   return categoryForNpaMargin(c);
 }
+// Day view only (the General Election map's "Today only" / dated views): a day is a result, not a forecast,
+// so there is no Toss Up there -- a county the normal tiers would call a Toss Up is Tilt D or Tilt R by
+// whoever has more raw votes. Every other view still uses Toss Up.
+function categoryForDayView(c){
+  const base = categoryForNpaDisplay(c);
+  if(base === 'Toss Up' && typeof btDayActive === 'function' && btDayActive()) return c.dem > c.rep ? 'Tilt D' : (c.rep > c.dem ? 'Tilt R' : 'Tie');
+  return base;
+}
 // RATING_CATS plus the pending "Not Updated" state and the NPA/Other
 // overrides above — used only by the D vs R vs NPA map/table/legend.
+const TILT_D_COLOR = '#caf0f8', TILT_R_COLOR = '#ffc8dd';
 const NPA_DISPLAY_CATS = RATING_CATS.concat([
+  { key:'Tilt D', color: TILT_D_COLOR },
+  { key:'Tilt R', color: TILT_R_COLOR },
   { key:'Not Updated', color: NOT_UPDATED_COLOR },
   { key:'NPA/Other Lead', color: NPA_OTHER_LEAD_COLOR },
   { key:'3-Way Tie', color: THREE_WAY_TIE_COLOR }
@@ -2995,9 +3006,15 @@ const RATING_KEY_ROWS = [
   ['Safe D','Safe D'], ['Likely D','Likely D'], ['Lean D','Leans D'], ['Toss Up','Toss Up'],
   ['Lean R','Leans R'], ['Likely R','Likely R'], ['Safe R','Safe R']
 ].map(([k, label]) => ({ label, color: RATING_CATS.find(c => c.key === k).color }));
-function ratingSideLegendHtml(){
+function ratingKeyRows(day){
+  if(!day) return RATING_KEY_ROWS;
+  const rows = RATING_KEY_ROWS.slice(), i = rows.findIndex(r => r.label === 'Toss Up');
+  rows.splice(i, 1, { label:'Tilt D', color:TILT_D_COLOR }, { label:'Tilt R', color:TILT_R_COLOR });
+  return rows;
+}
+function ratingSideLegendHtml(day){
   return `<div class="side-legend-title">County rating</div>` +
-    RATING_KEY_ROWS.map(r =>
+    ratingKeyRows(day).map(r =>
       `<div class="side-legend-row"><span class="sq" style="background:${r.color}"></span><span class="lbl">${r.label}</span></div>`
     ).join('');
 }
@@ -3225,7 +3242,7 @@ const METRICS = {
   // in as the live feed updates. Same rating-tier styling as Primary Election, but
   // the tier is decided from a margin that folds NPA into the denominator
   // alongside DEM and REP, so heavy-NPA counties can show a lighter lean.
-  demrepnpa: { title:'General Election rating by county', categorical:true, cats:NPA_DISPLAY_CATS, catFn:categoryForNpaDisplay, ratingKey:true },
+  demrepnpa: { title:'General Election rating by county', categorical:true, cats:NPA_DISPLAY_CATS, catFn:categoryForDayView, ratingKey:true },
   // Turnout as a share of registered voters, in nine color ranges (see
   // TURNOUT_BINS). The raw vote count is still in the hover, the county
   // page and the table. sideLegend: the key sits beside the map as a
@@ -3349,7 +3366,7 @@ function tooltipText(list){
           { label:'NPA/Other', count:combinedNpaOther, pct:combinedShare }
         ]);
         return `<b>${c.county}</b><br>` +
-          `Rating: ${categoryForNpaDisplay(c)}<br>` +
+          `Rating: ${categoryForDayView(c)}<br>` +
           `${lines}<br>` +
           `\u{1F7E2} Total ${fmt(c.total)}<br>` +
           `Margin ${(c.marginNpaAdj>=0?'+':'')}${pct(c.marginNpaAdj)}`;
@@ -3359,7 +3376,7 @@ function tooltipText(list){
       const npaDem = c.npa * (npaSplitToDem/100), npaRep = c.npa - npaDem;
       const margin = marginWithNpaSplit(c);
       return `<b>${c.county}</b><br>` +
-        `Rating: ${categoryForNpaDisplay(c)}<br>` +
+        `Rating: ${categoryForDayView(c)}<br>` +
         `\u{1F535} DEM ${fmt(c.dem)} \u2192 \u{1F535}${fmt(Math.round(demToD))} D / \u{1F534}${fmt(Math.round(demToR))} R<br>` +
         `\u{1F534} REP ${fmt(c.rep)} \u2192 \u{1F534}${fmt(Math.round(repToR))} R / \u{1F535}${fmt(Math.round(repToD))} D<br>` +
         `\u{1F7E3} NPA ${fmt(c.npa)} \u2192 \u{1F535}${fmt(Math.round(npaDem))} D / \u{1F534}${fmt(Math.round(npaRep))} R<br>` +
@@ -3534,7 +3551,7 @@ function buildMapTrace(metric, activeCounties){
     }
     // General Election: the rating key beside the map too (the chips under
     // it stay, since they also cover Not Updated / NPA lead / ties).
-    if(m.ratingKey) sideLegendHtml = ratingSideLegendHtml();
+    if(m.ratingKey) sideLegendHtml = ratingSideLegendHtml(btDayActive());
     if(m.evLegend){ legendVisible = false; legendHtml = ''; sideLegendHtml = evSideLegendHtml(activeCounties); }
   }else if(m.symmetric){
     const maxAbs = Math.max(0.01, ...activeCounties.map(c=>Math.abs(m.get(c))));
@@ -3736,7 +3753,7 @@ function renderTable(){
     </tr>
   `;
     }
-    const cat = useNpaAdj ? categoryForNpaDisplay(c) : c.category;
+    const cat = useNpaAdj ? categoryForDayView(c) : c.category;
     const pending = useNpaAdj && isCountyPending(c);
     const d = pending ? npaDisplayRecord(c) : c;
     const marginVal = useNpaAdj ? (pending ? 0 : activeNpaMargin(c)) : c.marginPct;
@@ -5767,7 +5784,12 @@ function drawTurnoutLegendOnCanvas(ctx, x, bottomY, scale){
 // map screenshots and the Margin Move infographic draw the same header.
 function drawStatewideHeader(ctx, summary, scale, titleText){
   ctx.fillStyle = '#e9edf5';
-  ctx.font = `600 ${Math.round(24*scale)}px Inter, Arial, sans-serif`;
+  // Long titles (e.g. a ballot type plus a day) shrink to fit instead of running off the edge.
+  let titlePx = Math.round(24*scale);
+  ctx.font = `600 ${titlePx}px Inter, Arial, sans-serif`;
+  while(titlePx > 12*scale && ctx.measureText(titleText).width > ctx.canvas.width - 48*scale){
+    titlePx -= 1; ctx.font = `600 ${titlePx}px Inter, Arial, sans-serif`;
+  }
   ctx.fillText(titleText, 24*scale, 40*scale);
 
   if(summary.statewideTie){
@@ -6626,7 +6648,7 @@ async function exportStatewidePng(btn, opts = {}){
     // The NPA block, when shown, stacks right above it.
     if(isGeneral){
       const keyTop = drawKeyOnCanvas(ctx, 24*scale, headerH*scale + mapImg.height - 24*scale, scale,
-        'COUNTY RATING', '', RATING_KEY_ROWS);
+        'COUNTY RATING', '', ratingKeyRows(btDayActive()));
       if(shiftSliderActive){
         const h = drawNpaHypotheticalBlock(ctx, 20*scale, 0, scale, 230, true);
         drawNpaHypotheticalBlock(ctx, 20*scale, keyTop - 14*scale - h, scale, 230, false);
@@ -6651,7 +6673,7 @@ async function exportStatewidePng(btn, opts = {}){
       ctx.font = `600 ${Math.round(15*scale)}px Inter, Arial, sans-serif`;
       const typeTableOn = isGeneral && btHas && !historicalTickFor(currentMetric);
       // The "Margin move / Counties updated" line belongs to the Vote Totals screenshot only; Mail / Early / Election Day screenshots leave it off.
-      if(!(typeTableOn && btView !== 'all')) ctx.fillText(
+      if(!(typeTableOn && btView !== 'all') && !btDayActive()) ctx.fillText(
         `Margin move: ${typeTableOn ? COUNTIES.filter(c => c.ratingChanged).length : summary.marginMoveCount} counties with a rating change \u00b7 Counties updated: ${typeTableOn ? COUNTIES.filter(c => c.totalNew).length : summary.countiesUpdated}`,
         24*scale, footerY0 + 30*scale
       );

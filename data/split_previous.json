@@ -1,15 +1,15 @@
 {
-  "run_time": "Updated at October 25th, 2026 at 3:00pm",
+  "run_time": "Updated at October 25th, 2026 at 7:00pm",
   "previous": {
     "vbm": [
-      597729,
-      497246,
-      296600
+      602689,
+      499847,
+      298479
     ],
     "ev": [
-      455202,
-      551963,
-      248793
+      487231,
+      585260,
+      265814
     ],
     "ed": [
       0,
@@ -18,237 +18,237 @@
     ]
   },
   "last_changed": {
-    "vbm": "Updated at October 25th, 2026 at 3:00pm",
-    "ev": "Updated at October 25th, 2026 at 3:00pm",
+    "vbm": "Updated at October 25th, 2026 at 7:00pm",
+    "ev": "Updated at October 25th, 2026 at 7:00pm",
     "ed": null
   },
   "county_last_changed": {
     "ALA": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "BAK": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 24th, 2026 at 7:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "BAY": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 24th, 2026 at 7:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "BRA": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": null,
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "BRE": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "BRO": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "CAL": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": null,
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "CHA": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 25th, 2026 at 11:00am",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "CIT": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "CLA": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "CLL": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": null,
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "CLM": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "DES": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 24th, 2026 at 7:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "DIX": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 24th, 2026 at 7:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "DUV": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 24th, 2026 at 7:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "ESC": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "FLA": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "FRA": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "GAD": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "GIL": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "GLA": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 24th, 2026 at 7:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "GUL": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 24th, 2026 at 7:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "HAM": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": null,
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "HAR": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": null,
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "HEN": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 25th, 2026 at 11:00am",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "HER": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": null,
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "HIG": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 24th, 2026 at 7:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "HIL": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "HOL": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "IND": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 25th, 2026 at 11:00am",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "JAC": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 24th, 2026 at 7:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "JEF": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 25th, 2026 at 11:00am",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "LAF": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 24th, 2026 at 7:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "LAK": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 11:00am",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "LEE": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": null,
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "LEO": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "LEV": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": null,
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "LIB": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": null,
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "MAD": {
@@ -258,171 +258,171 @@
       "ed": null
     },
     "MAN": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": null,
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "MRN": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 25th, 2026 at 11:00am",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "MRT": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "DAD": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 24th, 2026 at 7:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "MON": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "NAS": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 24th, 2026 at 7:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "OKA": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": null,
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "OKE": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": null,
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "ORA": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "OSC": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": null,
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "PAL": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "PAS": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "PIN": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "POL": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 24th, 2026 at 7:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "PUT": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 25th, 2026 at 11:00am",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "SAN": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 24th, 2026 at 7:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "SAR": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 24th, 2026 at 7:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "SEM": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "STJ": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 24th, 2026 at 7:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "STL": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "SUM": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "SUW": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": null,
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "TAY": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 24th, 2026 at 7:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "UNI": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 25th, 2026 at 11:00am",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "VOL": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "WAK": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 25th, 2026 at 11:00am",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "WAL": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
-      "vbm": "Updated at October 25th, 2026 at 3:00pm",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
+      "vbm": "Updated at October 25th, 2026 at 7:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     },
     "WAS": {
-      "all": "Updated at October 25th, 2026 at 3:00pm",
+      "all": "Updated at October 25th, 2026 at 7:00pm",
       "vbm": "Updated at October 25th, 2026 at 11:00am",
-      "ev": "Updated at October 25th, 2026 at 3:00pm",
+      "ev": "Updated at October 25th, 2026 at 7:00pm",
       "ed": null
     }
   }

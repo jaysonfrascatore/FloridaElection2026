@@ -6794,6 +6794,28 @@ function drawTypeTableFooter(ctx, footerY0, width, scale){
   });
   ctx.textAlign = 'left';
   const allTotal = allTot;
+  if(btDayActive()){
+    // A single day's votes against all registered voters would only ever read "<1%", so a day view lists
+    // the three closest counties of that day in the turnout bar's place.
+    const list = activeCountiesFor('demrepnpa');
+    const withM = c => ({ n:c.county, m:(c.dem - c.rep) / Math.max(1, c.dem + c.rep + c.ind + c.npa + c.other) * 100, t:c.total });
+    let pool = list.filter(c => c.total >= 200).map(withM);
+    if(pool.length < 3) pool = list.filter(c => c.total > 0).map(withM);
+    const close = pool.sort((p, q) => Math.abs(p.m) - Math.abs(q.m)).slice(0, 3);
+    const y = footerY0 + 194*scale;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = GRAY; ctx.font = `600 ${Math.round(13*scale)}px ${mono}`;
+    ctx.fillText('CLOSEST COUNTIES', 24*scale, y);
+    close.forEach((r, i) => {
+      const x0 = (250 + i * 215) * scale;
+      ctx.fillStyle = NEUTRAL; ctx.font = `700 ${Math.round(15*scale)}px ${sans}`;
+      ctx.fillText(r.n, x0, y);
+      const w = ctx.measureText(r.n + '  ').width, lab = formatMarginLabel(r.m);
+      ctx.fillStyle = lab === 'Even' ? NEUTRAL : (r.m > 0 ? BLUE : RED); ctx.font = `700 ${Math.round(14*scale)}px ${mono}`;
+      ctx.fillText(lab, x0 + w, y);
+    });
+    return;
+  }
   drawStatewideTurnoutBar(ctx, { totalVotes: allTotal }, footerY0 + 194*scale, width, scale);
 }
 

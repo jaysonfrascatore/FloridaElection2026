@@ -3115,14 +3115,44 @@ function btKeyLabel(k, long){
   const day = d.getDate(), sfx = (day % 100 >= 11 && day % 100 <= 13) ? 'th' : ({1:'st',2:'nd',3:'rd'}[day % 10] || 'th');
   return d.toLocaleDateString('en-US', { month: long ? 'long' : 'short' }) + ' ' + day + (long ? sfx : '');
 }
-function btDayLabel(){ const k = btSelKey(); return (btDaySel === 'full' || !btDayCounties) ? '' : (btSelKey() === btTodayKey() ? 'Today only (' + btKeyLabel(k) + ')' : btKeyLabel(k) + ' only'); }
+// In-person early voting (IPEV) day number and how many counties were open that day, from the county windows in EV_DATA.
+// Day 1 is October 19; the window ends Sunday, November 1. Returns null outside that range.
+function btIpev(key){
+  const m = Math.floor(key / 100) % 100, d = key % 100, md = m * 100 + d;
+  if(md < 1019 || md > 1101) return null;
+  const toNum = s => { const p = s.split('/').map(Number); return p[0] * 100 + p[1]; };
+  const names = Object.keys(EV_DATA);
+  const count = names.filter(n => toNum(EV_DATA[n][0]) <= md && md <= toNum(EV_DATA[n][1])).length;
+  const day = Math.round((new Date(2026, m - 1, d) - new Date(2026, 9, 19)) / 86400000) + 1;
+  return { day, count, total:names.length };
+}
+function btIpevText(key){ const p = btIpev(key); return p ? `IPEV Day ${p.day} (${p.count}/${p.total})` : ''; }
+// Statewide running totals (all ballot types) as of the end of a day, from data/county_history_types.csv.
+function btCumThrough(key){
+  const last = {};
+  (btTypeRows || []).forEach(r => { if(r._k <= key){ const p = last[r.Code]; if(!p || r._t >= p._t) last[r.Code] = r; } });
+  let d = 0, rp = 0, n = 0;
+  Object.keys(last).forEach(c => ['VBM','EV','ED'].forEach(t => { const r = last[c]; d += num(r['DEM ' + t]); rp += num(r['REP ' + t]); n += num(r['NPA ' + t]) + num(r['OTHER ' + t]); }));
+  return { d, r:rp, n, t:d + rp + n };
+}
+function btDayLabel(){
+  const k = btSelKey(); if(btDaySel === 'full' || !btDayCounties) return '';
+  const ip = btIpevText(k), core = ip ? ip + ' \u00b7 ' + btKeyLabel(k) : btKeyLabel(k);
+  return k === btTodayKey() ? 'Today only \u00b7 ' + core : core + ' only';
+}
 function btFillDaySelect(){
   const sel = document.getElementById('dayViewSelect'); if(!sel) return;
   // The list runs from October 18 (the first day worth mapping) through yesterday, newest first.
   const today = btTodayKey(), past = [];
   for(let d = new Date(2026, 9, 18); btKeyOf(d) < today; d.setDate(d.getDate() + 1)) past.push(btKeyOf(d));
   past.reverse();
-  sel.innerHTML = '<option value="full">Full Statewide</option><option value="today">Today only</option>' + past.map(k => `<option value="${k}">${btKeyLabel(k, true)}</option>`).join('');
+  const label = k => {
+    const ip = btIpevText(k);
+    if(!ip) return btKeyLabel(k, true);
+    const votes = btCumThrough(k).t - btCumThrough(k - 1).t;
+    return `${ip} \u00b7 ${btKeyLabel(k)} \u00b7 ${votes.toLocaleString('en-US')} votes`;
+  };
+  sel.innerHTML = '<option value="full">Full Statewide</option><option value="today">Today only</option>' + past.map(k => `<option value="${k}">${label(k)}</option>`).join('');
   sel.value = Array.from(sel.options).some(o => o.value === btDaySel) ? btDaySel : 'full';
   if(sel.value !== btDaySel) btDaySel = sel.value;
 }
@@ -3280,61 +3310,81 @@ async function exportDailyRecapPng(btn){
     const list = out.all, sum = f => list.reduce((s, c) => s + f(c), 0);
     const D = sum(c => c.dem), R = sum(c => c.rep), N = sum(c => c.ind + c.npa + c.other), T = D + R + N;
     if(!T) throw new Error('no votes were counted on that day');
+    const cum = btCumThrough(key);                       // statewide, all days through the end of this one
     const dayRows = btTypeRows.filter(r => r._k === key);
     const stamps = Array.from(new Set(dayRows.map(r => r._t.getTime()))).sort((a, b) => a - b);
     const dt = new Date(Math.floor(key / 10000), Math.floor(key / 100) % 100 - 1, key % 100);
     const title = 'Votes counted ' + dt.toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' });
-    const sub = 'Mail + Early Vote + Election Day · ' + stamps.length + ' update' + (stamps.length === 1 ? '' : 's') + ' · latest ' + new Date(stamps[stamps.length - 1]).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+    const ip = btIpevText(key);
+    const sub = (ip ? ip.replace(/ \((\d+\/\d+)\)/, ' · $1') + ' counties open · ' : '') + stamps.length + ' update' + (stamps.length === 1 ? '' : 's') + ' · latest ' + new Date(stamps[stamps.length - 1]).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
     btForceTilt = true;
     let mapImg;
-    try{ mapImg = await renderMetricMapCanvas('demrepnpa', list, 420, 420, 2); }finally{ btForceTilt = false; }
+    try{ mapImg = await renderMetricMapCanvas('demrepnpa', list, 700, 528, 2); }finally{ btForceTilt = false; }   // same map size as the other General Election screenshots
 
-    const W = 1080, H = 1350, S = 2, cv = document.createElement('canvas'); cv.width = W * S; cv.height = H * S;
+    const W = 1080, H = 1310, S = 2, cv = document.createElement('canvas'); cv.width = W * S; cv.height = H * S;
     const x = cv.getContext('2d'); x.scale(S, S);
     const sans = 'Inter, Arial, sans-serif', mono = 'IBM Plex Mono, monospace', f = n => Math.round(n).toLocaleString('en-US');
-    const BLUE = '#5b9bd9', RED = '#d4675a', PURPLE = '#c77dff', GREEN = '#80ed99', GRAY = '#7c879c', GOLD = '#d8b466';
+    const BLUE = '#5b9bd9', RED = '#d4675a', PURPLE = '#c77dff', GREEN = '#80ed99', GRAY = '#7c879c', GOLD = '#d8b466', WHITE = '#e9edf5';
+    const marg = (d, r, t) => t ? (d - r) / t * 100 : 0;
+    const mText = m => formatMarginLabel(m), mCol = m => (Math.abs(m) < 0.005 ? WHITE : (m > 0 ? BLUE : RED));
     x.fillStyle = '#0a0e17'; x.fillRect(0, 0, W, H);
     x.fillStyle = GOLD; x.font = '600 15px ' + mono; x.fillText('FLORIDA VOTE TRACKER 2026  ·  DAILY RECAP', 48, 64);
-    x.fillStyle = '#e9edf5'; x.font = '600 44px ' + sans; x.fillText(title, 48, 120);
+    x.fillStyle = WHITE; x.font = '600 44px ' + sans; x.fillText(title, 48, 120);
     x.fillStyle = GRAY; x.font = '20px ' + sans; x.fillText(sub, 48, 154);
+    // The day
     [['DEM', D, BLUE], ['REP', R, RED], ['NPA/OTHER', N, PURPLE], ['TOTAL', T, GREEN]].forEach((t, i) => {
-      const tx = 48 + i * 249, ty = 190;
-      x.fillStyle = '#131a28'; x.beginPath(); x.roundRect(tx, ty, 237, 112, 14); x.fill();
-      x.fillStyle = GRAY; x.font = '600 14px ' + mono; x.fillText(t[0], tx + 18, ty + 32);
-      x.fillStyle = t[2]; x.font = '600 34px ' + mono; x.fillText(f(t[1]), tx + 18, ty + 80);
+      const tx = 48 + i * 249, ty = 304;
+      x.fillStyle = '#131a28'; x.beginPath(); x.roundRect(tx, ty, 237, 104, 14); x.fill();
+      x.fillStyle = GRAY; x.font = '600 14px ' + mono; x.fillText(t[0] + ' · THE DAY', tx + 18, ty + 30);
+      x.fillStyle = t[2]; x.font = '600 33px ' + mono; x.fillText(f(t[1]), tx + 18, ty + 76);
     });
-    const lead = D - R;
-    x.fillStyle = lead === 0 ? '#e9edf5' : (lead > 0 ? BLUE : RED); x.font = '600 22px ' + sans;
-    x.fillText(lead === 0 ? 'Democrats and Republicans are even on the day' : (lead > 0 ? 'Democrats' : 'Republicans') + ' lead the day by ' + f(Math.abs(lead)) + ' votes', 48, 352);
-    x.drawImage(mapImg, 48, 380, 540, 540);
-    const leg = [['Safe D','#03045e'],['Likely D','#00b4d8'],['Leans D','#90e0ef'],['Tilt D',TILT_D_COLOR],['Tilt R',TILT_R_COLOR],['Leans R','#f49cbb'],['Likely R','#dd2d4a'],['Safe R','#880d1e']];
-    if(list.some(c => c.total === 0)) leg.push(['No votes', NOT_UPDATED_COLOR]);
-    leg.forEach((l, i) => { const ly = 420 + i * 34; x.fillStyle = l[1]; x.fillRect(620, ly, 22, 22); x.strokeStyle = '#2a3447'; x.strokeRect(620, ly, 22, 22); x.fillStyle = '#e9edf5'; x.font = '18px ' + sans; x.fillText(l[0], 652, ly + 18); });
-    // Counties with at least 200 votes that day (tiny counties would otherwise swing the lists on a handful of ballots).
+    const dm = marg(D, R, T);
+    x.fillStyle = mCol(dm); x.font = '600 22px ' + sans;
+    x.fillText(Math.abs(D - R) === 0 ? 'Democrats and Republicans are even on the day' : (D > R ? 'Democrats' : 'Republicans') + ' lead the day by ' + f(Math.abs(D - R)) + ' votes (' + mText(dm) + ')', 48, 446);
+    // Statewide to date
+    x.fillStyle = '#131a28'; x.beginPath(); x.roundRect(48, 184, 984, 96, 14); x.fill();
+    x.fillStyle = GOLD; x.font = '600 14px ' + mono; x.fillText('FULL STATEWIDE TOTAL · THROUGH ' + dt.toLocaleDateString('en-US', { month:'short', day:'numeric' }).toUpperCase(), 66, 212);
+    const cm = marg(cum.d, cum.r, cum.t);
+    [['DEM', f(cum.d), BLUE, 66], ['REP', f(cum.r), RED, 315], ['NPA/OTHER', f(cum.n), PURPLE, 564], ['TOTAL VOTES', f(cum.t), GREEN, 813]].forEach(t => {   // same four columns as the day tiles below, total on the right
+      x.fillStyle = GRAY; x.font = '600 12px ' + mono; x.fillText(t[0], t[3], 236);
+      x.fillStyle = t[2]; x.font = '600 28px ' + mono; x.fillText(t[1], t[3], 268);
+    });
+    x.fillStyle = mCol(cm); x.font = '600 16px ' + mono; x.textAlign = 'right'; x.fillText('MARGIN ' + mText(cm), 1014, 212); x.textAlign = 'left';
+    // Map (same proportions as the other maps) with the rating key at its lower left
+    const MX = 48, MY = 474, MW = 660, MH = Math.round(660 * 528 / 700);
+    x.drawImage(mapImg, MX, MY, MW, MH);
+    const keyRows = ratingKeyRows(true);
+    if(list.some(c => c.total === 0)) keyRows.push({ label:'No votes', color:NOT_UPDATED_COLOR });
+    drawKeyOnCanvas(x, MX + 10, MY + MH - 10, 1.15, 'COUNTY RATING', '', keyRows);
+    // County performance, in a column to the right of the map
     const rows = list.filter(c => c.total >= 200).map(c => ({ n:c.county, m:(c.dem - c.rep) / (c.dem + c.rep + c.ind + c.npa + c.other) * 100 }));
     const byM = rows.slice().sort((a, b) => b.m - a.m);
     const close = rows.slice().sort((a, b) => Math.abs(a.m) - Math.abs(b.m)).slice(0, 3);
+    const LX = 736;
     const lst = (head, arr, color, y0) => {
-      x.fillStyle = color; x.font = '600 15px ' + mono; x.fillText(head, 820, y0);
+      x.fillStyle = color; x.font = '600 18px ' + mono; x.fillText(head, LX, y0);
       arr.forEach((r, i) => {
-        x.fillStyle = '#e9edf5'; x.font = '600 17px ' + sans; x.fillText(r.n, 820, y0 + 30 + i * 34);
-        x.fillStyle = r.m > 0 ? BLUE : (r.m < 0 ? RED : '#e9edf5'); x.font = '16px ' + mono;
-        x.fillText(Math.abs(r.m) < 0.05 ? 'Even' : (r.m > 0 ? 'D+' : 'R+') + Math.abs(r.m).toFixed(1), 965, y0 + 30 + i * 34);
+        const y = y0 + 38 + i * 42;
+        x.fillStyle = WHITE; x.font = '600 24px ' + sans; x.fillText(r.n, LX, y);
+        x.fillStyle = r.m > 0 ? BLUE : (r.m < 0 ? RED : WHITE); x.font = '600 22px ' + mono; x.textAlign = 'right';
+        x.fillText(Math.abs(r.m) < 0.05 ? 'Even' : (r.m > 0 ? 'D+' : 'R+') + Math.abs(r.m).toFixed(1), 1032, y); x.textAlign = 'left';
       });
     };
-    lst('BEST DEM COUNTIES', byM.filter(r => r.m > 0).slice(0, 3), BLUE, 430);
-    lst('BEST REP COUNTIES', byM.filter(r => r.m < 0).slice(-3).reverse(), RED, 590);
-    lst('CLOSEST COUNTIES', close, GOLD, 750);
-    x.fillStyle = '#131a28'; x.fillRect(0, 1010, W, 340);
-    x.fillStyle = GOLD; x.font = '600 15px ' + mono; x.fillText('BALLOTS BY TYPE', 48, 1056);
+    lst('BEST DEM COUNTIES', byM.filter(r => r.m > 0).slice(0, 3), BLUE, MY + 18);
+    lst('BEST REP COUNTIES', byM.filter(r => r.m < 0).slice(-3).reverse(), RED, MY + 18 + 176);
+    lst('CLOSEST COUNTIES', close, GOLD, MY + 18 + 352);
+    // Ballot types
+    const BY = MY + MH + 40;
+    x.fillStyle = '#131a28'; x.fillRect(0, BY, W, H - BY);
+    x.fillStyle = GOLD; x.font = '600 15px ' + mono; x.fillText('BALLOTS BY TYPE (THE DAY)', 48, BY + 46);
     const tot = stat.all[0] + stat.all[1] + stat.all[2];
     [['Vote by Mail', 'vbm'], ['Early Vote', 'ev'], ['Election Day', 'ed']].forEach((t, i) => {
-      const n = stat[t[1]][0] + stat[t[1]][1] + stat[t[1]][2], share = tot ? n / tot : 0, y = 1100 + i * 58;
-      x.fillStyle = '#e9edf5'; x.font = '600 20px ' + sans; x.fillText(t[0], 48, y + 20);
+      const n = stat[t[1]][0] + stat[t[1]][1] + stat[t[1]][2], share = tot ? n / tot : 0, y = BY + 80 + i * 54;
+      x.fillStyle = WHITE; x.font = '600 20px ' + sans; x.fillText(t[0], 48, y + 20);
       x.fillStyle = '#212a3b'; x.fillRect(280, y, 640, 26); x.fillStyle = GREEN; x.fillRect(280, y, 640 * share, 26);
-      x.fillStyle = '#e9edf5'; x.font = '600 18px ' + mono; x.fillText((share * 100).toFixed(0) + '%', 936, y + 20);
+      x.fillStyle = WHITE; x.font = '600 18px ' + mono; x.fillText((share * 100).toFixed(0) + '%', 936, y + 20);
     });
-    x.fillStyle = GRAY; x.font = '15px ' + mono; x.fillText('Source: https://jaysonfrascatore.github.io/FloridaElection2026/  ·  Created by Jayson Frascatore', 48, 1318);
+    x.fillStyle = GRAY; x.font = '15px ' + mono; x.fillText('Source: https://jaysonfrascatore.github.io/FloridaElection2026/  ·  Created by Jayson Frascatore', 48, H - 26);
     const a = document.createElement('a');
     a.href = cv.toDataURL('image/png');
     a.download = 'florida-daily-recap-' + key + '.png';

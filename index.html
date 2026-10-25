@@ -1201,6 +1201,7 @@
       <input type="text" id="searchInput" placeholder="Search county...">
     </div>
     <button class="sim-btn" id="downloadMapPngBtn">Download PNG</button>
+    <button class="sim-btn" id="dailyRecapBtn" style="display:none;" title="Download a one-day recap graphic (uses the day picked in the map's dropdown, or the latest day)">Daily Recap</button>
     <button class="sim-btn" id="downloadMapOnlyBtn" style="display:none;">Download Map</button>
   </div>
 
@@ -2065,9 +2066,10 @@ function categoryForNpaDisplay(c){
 // Day view only (the General Election map's "Today only" / dated views): a day is a result, not a forecast,
 // so there is no Toss Up there -- a county the normal tiers would call a Toss Up is Tilt D or Tilt R by
 // whoever has more raw votes. Every other view still uses Toss Up.
+let btForceTilt = false;
 function categoryForDayView(c){
   const base = categoryForNpaDisplay(c);
-  if(base === 'Toss Up' && typeof btDayActive === 'function' && btDayActive()) return c.dem > c.rep ? 'Tilt D' : (c.rep > c.dem ? 'Tilt R' : 'Tie');
+  if(base === 'Toss Up' && ((typeof btDayActive === 'function' && btDayActive()) || btForceTilt)) return c.dem > c.rep ? 'Tilt D' : (c.rep > c.dem ? 'Tilt R' : 'Tie');
   return base;
 }
 // RATING_CATS plus the pending "Not Updated" state and the NPA/Other
@@ -3127,6 +3129,11 @@ function btFillDaySelect(){
 function btBuildDay(){
   btDayCounties = null; btDayStat = null;
   const key = btSelKey(); if(key === null || !btTypeRows) return;
+  const r = btComputeDay(key);
+  btDayCounties = r.out; btDayStat = r.stat;
+}
+// One day's votes by county and by ballot type: { out:{all,vbm,ev,ed -> county records}, stat:{all,vbm,ev,ed -> [D,R,NPA+Other]} }.
+function btComputeDay(key){
   const byCode = {};
   btTypeRows.forEach(r => { (byCode[r.Code] = byCode[r.Code] || []).push(r); });
   const F = ['DEM','REP','NPA','OTHER'], T = { vbm:'VBM', ev:'EV', ed:'ED' };
@@ -3149,7 +3156,7 @@ function btBuildDay(){
   });
   const out = {};
   Object.keys(fakes).forEach(k => { out[k] = fillMissingCountiesAtZero(buildCountyRecords(fakes[k])); });
-  btDayCounties = out; btDayStat = stat;
+  return { out, stat };
 }
 async function btDayRefresh(rerender){
   const sel = document.getElementById('dayViewSelect');
@@ -3257,6 +3264,88 @@ function btSyncTrend(){
     statewideHistoryCallId++; renderStatewideHistoryCharts(true);
   }else renderTypeTrend();
 }
+
+
+// ---- Daily Recap graphic ----
+// One tall image for the day picked in the map's dropdown (or the latest day with votes when it is on Full Statewide):
+// party totals, the day's map with the Tilt key, best / closest counties, and the ballot-type split.
+async function exportDailyRecapPng(btn){
+  const label = btn.textContent; btn.textContent = 'Rendering…'; btn.disabled = true;
+  try{
+    if(!btTypeRows || !btTypeRows.length) throw new Error('the day-by-day data has not loaded yet');
+    const sel = btSelKey();
+    const keys = btTypeRows.map(r => r._k).filter(k => k <= btTodayKey());
+    const key = sel !== null ? sel : Math.max.apply(null, keys);
+    const { out, stat } = btComputeDay(key);
+    const list = out.all, sum = f => list.reduce((s, c) => s + f(c), 0);
+    const D = sum(c => c.dem), R = sum(c => c.rep), N = sum(c => c.ind + c.npa + c.other), T = D + R + N;
+    if(!T) throw new Error('no votes were counted on that day');
+    const dayRows = btTypeRows.filter(r => r._k === key);
+    const stamps = Array.from(new Set(dayRows.map(r => r._t.getTime()))).sort((a, b) => a - b);
+    const dt = new Date(Math.floor(key / 10000), Math.floor(key / 100) % 100 - 1, key % 100);
+    const title = 'Votes counted ' + dt.toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric' });
+    const sub = 'Mail + Early Vote + Election Day · ' + stamps.length + ' update' + (stamps.length === 1 ? '' : 's') + ' · latest ' + new Date(stamps[stamps.length - 1]).toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+    btForceTilt = true;
+    let mapImg;
+    try{ mapImg = await renderMetricMapCanvas('demrepnpa', list, 420, 420, 2); }finally{ btForceTilt = false; }
+
+    const W = 1080, H = 1350, S = 2, cv = document.createElement('canvas'); cv.width = W * S; cv.height = H * S;
+    const x = cv.getContext('2d'); x.scale(S, S);
+    const sans = 'Inter, Arial, sans-serif', mono = 'IBM Plex Mono, monospace', f = n => Math.round(n).toLocaleString('en-US');
+    const BLUE = '#5b9bd9', RED = '#d4675a', PURPLE = '#c77dff', GREEN = '#80ed99', GRAY = '#7c879c', GOLD = '#d8b466';
+    x.fillStyle = '#0a0e17'; x.fillRect(0, 0, W, H);
+    x.fillStyle = GOLD; x.font = '600 15px ' + mono; x.fillText('FLORIDA VOTE TRACKER 2026  ·  DAILY RECAP', 48, 64);
+    x.fillStyle = '#e9edf5'; x.font = '600 44px ' + sans; x.fillText(title, 48, 120);
+    x.fillStyle = GRAY; x.font = '20px ' + sans; x.fillText(sub, 48, 154);
+    [['DEM', D, BLUE], ['REP', R, RED], ['NPA/OTHER', N, PURPLE], ['TOTAL', T, GREEN]].forEach((t, i) => {
+      const tx = 48 + i * 249, ty = 190;
+      x.fillStyle = '#131a28'; x.beginPath(); x.roundRect(tx, ty, 237, 112, 14); x.fill();
+      x.fillStyle = GRAY; x.font = '600 14px ' + mono; x.fillText(t[0], tx + 18, ty + 32);
+      x.fillStyle = t[2]; x.font = '600 34px ' + mono; x.fillText(f(t[1]), tx + 18, ty + 80);
+    });
+    const lead = D - R;
+    x.fillStyle = lead === 0 ? '#e9edf5' : (lead > 0 ? BLUE : RED); x.font = '600 22px ' + sans;
+    x.fillText(lead === 0 ? 'Democrats and Republicans are even on the day' : (lead > 0 ? 'Democrats' : 'Republicans') + ' lead the day by ' + f(Math.abs(lead)) + ' votes', 48, 352);
+    x.drawImage(mapImg, 48, 380, 540, 540);
+    const leg = [['Safe D','#03045e'],['Likely D','#00b4d8'],['Leans D','#90e0ef'],['Tilt D',TILT_D_COLOR],['Tilt R',TILT_R_COLOR],['Leans R','#f49cbb'],['Likely R','#dd2d4a'],['Safe R','#880d1e']];
+    if(list.some(c => c.total === 0)) leg.push(['No votes', NOT_UPDATED_COLOR]);
+    leg.forEach((l, i) => { const ly = 420 + i * 34; x.fillStyle = l[1]; x.fillRect(620, ly, 22, 22); x.strokeStyle = '#2a3447'; x.strokeRect(620, ly, 22, 22); x.fillStyle = '#e9edf5'; x.font = '18px ' + sans; x.fillText(l[0], 652, ly + 18); });
+    // Counties with at least 200 votes that day (tiny counties would otherwise swing the lists on a handful of ballots).
+    const rows = list.filter(c => c.total >= 200).map(c => ({ n:c.county, m:(c.dem - c.rep) / (c.dem + c.rep + c.ind + c.npa + c.other) * 100 }));
+    const byM = rows.slice().sort((a, b) => b.m - a.m);
+    const close = rows.slice().sort((a, b) => Math.abs(a.m) - Math.abs(b.m)).slice(0, 3);
+    const lst = (head, arr, color, y0) => {
+      x.fillStyle = color; x.font = '600 15px ' + mono; x.fillText(head, 820, y0);
+      arr.forEach((r, i) => {
+        x.fillStyle = '#e9edf5'; x.font = '600 17px ' + sans; x.fillText(r.n, 820, y0 + 30 + i * 34);
+        x.fillStyle = r.m > 0 ? BLUE : (r.m < 0 ? RED : '#e9edf5'); x.font = '16px ' + mono;
+        x.fillText(Math.abs(r.m) < 0.05 ? 'Even' : (r.m > 0 ? 'D+' : 'R+') + Math.abs(r.m).toFixed(1), 965, y0 + 30 + i * 34);
+      });
+    };
+    lst('BEST DEM COUNTIES', byM.filter(r => r.m > 0).slice(0, 3), BLUE, 430);
+    lst('BEST REP COUNTIES', byM.filter(r => r.m < 0).slice(-3).reverse(), RED, 590);
+    lst('CLOSEST COUNTIES', close, GOLD, 750);
+    x.fillStyle = '#131a28'; x.fillRect(0, 1010, W, 340);
+    x.fillStyle = GOLD; x.font = '600 15px ' + mono; x.fillText('BALLOTS BY TYPE', 48, 1056);
+    const tot = stat.all[0] + stat.all[1] + stat.all[2];
+    [['Vote by Mail', 'vbm'], ['Early Vote', 'ev'], ['Election Day', 'ed']].forEach((t, i) => {
+      const n = stat[t[1]][0] + stat[t[1]][1] + stat[t[1]][2], share = tot ? n / tot : 0, y = 1100 + i * 58;
+      x.fillStyle = '#e9edf5'; x.font = '600 20px ' + sans; x.fillText(t[0], 48, y + 20);
+      x.fillStyle = '#212a3b'; x.fillRect(280, y, 640, 26); x.fillStyle = GREEN; x.fillRect(280, y, 640 * share, 26);
+      x.fillStyle = '#e9edf5'; x.font = '600 18px ' + mono; x.fillText((share * 100).toFixed(0) + '%', 936, y + 20);
+    });
+    x.fillStyle = GRAY; x.font = '15px ' + mono; x.fillText('Source: https://jaysonfrascatore.github.io/FloridaElection2026/  ·  Created by Jayson Frascatore', 48, 1318);
+    const a = document.createElement('a');
+    a.href = cv.toDataURL('image/png');
+    a.download = 'florida-daily-recap-' + key + '.png';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }catch(err){
+    alert('Could not make the daily recap: ' + err.message);
+  }finally{
+    btn.textContent = label; btn.disabled = false;
+  }
+}
+document.getElementById('dailyRecapBtn').addEventListener('click', e => exportDailyRecapPng(e.currentTarget));
 
 // ---- Ballot-type views on the General Election tab (vote by mail / early vote / Election Day) ----
 // Reads the DEM/REP/NPA/OTHER x VBM/EV/ED columns the tracker CSV already carries. The default
@@ -3691,6 +3780,8 @@ async function renderMap(){
   document.getElementById('mapTitle').textContent = m.title + (currentMetric === 'demrepnpa' && btDayLabel() ? ' \u2014 ' + btDayLabel() : '');
   const dvs = document.getElementById('dayViewSelect');
   if(dvs) dvs.style.display = (currentMetric === 'demrepnpa' && (btDayKeys.length || btDaySel !== 'full')) ? '' : 'none';
+  const rcb = document.getElementById('dailyRecapBtn');
+  if(rcb) rcb.style.display = (currentMetric === 'demrepnpa' && btTypeRows && btTypeRows.length) ? '' : 'none';
   btRender();
   document.getElementById('npaSliderWrap').style.display = (currentMetric === 'demrepnpa') ? 'block' : 'none';
   document.getElementById('turnoutSliderWrap').style.display = (currentMetric === 'total') ? 'block' : 'none';

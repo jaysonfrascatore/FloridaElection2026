@@ -3108,7 +3108,10 @@ function btKeyLabel(k, long){
 function btDayLabel(){ const k = btSelKey(); return (btDaySel === 'full' || !btDayCounties) ? '' : (btSelKey() === btTodayKey() ? 'Today only (' + btKeyLabel(k) + ')' : btKeyLabel(k) + ' only'); }
 function btFillDaySelect(){
   const sel = document.getElementById('dayViewSelect'); if(!sel) return;
-  const today = btTodayKey(), past = btDayKeys.filter(k => k < today).sort((a, b) => b - a);
+  // The list runs from October 18 (the first day worth mapping) through yesterday, newest first.
+  const today = btTodayKey(), past = [];
+  for(let d = new Date(2026, 9, 18); btKeyOf(d) < today; d.setDate(d.getDate() + 1)) past.push(btKeyOf(d));
+  past.reverse();
   sel.innerHTML = '<option value="full">Full Statewide</option><option value="today">Today only</option>' + past.map(k => `<option value="${k}">${btKeyLabel(k, true)}</option>`).join('');
   sel.value = Array.from(sel.options).some(o => o.value === btDaySel) ? btDaySel : 'full';
   if(sel.value !== btDaySel) btDaySel = sel.value;

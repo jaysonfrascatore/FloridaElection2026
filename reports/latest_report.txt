@@ -7,13 +7,13 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 25th, 2026 at 11:00am Eastern Time
+Updated at October 25th, 2026 at 3:00pm Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-66
+67
 
 Unchanged Counties:
 False
@@ -25,21 +25,21 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-1,052,931
+1,089,920
 
 REP:
-1,049,209
+1,085,107
 
 OTHER:
-545,393
+564,293
 
 TOTAL:
-2,647,533
+2,739,320
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 3,722 votes statewide.
+🔵 Democrats lead by 4,813 votes statewide.
 
 Margin Change:
 +0.02% toward Democrats
@@ -47,10 +47,10 @@ Margin Change:
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +17,873
-🔴 REP: +16,843
-🟣 OTHER: +9,850
-🟢 TOTAL: +44,566
+🔵 DEM: +36,989
+🔴 REP: +35,898
+🟣 OTHER: +18,900
+🟢 TOTAL: +91,787
 
 REJECTED COUNTY UPDATES
 =================================
@@ -64,12 +64,39 @@ RATING / FORECAST CHANGES
 =================================
 
 
-Brevard
+Duval
+
+Likely D → Safe D
+
+Margin Move:
++0.009
+
+
+
+Escambia
 
 Safe R → Likely R
 
 Margin Move:
-+0.004
++0.002
+
+
+
+Franklin
+
+Likely R → Lean R
+
+Margin Move:
++0.008
+
+
+
+Madison
+
+Lean R → Toss Up R
+
+Margin Move:
++0.009
 
 
 
@@ -77,46 +104,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️11 AM Florida EV & VBM Update
+🗳️3 PM Florida EV & VBM Update
 
-New votes have been cast in 66 counties over the last hour, with the largest update coming from Hillsborough County.
+New votes have been cast in 67 counties over the last hour, with the largest update coming from Broward County.
 
-🔵 DEM: +17,873
-🔴 REP: +16,843
-🟣 OTHER: +9,850
-🟢 TOTAL: +44,566
+🔵 DEM: +36,989
+🔴 REP: +35,898
+🟣 OTHER: +18,900
+🟢 TOTAL: +91,787
 
-🔵 Democrats lead by 3,722 votes statewide.
+🔵 Democrats lead by 4,813 votes statewide.
 
 🔴 Margin Change: +0.02% toward Democrats
 
 Largest County Updates
 
 
-🥇Hillsborough County
+🥇Broward County
 
-🔵 DEM: +2,975
-🔴 REP: +2,119
-🟣 OTHER: +1,509
-🟢 TOTAL: +6,603
+🔵 DEM: +6,458
+🔴 REP: +2,067
+🟣 OTHER: +2,642
+🟢 TOTAL: +11,167
 
 
 
 🥈Miami-Dade County
 
-🔵 DEM: +1,723
-🔴 REP: +1,993
-🟣 OTHER: +1,261
-🟢 TOTAL: +4,977
+🔵 DEM: +3,616
+🔴 REP: +4,391
+🟣 OTHER: +2,780
+🟢 TOTAL: +10,787
 
 
 
-🥉Broward County
+🥉Duval County
 
-🔵 DEM: +2,033
-🔴 REP: +823
-🟣 OTHER: +922
-🟢 TOTAL: +3,778
+🔵 DEM: +3,649
+🔴 REP: +2,059
+🟣 OTHER: +956
+🟢 TOTAL: +6,664
 
 
 

@@ -1,0 +1,123 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Election ID:
+FL-2026-General
+
+Run Time:
+Updated at October 26th, 2026 at 7:00pm Eastern Time
+
+Counties Loaded:
+67 / 67
+
+Updated Counties:
+67
+
+Unchanged Counties:
+False
+
+Rejected County Updates:
+0
+
+STATEWIDE TOTALS
+=================================
+
+DEM:
+1,239,747
+
+REP:
+1,253,451
+
+OTHER:
+648,681
+
+TOTAL:
+3,141,879
+
+STATEWIDE SUMMARY
+=================================
+
+🔴 Republicans lead by 13,704 votes statewide.
+
+Margin Change:
++0.08% toward Democrats
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +42,496
+🔴 REP: +38,964
+🟣 OTHER: +21,715
+🟢 TOTAL: +103,175
+
+REJECTED COUNTY UPDATES
+=================================
+
+
+No county updates were rejected.
+
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+Duval
+
+Likely D → Safe D
+
+Margin Move:
++0.009
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️7 PM Florida EV & VBM Update
+
+New votes have been cast in 67 counties over the last hour, with the largest update coming from Broward County.
+
+🔵 DEM: +42,496
+🔴 REP: +38,964
+🟣 OTHER: +21,715
+🟢 TOTAL: +103,175
+
+🔴 Republicans lead by 13,704 votes statewide.
+
+🔴 Margin Change: +0.08% toward Democrats
+
+Largest County Updates
+
+
+🥇Broward County
+
+🔵 DEM: +6,785
+🔴 REP: +2,486
+🟣 OTHER: +3,003
+🟢 TOTAL: +12,274
+
+
+
+🥈Miami-Dade County
+
+🔵 DEM: +4,668
+🔴 REP: +3,941
+🟣 OTHER: +3,183
+🟢 TOTAL: +11,792
+
+
+
+🥉Duval County
+
+🔵 DEM: +3,523
+🔴 REP: +1,824
+🟣 OTHER: +1,080
+🟢 TOTAL: +6,427
+
+
+
+#Florida #EarlyVoting #VoteByMail

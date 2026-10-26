@@ -7,16 +7,16 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 25th, 2026 at 7:00pm Eastern Time
+Updated at October 25th, 2026 at 11:00pm Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-66
+13
 
 Unchanged Counties:
-False
+True
 
 Rejected County Updates:
 0
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-1,108,775
+1,109,782
 
 REP:
-1,100,524
+1,100,859
 
 OTHER:
-574,278
+574,661
 
 TOTAL:
-2,783,577
+2,785,302
 
 STATEWIDE SUMMARY
 =================================
 
-🔵 Democrats lead by 8,251 votes statewide.
+🔵 Democrats lead by 8,923 votes statewide.
 
 Margin Change:
-+0.08% toward Democrats
++0.02% toward Democrats
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +18,855
-🔴 REP: +15,417
-🟣 OTHER: +9,985
-🟢 TOTAL: +44,257
+🔵 DEM: +1,007
+🔴 REP: +335
+🟣 OTHER: +383
+🟢 TOTAL: +1,725
 
 REJECTED COUNTY UPDATES
 =================================
@@ -72,46 +72,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️7 PM Florida EV & VBM Update
+🗳️11 PM Florida EV & VBM Update
 
-New votes have been cast in 66 counties over the last hour, with the largest update coming from Miami-Dade County.
+New votes have been cast in 13 counties over the last hour, with the largest update coming from Palm Beach County.
 
-🔵 DEM: +18,855
-🔴 REP: +15,417
-🟣 OTHER: +9,985
-🟢 TOTAL: +44,257
+🔵 DEM: +1,007
+🔴 REP: +335
+🟣 OTHER: +383
+🟢 TOTAL: +1,725
 
-🔵 Democrats lead by 8,251 votes statewide.
+🔵 Democrats lead by 8,923 votes statewide.
 
-🔴 Margin Change: +0.08% toward Democrats
+🔴 Margin Change: +0.02% toward Democrats
 
 Largest County Updates
 
 
-🥇Miami-Dade County
+🥇Palm Beach County
 
-🔵 DEM: +2,262
-🔴 REP: +2,555
-🟣 OTHER: +1,817
-🟢 TOTAL: +6,634
-
-
-
-🥈Broward County
-
-🔵 DEM: +3,341
-🔴 REP: +1,113
-🟣 OTHER: +1,404
-🟢 TOTAL: +5,858
+🔵 DEM: +676
+🔴 REP: +190
+🟣 OTHER: +222
+🟢 TOTAL: +1,088
 
 
 
-🥉Orange County
+🥈Orange County
 
-🔵 DEM: +1,841
-🔴 REP: +755
-🟣 OTHER: +820
-🟢 TOTAL: +3,416
+🔵 DEM: +166
+🔴 REP: +54
+🟣 OTHER: +78
+🟢 TOTAL: +298
+
+
+
+🥉Leon County
+
+🔵 DEM: +113
+🔴 REP: +27
+🟣 OTHER: +33
+🟢 TOTAL: +173
 
 
 

@@ -12146,7 +12146,7 @@ function saShow(on){
   const v = document.getElementById('splitAvgView'), g = document.getElementById('liveGrid');
   v.style.display = on ? '' : 'none'; g.style.display = on ? 'none' : '';
   ['downloadMapPngBtn', 'dailyRecapBtn', 'downloadMapOnlyBtn'].forEach(id => { const el = document.getElementById(id); if(el && on) el.style.display = 'none'; });
-  if(!on){ if(typeof renderMap === 'function'){ try{ renderMap(); }catch(e){} } return; }
+  if(!on){ const dl = document.getElementById('downloadMapPngBtn'); if(dl) dl.style.display = ''; if(typeof renderMap === 'function'){ try{ renderMap(); }catch(e){} } return; }
   v.querySelectorAll('.sa-reveal').forEach(e => e.classList.remove('sa-in'));
   saRender().then(saObserve);
 }

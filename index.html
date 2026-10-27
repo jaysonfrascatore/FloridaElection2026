@@ -12447,7 +12447,7 @@ async function saFcRender(animate){
     box.innerHTML = head + `<div class="sa-big">${animate ? saCountEl(0, Math.abs(cur.m), 2, cur.m >= 0 ? 'D+' : 'R+', '', saMarginColor(cur.m)) : `<span style="color:${saMarginColor(cur.m)}">${bigTxt}</span>`}</div>
       <div class="sa-sub"><b>${k === 'ed' ? 'Election Day Only Forecast' : 'Final Forecast'}</b> · about ${fmt(Math.round(cur.o.t))} ${noun}. ${desc} <b>Based on party registration only</b>, since how people actually vote has to be assumed: ${demLoyalty.toFixed(1).replace(/\.0$/,'')}% of Democrats and ${repLoyalty.toFixed(1).replace(/\.0$/,'')}% of Republicans vote their party, and <span style="color:#c77dff">NPA/other</span> voters split <b style="color:#5b9bd9">${npaSplitToDem.toFixed(1)}% D</b> / <b style="color:#d4675a">${(100 - npaSplitToDem).toFixed(1)}% R</b>.</div>
       <div class="sa-shift"><div><span class="lbl">Forecast vs ${when}</span> ${saShift(dm)}${pv ? ` <span class="was">(${saPts(pv.m)} → ${saPts(cur.m)})</span>` : ''}</div></div>
-      <div class="sa-chart-wrap"><div class="sa-key">Forecasted margin after each ${gran}, blue when Democrats are projected ahead and red when Republicans are</div>
+      <div class="sa-chart-wrap"><div class="sa-key">Forecasted margin after each ${gran} (solid), blue when Democrats are projected ahead and red when Republicans are. Dotted: ${k === 'ed' ? 'the margin of the Election Day vote still to come, as the count fills in' : 'the margin of all ballots counted as the count fills in'} through Nov 3</div>
       <div id="${id}Ch" style="height:250px;"></div></div>`;
     const xs = rows.map(r => r.p.t), ys = rows.map(r => r.m);
     const traces = saSignedSegs(xs, ys).map(sg => ({ x:sg.x, y:sg.y, type:'scatter', mode:'lines', line:{ color:sg.c, width:3.5 }, hoverinfo:'skip', showlegend:false }));
@@ -12461,7 +12461,25 @@ async function saFcRender(animate){
         `<div class="sorted-hover-row">${q ? saShift(d) : '<span style="color:#7c879c">first point</span>'}</div>`;
     };
     traces.push({ x:xs, y:ys, type:'scatter', mode:'markers', showlegend:false, marker:{ size:9, color:ys.map(saMarginColor), line:{ color:'#0a0e17', width:1.5 } }, customdata:rows.map(tipOf), hoverinfo:'none' });
-    const lo = Math.min(...ys, 0), hi = Math.max(...ys, 0), pad = Math.max((hi - lo) * 0.18, 1.5);
+    // projected path to Nov 3 (dotted)
+    const PP = saState.fcPath; let pxs = [], pys = [], ptip = [];
+    if(PP){
+      const fin = PP.fin, remOf = q => ({ d:Math.max(0, fin.d - q.d), r:Math.max(0, fin.r - q.r), n:Math.max(0, fin.n - q.n) });
+      const seq = [{ t:PP.cur.t, o:{ d:PP.cur.d, r:PP.cur.r, n:PP.cur.n } }].concat(PP.proj.map(q => ({ t:q.t, o:{ d:q.d, r:q.r, n:q.n } })));
+      const vals = seq.map(q => ({ t:q.t, o:k === 'ed' ? remOf(q.o) : q.o }));
+      if(k === 'ed' && vals.length > 1) vals[vals.length - 1].o = vals[vals.length - 2].o;   // Election Day: the whole vote still to come
+      vals.forEach((q, i) => {
+        const o = q.o, mm = saFcMargin(o); if(mm === null) return;
+        const isLast = i === vals.length - 1, tt = o.d + o.r + o.n;
+        pxs.push(q.t); pys.push(mm);
+        ptip.push(`<div class="sorted-hover-date">${i === 0 ? 'Now' : isLast ? 'Nov 3 · Election Day' : saDayLabel(q.t)} · ${i === 0 ? 'latest count' : 'Projected'}</div>` + saRow(saMarginColor(mm), k === 'ed' ? 'Election Day margin still to come' : 'Margin of all ballots counted', saPts(mm)) +
+          saRow(SA_COL.d, 'DEM', (o.d / tt * 100).toFixed(1) + '%') + saRow(SA_COL.r, 'REP', (o.r / tt * 100).toFixed(1) + '%') + saRow(SA_COL.n, 'NPA/Other', (o.n / tt * 100).toFixed(1) + '%') +
+          `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>${k === 'ed' ? 'STILL TO COME' : 'BALLOTS'}</b>&nbsp;${fmt(Math.round(tt))}</div>`);
+      });
+      saSignedSegs(pxs, pys).forEach(sg => traces.push({ x:sg.x, y:sg.y, type:'scatter', mode:'lines', line:{ color:sg.c, width:3, dash:'dot' }, hoverinfo:'skip', showlegend:false }));
+      traces.push({ x:pxs, y:pys, type:'scatter', mode:'markers', showlegend:false, marker:{ size:7, color:pys.map(saMarginColor), symbol:'circle-open', line:{ width:1.5, color:pys.map(saMarginColor) } }, customdata:ptip, hoverinfo:'none' });
+    }
+    const lo = Math.min(...ys, ...pys, 0), hi = Math.max(...ys, ...pys, 0), pad = Math.max((hi - lo) * 0.18, 1.5);
     const el = document.getElementById(id + 'Ch');
     await Plotly.react(el, traces, { margin:{ t:8, r:14, b:36, l:56 }, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', showlegend:false, hovermode:'x unified', hoverdistance:-1, hoverlabel:saBlank,
       font:{ family:'Inter, sans-serif', color:'#9aa4b8', size:11 },
@@ -12575,7 +12593,7 @@ async function saRender(){
   sec('saSecEd', saEdHTML(M, types, edMeth));
   saRenderNeeds();
   saDrawEdMap().catch(() => {});
-  try{ saState.fc = saFcBuild(pts, M); saFcRender(true).catch(() => {}); }catch(e){ console.error(e); }
+  try{ saState.fc = saFcBuild(pts, M); saState.fcPath = saTurnPathData(M, pts); saFcRender(true).catch(() => {}); }catch(e){ console.error(e); }
   // party share chart
   const per = saIncsCum(pts);
   const shareEl = document.getElementById('saShareChart');
@@ -12635,11 +12653,7 @@ async function saRenderTurnParty(M){
   document.getElementById('anTpNote').textContent = 'Each point is one logged update. Hover anywhere on the chart to see all three parties at that update.';
   try{ await saRenderTurnPath(M, pts, reg, seq); }catch(e){ console.error(e); }
 }
-// Projected path of each party's turnout from the latest count to Election Day (Nov 3).
-// Until Nov 2 each party keeps adding ballots at its own last-7-day daily pace (capped so Election Day always keeps at
-// least 15% of what is still to come); whatever is left of the projected final total votes on Election Day.
-async function saRenderTurnPath(M, pts, reg, seq){
-  const el = document.getElementById('anTrChart'); if(!el) return;
+function saTurnPathData(M, pts){
   const KS = ['d', 'r', 'n'], NM = { d:'DEM', r:'REP', n:'NPA/Other' };
   const last = {}; pts.forEach(p => { last[saKey(p.t)] = { t:p.t, d:p.D, r:p.R, n:p.N }; });
   let act = Object.keys(last).sort().map(k => last[k]);
@@ -12660,6 +12674,14 @@ async function saRenderTurnPath(M, pts, reg, seq){
   const inc = {}; KS.forEach(k => { const want = pace[k] * fut.length, cap = rem[k] * 0.85; inc[k] = want > cap && want > 0 ? pace[k] * cap / want : pace[k]; });
   fut.forEach(t => { const o = { t, inc:{}, kind:'Projected' }; KS.forEach(k => { const g = Math.min(inc[k], Math.max(0, fin[k] - run[k])); run[k] += g; o[k] = run[k]; o.inc[k] = g; }); proj.push(o); });
   const fo = { t:edT, inc:{}, kind:'Election Day (final)' }; KS.forEach(k => { fo.inc[k] = Math.max(0, fin[k] - run[k]); fo[k] = fin[k]; }); proj.push(fo);
+  return { KS, NM, act, cur, fin, n7, proj, edT };
+}
+// Projected path of each party's turnout from the latest count to Election Day (Nov 3).
+// Until Nov 2 each party keeps adding ballots at its own last-7-day daily pace (capped so Election Day always keeps at
+// least 15% of what is still to come); whatever is left of the projected final total votes on Election Day.
+async function saRenderTurnPath(M, pts, reg, seq){
+  const el = document.getElementById('anTrChart'); if(!el) return;
+  const { KS, NM, act, cur, fin, n7, proj, edT } = saTurnPathData(M, pts);
   if(seq !== undefined && seq !== saTpSeq) return;
   const pct = saState.tpMode === 'pct', val = (o, k) => pct ? o[k] / reg[k] * 100 : o[k], fmtV = v => pct ? v.toFixed(1) + '%' : fmt(Math.round(v));
   document.getElementById('anTrHead').innerHTML = KS.map(k => `<span class="nm" style="color:${SA_COL[k]}">${NM[k]}</span><span class="big" style="color:${SA_COL[k]}">${fmtV(val(fin, k))}</span>`).join('') + `<span class="sub">projected final on Nov 3 (now ${KS.map(k => `<span style="color:${SA_COL[k]}">${fmtV(val(cur, k))}</span>`).join(' · ')})</span>`;

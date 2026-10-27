@@ -12285,27 +12285,67 @@ function saEdHTML(M, types, meth){
     ${ed ? `<div class="sa-note" style="margin-top:12px">Expected Election Day mix of the roughly ${fmt(Math.round(edT))} ballots still to come:</div>
     <div class="sa-bar"><i style="width:${ed.d}%;background:${SA_COL.d}"></i><i style="width:${ed.r}%;background:${SA_COL.r}"></i><i style="width:${ed.n}%;background:${SA_COL.n}"></i></div>
     <div class="sa-split"><span style="color:${SA_COL.d}">DEM ${ed.d.toFixed(1)}%</span><span style="color:${SA_COL.r}">REP ${ed.r.toFixed(1)}%</span><span style="color:${SA_COL.n}">NPA ${ed.n.toFixed(1)}%</span></div>` : ''}
-    <div class="sa-proj-title">What each party needs on Election Day</div>
-    <div class="sa-note">The Election Day mix at which the statewide two-party vote ties, using the NPA split and loyalty sliders.</div>
+    <div class="sa-proj-title">Projected outcome of the Election Day vote, county by county</div>
+    <div class="sa-key" style="margin:2px 0 6px"><b style="color:var(--gold)">Current forecast based on estimated turnout models</b></div>
+    <div class="sa-note">Only the ballots still to come after today's count. Turnout by party comes from the Projected Final Turnout model, which looks at turnout in the 2018, 2022 and 2024 elections and this year's pace, and assumes ${demLoyalty.toFixed(0)}% of Democrats and ${repLoyalty.toFixed(0)}% of Republicans vote for their own party. NPA/other voters follow the NPA slider below.</div>
+    <div id="saEdMap" style="height:460px;"></div>
+    <div class="sa-proj-title">How much of the NPA vote does each party need to win statewide?</div>
+    <div class="sa-note">Uses the projected final turnout by party above. Move the slider to see what a different NPA split would mean for the statewide result.</div>
     <div class="sa-slider"><label for="saNpa">NPA/Other split</label><input type="range" id="saNpa" min="0" max="100" step="0.5" value="${npaSplitToDem}"><span id="saNpaVal"></span></div>
     <div id="saNeeds"></div>`;
 }
 function saRenderNeeds(){
   const b = saState.ctx; if(!b) return;
-  const s = npaSplitToDem / 100, dl = demLoyalty / 100, rl = repLoyalty / 100;
-  const val = document.getElementById('saNpaVal'); if(val) val.textContent = `${npaSplitToDem.toFixed(1)}% D / ${(100 - npaSplitToDem).toFixed(1)}% R · loyalty ${demLoyalty.toFixed(0)}% D, ${repLoyalty.toFixed(0)}% R`;
+  const p = b.M.party, dl = demLoyalty / 100, rl = repLoyalty / 100, s = npaSplitToDem / 100;
+  const val = document.getElementById('saNpaVal'); if(val) val.textContent = `${npaSplitToDem.toFixed(1)}% D / ${(100 - npaSplitToDem).toFixed(1)}% R`;
   const el = document.getElementById('saNeeds'); if(!el) return;
-  if(!b.edT){ el.innerHTML = '<div class="sa-empty">Every projected ballot is already counted.</div>'; return; }
-  const kD = 2 * dl - 1, kR = 2 * rl - 1, kN = 2 * s - 1;
-  const banked = b.bD * kD - b.bR * kR + b.bN * kN;
-  const nEd = b.edN / b.edT, dEd = b.edD / b.edT, rEd = b.edR / b.edT;
-  const fcMargin = banked + b.edT * (dEd * kD - rEd * kR + nEd * kN), total = b.bT + b.edT, den = kD + kR;
-  const dStar = den > 0.01 ? (-banked / b.edT + (1 - nEd) * kR - nEd * kN) / den : null, rStar = dStar === null ? null : 1 - nEd - dStar;
-  const card = (nm, c, need, fc) => `<div class="sa-card"><div class="nm" style="color:${c}">${nm} need</div><div class="big2" style="color:${c}">${need === null ? '—' : (Math.max(0, need) * 100).toFixed(1) + '%'}</div>
-    <div class="mini">of Election Day ballots to tie the state. Forecast: <b style="color:var(--text)">${(fc * 100).toFixed(1)}%</b>${need === null ? '' : ` (<span class="${fc - need >= 0 ? 'sa-up' : 'sa-dn'}">${fc - need >= 0 ? '+' : '−'}${Math.abs((fc - need) * 100).toFixed(1)} pts</span> vs the break-even)<br>About ${fmt(Math.round(Math.max(0, need) * b.edT))} of the ${fmt(Math.round(b.edT))} ballots still to come.`}</div></div>`;
-  el.innerHTML = `<div class="sa-need">${card('Democrats', SA_COL.d, dStar, dEd)}${card('Republicans', SA_COL.r, rStar, rEd)}</div>
-    <div class="sa-verdict">Banked so far: <b>${saPts(banked / (b.bT || 1) * 100)}</b> on a candidate-vote basis. If Election Day arrives as forecast, the final statewide margin lands around <b style="color:${fcMargin >= 0 ? SA_COL.d : SA_COL.r}">${saPts(fcMargin / total * 100)}</b>.
-    ${dStar === null ? '' : Math.abs((dStar - dEd) * 100) < 0.05 ? 'The forecast sits right on the line.' : dStar > dEd ? `Democrats are below the line and need to beat the forecast by ${((dStar - dEd) * 100).toFixed(1)} pts of Election Day ballots.` : `Democrats are above the line by ${((dEd - dStar) * 100).toFixed(1)} pts of Election Day ballots.`}</div>`;
+  const kD = 2 * dl - 1, kR = 2 * rl - 1, base = p.d * kD - p.r * kR, tot = p.d + p.r + p.n;
+  if(!p.n){ el.innerHTML = '<div class="sa-empty">No NPA/other ballots are projected.</div>'; return; }
+  const sStar = (1 - base / p.n) / 2;                       // share of NPA/other votes Democrats need to tie the state
+  const dNeed = Math.min(1, Math.max(0, sStar)), rNeed = Math.min(1, Math.max(0, 1 - sStar));
+  const margin = (base + p.n * (2 * s - 1)) / tot * 100;
+  const note = x => x <= 0 ? 'win even with none of them' : x >= 1 ? 'cannot win on NPA votes alone' : '';
+  const card = (nm, c, need, raw) => `<div class="sa-card"><div class="nm" style="color:${c}">${nm} need</div>
+    <div class="big2" style="color:${c}">${raw <= 0 ? '0%' : raw >= 1 ? '100%+' : (need * 100).toFixed(1) + '%'}</div>
+    <div class="mini">of NPA/other voters statewide to win${note(raw) ? ' (' + note(raw) + ')' : ''}.${raw > 0 && raw < 1 ? `<br>About ${fmt(Math.round(need * p.n))} of the ${fmt(Math.round(p.n))} NPA/other ballots projected.` : ''}</div></div>`;
+  el.innerHTML = `<div class="sa-need">${card('Democrats', SA_COL.d, dNeed, sStar)}${card('Republicans', SA_COL.r, rNeed, 1 - sStar)}</div>
+    <div class="sa-verdict">This uses the projected final turnout by party, <b style="color:${SA_COL.d}">${fmt(Math.round(p.d))} Democratic</b>, <b style="color:${SA_COL.r}">${fmt(Math.round(p.r))} Republican</b> and <b style="color:${SA_COL.n}">${fmt(Math.round(p.n))} NPA/other</b> ballots, with ${demLoyalty.toFixed(0)}% of Democrats and ${repLoyalty.toFixed(0)}% of Republicans voting for their own party's candidate.
+    Under those assumptions the two parties tie when NPA/other voters split <b>${(sStar * 100).toFixed(1)}% Democratic / ${((1 - sStar) * 100).toFixed(1)}% Republican</b>.
+    At the slider's setting (${npaSplitToDem.toFixed(1)}% D), the statewide result would be <b style="color:${margin >= 0 ? SA_COL.d : SA_COL.r}">${saPts(margin)}</b>.</div>`;
+}
+// ---- Election Day map: projected outcome of the ballots still to come, county by county ----
+function saCountyED(M){
+  const byName = {}; COUNTIES.forEach(c => { byName[c.county] = c; });
+  const out = {};
+  SIM_COUNTY_NAMES.forEach(n => {
+    const c = byName[n], reg = SIM_REG[n][0], rs = SIM_REG[n][1] / 100, ds = SIM_REG[n][2] / 100, ns = Math.max(0, 1 - rs - ds);
+    const aD = c ? (c.dem || 0) : 0, aR = c ? (c.rep || 0) : 0, aT = c ? (c.total || 0) : 0, aN = Math.max(0, aT - aD - aR);
+    const rem = Math.max(0, M.E[n] - aT);
+    const pool = { d:Math.max(0, reg * ds - aD), r:Math.max(0, reg * rs - aR), n:Math.max(0, reg * ns - aN) }, pt = pool.d + pool.r + pool.n;
+    const mix = pt > 0 ? { d:pool.d / pt, r:pool.r / pt, n:pool.n / pt } : { d:ds, r:rs, n:ns };
+    out[n] = { d:rem * mix.d, r:rem * mix.r, n:rem * mix.n, t:rem };
+  });
+  return out;
+}
+async function saDrawEdMap(){
+  const el = document.getElementById('saEdMap'); const b = saState.ctx; if(!el || !b) return;
+  await ensureGeojson();
+  const ed = saCountyED(b.M), dl = demLoyalty / 100, rl = repLoyalty / 100, s = npaSplitToDem / 100;
+  const names = SIM_COUNTY_NAMES.filter(c => FL_FIPS[c]);
+  const res = {};
+  names.forEach(c => {
+    const o = ed[c]; if(!o || !o.t) return;
+    const D = o.d * dl + o.r * (1 - rl) + o.n * s, R = o.r * rl + o.d * (1 - dl) + o.n * (1 - s);
+    res[c] = { m:(D - R) / o.t * 100, t:o.t, d:o.d / o.t * 100, r:o.r / o.t * 100, n:o.n / o.t * 100 };
+  });
+  const vals = names.map(c => res[c] ? res[c].m : null);
+  const av = vals.filter(v => v !== null).map(Math.abs).sort((x, y) => x - y), mx = Math.max(10, Math.ceil((av[Math.floor(av.length * 0.95)] || 0) / 5) * 5);
+  const hover = names.map(c => { const o = res[c]; return o ? `<b>${c}</b><br>Projected Election Day vote: <b>${saPts(o.m)}</b><br>About ${fmt(Math.round(o.t))} ballots still to come<br>Expected mix: DEM ${o.d.toFixed(1)}% · REP ${o.r.toFixed(1)}% · NPA ${o.n.toFixed(1)}%` : `<b>${c}</b><br>No Election Day ballots projected`; });
+  const base = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z:names.map(() => 0), featureidkey:'id', zmin:0, zmax:1, colorscale:[[0, '#222b3d'], [1, '#222b3d']], showscale:false, marker:{ line:{ color:'#0a0e17', width:1 } }, hoverinfo:'skip' };
+  const tr = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z:vals, featureidkey:'id', zmin:-mx, zmax:mx, zmid:0,
+    colorscale:[[0, '#b5382f'], [0.3, '#d98a82'], [0.5, '#e4e7ee'], [0.7, '#8fb8e3'], [1, '#2f6fb5']], text:hover, hoverinfo:'text', hoverlabel:saTipBox,
+    marker:{ line:{ color:'#0a0e17', width:1 } }, colorbar:{ orientation:'h', thickness:10, len:0.55, y:-0.02, x:0.5, ticksuffix:' pts', tickfont:{ size:10, color:'#9aa4b8' }, outlinewidth:0, tickvals:[-mx, 0, mx], ticktext:['R+' + mx, 'Even', 'D+' + mx] } };
+  await Plotly.react(el, [base, tr], { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:34, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });
 }
 document.getElementById('splitAvgView').addEventListener('input', e => {
   if(e.target.id !== 'saNpa') return;
@@ -12313,6 +12353,7 @@ document.getElementById('splitAvgView').addEventListener('input', e => {
   const live = document.getElementById('npaSlider'); if(live) live.value = 100 - npaSplitToDem;
   try{ updateNpaSliderLabel(); }catch(_){}
   saRenderNeeds();
+  saDrawEdMap().catch(() => {});
 });
 document.getElementById('saGran').addEventListener('click', e => {
   const b = e.target.closest('button'); if(!b) return;
@@ -12345,6 +12386,7 @@ async function saRender(){
   }
   sec('saSecEd', saEdHTML(M, types, edMeth));
   saRenderNeeds();
+  saDrawEdMap().catch(() => {});
   // party share chart
   const per = saIncsCum(pts);
   const shareEl = document.getElementById('saShareChart');

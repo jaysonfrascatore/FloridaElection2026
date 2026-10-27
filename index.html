@@ -1826,6 +1826,11 @@
     <div class="an-td-head" id="anTpHead"></div>
     <div id="anTpChart" style="height:280px;"></div>
     <div class="an-td-note" id="anTpNote"></div>
+    <h3 class="sa-proj-title" style="margin:26px 0 4px">Turnout path to Election Day</h3>
+    <div class="table-hint">Ballots counted so far (solid) and the projected path through Election Day, Nov 3 (dotted), for each party. The dotted line lands on the Projected Final Turnout above.</div>
+    <div class="an-td-head" id="anTrHead"></div>
+    <div id="anTrChart" style="height:310px;"></div>
+    <div class="an-td-note" id="anTrNote"></div>
   </div>
 
   <div class="panel an-compare" id="anCompare"></div>
@@ -12628,6 +12633,61 @@ async function saRenderTurnParty(M){
     yaxis:{ gridcolor:'#212a3b', tickfont:{ size:10 }, range:[Math.max(0, lo - pad), hi + pad], ticksuffix:pct ? '%' : '', tickformat:pct ? '.0f' : ',.0f' } }), { displayModeBar:false, responsive:true });
   saAttachTip(el, (n, y) => pct ? y.toFixed(1) + '%' : fmt(Math.round(y)));
   document.getElementById('anTpNote').textContent = 'Each point is one logged update. Hover anywhere on the chart to see all three parties at that update.';
+  try{ await saRenderTurnPath(M, pts, reg, seq); }catch(e){ console.error(e); }
+}
+// Projected path of each party's turnout from the latest count to Election Day (Nov 3).
+// Until Nov 2 each party keeps adding ballots at its own last-7-day daily pace (capped so Election Day always keeps at
+// least 15% of what is still to come); whatever is left of the projected final total votes on Election Day.
+async function saRenderTurnPath(M, pts, reg, seq){
+  const el = document.getElementById('anTrChart'); if(!el) return;
+  const KS = ['d', 'r', 'n'], NM = { d:'DEM', r:'REP', n:'NPA/Other' };
+  const last = {}; pts.forEach(p => { last[saKey(p.t)] = { t:p.t, d:p.D, r:p.R, n:p.N }; });
+  let act = Object.keys(last).sort().map(k => last[k]);
+  let bD = 0, bR = 0, bN = 0; COUNTIES.forEach(c => { bD += c.dem || 0; bR += c.rep || 0; bN += Math.max(0, (c.total || 0) - (c.dem || 0) - (c.rep || 0)); });
+  const now = new Date(), live = { t:act.length && saKey(act[act.length - 1].t) === saKey(now) ? act[act.length - 1].t : now, d:bD, r:bR, n:bN };
+  const lp = act[act.length - 1];
+  if(lp && Math.abs((lp.d + lp.r + lp.n) - (bD + bR + bN)) <= 1) live.t = lp.t;   // nothing new since the last logged update, so keep that update's time
+  if(act.length && saKey(act[act.length - 1].t) === saKey(live.t)) act[act.length - 1] = live; else act.push(live);
+  const cur = act[act.length - 1], fin = M.party;
+  const n7 = Math.min(7, act.length - 1), base = act[act.length - 1 - n7];
+  const pace = {}, rem = {}; KS.forEach(k => { pace[k] = n7 > 0 ? Math.max(0, (cur[k] - base[k]) / n7) : 0; rem[k] = Math.max(0, fin[k] - cur[k]); });
+  const ed = new Date(2026, 10, 3), fut = [];
+  const d0 = new Date(cur.t.getFullYear(), cur.t.getMonth(), cur.t.getDate() + 1);
+  for(let d = d0; d < ed; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) fut.push(new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 0));
+  const edT = new Date(2026, 10, 3, 23, 0);
+  const proj = [];   // {t, d, r, n, inc:{...}, kind}
+  const run = { d:cur.d, r:cur.r, n:cur.n };
+  const inc = {}; KS.forEach(k => { const want = pace[k] * fut.length, cap = rem[k] * 0.85; inc[k] = want > cap && want > 0 ? pace[k] * cap / want : pace[k]; });
+  fut.forEach(t => { const o = { t, inc:{}, kind:'Projected' }; KS.forEach(k => { const g = Math.min(inc[k], Math.max(0, fin[k] - run[k])); run[k] += g; o[k] = run[k]; o.inc[k] = g; }); proj.push(o); });
+  const fo = { t:edT, inc:{}, kind:'Election Day (final)' }; KS.forEach(k => { fo.inc[k] = Math.max(0, fin[k] - run[k]); fo[k] = fin[k]; }); proj.push(fo);
+  if(seq !== undefined && seq !== saTpSeq) return;
+  const pct = saState.tpMode === 'pct', val = (o, k) => pct ? o[k] / reg[k] * 100 : o[k], fmtV = v => pct ? v.toFixed(1) + '%' : fmt(Math.round(v));
+  document.getElementById('anTrHead').innerHTML = KS.map(k => `<span class="nm" style="color:${SA_COL[k]}">${NM[k]}</span><span class="big" style="color:${SA_COL[k]}">${fmtV(val(fin, k))}</span>`).join('') + `<span class="sub">projected final on Nov 3 (now ${KS.map(k => `<span style="color:${SA_COL[k]}">${fmtV(val(cur, k))}</span>`).join(' · ')})</span>`;
+  const all = act.map(o => Object.assign({}, o, { kind:'Counted', inc:null })).concat(proj);
+  const xs = all.map(o => o.t);
+  const nA = act.length;
+  const trs = [];
+  KS.forEach(k => {
+    trs.push({ x:act.map(o => o.t), y:act.map(o => val(o, k)), type:'scatter', mode:'lines+markers', line:{ color:SA_COL[k], width:3 }, marker:{ size:6, color:SA_COL[k], line:{ color:'#0a0e17', width:1 } }, hoverinfo:'skip', showlegend:false, name:NM[k] });
+    trs.push({ x:[cur.t].concat(proj.map(o => o.t)), y:[val(cur, k)].concat(proj.map(o => val(o, k))), type:'scatter', mode:'lines', line:{ color:SA_COL[k], width:3, dash:'dot' }, hoverinfo:'skip', showlegend:false, name:NM[k] + ' projected' });
+  });
+  const tip = (o, i) => {
+    const isP = i >= nA, tot = o.d + o.r + o.n;
+    const prev = i ? all[i - 1] : null;
+    const rows = KS.map(k => saRow(SA_COL[k], NM[k], fmtV(val(o, k)), pct ? fmt(Math.round(o[k])) + ' ballots' : '')).join('');
+    const gain = isP && o.inc ? `<div class="sorted-hover-gain-header">Added ${i === all.length - 1 ? 'on Election Day' : 'that day'} (projected):</div>` + KS.map(k => `<div class="sorted-hover-row">${saDot(SA_COL[k])}<span class="sorted-hover-gap">${NM[k]} +${fmt(Math.round(o.inc[k]))}</span></div>`).join('') : '';
+    return `<div class="sorted-hover-date">${i === all.length - 1 ? 'Nov 3 · Election Day' : saDayLabel(o.t)} · ${isP ? o.kind : 'Counted'}</div>` + rows + `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>ALL BALLOTS</b>&nbsp;${fmt(Math.round(tot))}</div>` + gain;
+  };
+  trs.push({ x:xs, y:all.map(o => val(o, 'd')), type:'scatter', mode:'markers', marker:{ size:12, opacity:0 }, showlegend:false, customdata:all.map(tip), hoverinfo:'none' });
+  const ys = [].concat(...KS.map(k => all.map(o => val(o, k)))), lo = Math.min(...ys), hi = Math.max(...ys), pad = Math.max((hi - lo) * 0.08, pct ? 1 : 5000);
+  const lay = saUnifiedLayout({ tickformat:'%b %-d', yaxis:{ gridcolor:'#212a3b', tickfont:{ size:10 }, range:[Math.max(0, lo - pad), hi + pad], ticksuffix:pct ? '%' : '', tickformat:pct ? '.0f' : ',.0f' } });
+  lay.showlegend = false;
+  lay.shapes = [{ type:'line', xref:'x', yref:'paper', x0:cur.t, x1:cur.t, y0:0, y1:1, line:{ color:'#5a6580', width:1, dash:'dash' } }, { type:'line', xref:'x', yref:'paper', x0:edT, x1:edT, y0:0, y1:1, line:{ color:'#F5B942', width:1, dash:'dash' } }];
+  lay.annotations = [{ xref:'x', yref:'paper', x:cur.t, y:1.02, text:'Now', showarrow:false, font:{ size:10, color:'#9aa4b8' } }, { xref:'x', yref:'paper', x:edT, y:1.02, text:'Election Day', showarrow:false, xanchor:'right', font:{ size:10, color:'#F5B942' } }];
+  lay.margin.t = 22;
+  await Plotly.react(el, trs, lay, { displayModeBar:false, responsive:true });
+  saAttachHtmlTip(el);
+  document.getElementById('anTrNote').textContent = `Dotted lines assume each party keeps adding ballots at its own last-${n7 || 7}-day daily pace through Nov 2, and the rest of the projected final turnout votes on Election Day. Hover anywhere on the chart.`;
 }
 document.getElementById('anTpMode').addEventListener('click', e => {
   const b = e.target.closest('button'); if(!b) return;

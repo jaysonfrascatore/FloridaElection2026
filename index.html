@@ -939,6 +939,31 @@
   }
   #dayViewSelect:hover{ border-color:var(--gold); }
   #countyZoomPngBtn.visible{ display:inline-flex; }
+  .sa-panel{ margin-bottom:14px; }
+  #anTurnPartyPanel{ margin-top:14px; }
+  .sa-head{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
+  .sa-head h2{ margin:0; }
+  .sa-ctrls{ display:flex; flex-wrap:wrap; gap:8px; }
+  .sa-seg button{ font-size:11px; padding:6px 10px; }
+  .sa-cards{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:10px 0 14px; }
+  @media (max-width:760px){ .sa-cards{ grid-template-columns:minmax(0,1fr); } }
+  .sa-card{ background:var(--panel-2); border:1px solid var(--border); border-radius:10px; padding:12px 14px; }
+  .sa-card .nm{ font-size:12px; color:var(--muted); font-family:var(--mono); text-transform:uppercase; letter-spacing:.04em; }
+  .sa-card .big{ font-size:24px; font-weight:700; margin:4px 0 2px; }
+  .sa-card .mini{ font-size:11.5px; color:var(--muted); margin-top:6px; line-height:1.45; }
+  .sa-card .tag{ display:inline-block; font-size:10px; padding:1px 6px; border-radius:6px; border:1px solid var(--gold); color:var(--gold); margin-left:6px; vertical-align:middle; }
+  .sa-bar{ display:flex; height:10px; border-radius:5px; overflow:hidden; margin:8px 0 4px; background:#222b3d; }
+  .sa-bar i{ display:block; height:100%; }
+  .sa-split{ display:flex; justify-content:space-between; font-size:11.5px; font-family:var(--mono); }
+  .sa-sub{ font-size:13px; font-weight:600; margin:6px 0 2px; } .sa-subnote{ font-weight:400; color:var(--muted); font-size:11px; margin-left:6px; }
+  .sa-slider{ display:flex; align-items:center; gap:10px; margin:10px 0; flex-wrap:wrap; font-size:12px; }
+  .sa-slider input{ flex:1 1 180px; min-width:140px; }
+  .sa-need{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:8px; }
+  @media (max-width:760px){ .sa-need{ grid-template-columns:minmax(0,1fr); } }
+  .sa-verdict{ margin-top:10px; font-size:13px; line-height:1.5; padding:10px 12px; border-left:3px solid var(--gold); background:var(--panel-2); border-radius:6px; }
+  .sa-empty{ padding:14px; font-size:12.5px; color:var(--muted); border:1px dashed var(--border); border-radius:10px; }
+  .sa-up{ color:#4ade80; } .sa-dn{ color:#f87171; }
+  .pt-lead-row{ display:block; margin-top:4px; padding-top:4px; border-top:1px dashed var(--border); font-weight:600; }
   #mapZoomRow{ display:flex; gap:14px; align-items:stretch; position:relative; }
   /* Total Turnout's key: sits over the open water at the map's lower left
      (never over a county), and steps aside while a county page is open. */
@@ -1177,6 +1202,7 @@
           <span style="color:#d4675a;">REP <b id="ptRep">&mdash;</b></span>
           <span style="color:#c77dff;">NPA/Other <b id="ptOther">&mdash;</b></span>
           <span class="net-gain-total">LIVE TURNOUT <b id="ptTotal">&mdash;</b></span>
+          <span class="pt-lead-row">TURNOUT LEAD <b id="ptLead">&mdash;</b></span>
         </div>
         <div class="sub" id="ptSub"></div>
       </div>
@@ -1201,6 +1227,7 @@
       <button data-metric="move">Margin move</button>
       <button data-metric="updated">Counties Updated</button>
       <button data-metric="dropwinner">Drop Winners</button>
+      <button data-metric="splitavg">Split Averages</button>
     </div>
     <div class="next-update" id="nextUpdateClock" aria-live="off">
       <div class="nu-label" id="nuLabel">Next update</div>
@@ -1213,6 +1240,34 @@
     <button class="sim-btn" id="downloadMapPngBtn">Download PNG</button>
     <button class="sim-btn" id="dailyRecapBtn" style="display:none;" title="Download a one-day recap graphic (uses the day picked in the map's dropdown, or the latest day)">Daily Recap</button>
     <button class="sim-btn" id="downloadMapOnlyBtn" style="display:none;">Download Map</button>
+  </div>
+
+  <div id="splitAvgView" style="display:none">
+    <div class="panel sa-panel">
+      <div class="sa-head"><h2>Split Averages</h2>
+        <div class="sa-ctrls">
+          <div class="segmented sa-seg" id="saGran"><button data-g="update" class="active">By update</button><button data-g="day">By day</button></div>
+          <div class="segmented sa-seg" id="saBasis"><button data-b="cum" class="active">Running total</button><button data-b="new">New votes only</button></div>
+        </div>
+      </div>
+      <div class="table-hint" id="saIntro">How each voting method splits between the parties, how that has moved, and what Election Day has to look like. Parties are by registration, not by who they vote for.</div>
+      <div id="saCards" class="sa-cards"></div>
+      <div class="sa-sub">Margin by voting method <span class="sa-subnote" id="saMethNote"></span></div>
+      <div id="saMethChart" style="height:270px;"></div>
+    </div>
+    <div class="panel sa-panel">
+      <div class="sa-head"><h2>What each party needs on Election Day</h2></div>
+      <div class="table-hint">Election Day is forecast from the Projected Final Turnout model (county by county) minus what is already banked. The break-even is the Election Day mix at which the statewide two-party vote ties, using the loyalty and NPA sliders.</div>
+      <div class="sa-slider"><label for="saNpa">NPA/Other split</label><input type="range" id="saNpa" min="0" max="100" step="0.5" value="50"><span id="saNpaVal"></span></div>
+      <div id="saNeeds"></div>
+    </div>
+    <div class="panel sa-panel">
+      <div class="sa-head"><h2>Party share of ballots</h2></div>
+      <div class="table-hint">DEM, REP and NPA/Other as a share of all ballots counted statewide.</div>
+      <div id="saShareHead" class="an-td-head"></div>
+      <div id="saShareChart" style="height:280px;"></div>
+      <div class="an-td-note" id="saShareNote"></div>
+    </div>
   </div>
 
   <div class="grid" id="liveGrid">
@@ -1744,6 +1799,15 @@
       </div>
     </div>
     <div class="panel" id="anHousePanel" style="display:none"></div>
+  </div>
+
+  <div class="panel" id="anTurnPartyPanel" style="display:none">
+    <div class="sa-head"><h2>Projected Final Turnout by party</h2>
+      <div class="segmented sa-seg" id="anTpMode"><button data-m="pct" class="active">% of party's voters</button><button data-m="votes">Ballots</button></div></div>
+    <div class="table-hint">Each point replays the projection on the ballots counted at that update: how many of each party's registered voters are expected to have voted when every vote is in. Parties are by registration.</div>
+    <div class="an-td-head" id="anTpHead"></div>
+    <div id="anTpChart" style="height:280px;"></div>
+    <div class="an-td-note" id="anTpNote"></div>
   </div>
 
   <div class="panel an-compare" id="anCompare"></div>
@@ -2812,6 +2876,7 @@ function applyBarWidths(){
 }
 
 function toggleBarParty(party){
+  if(typeof saShow === 'function') saShow(false);
   selectedParty = (selectedParty === party) ? null : party;
   applyBarWidths();
   document.querySelectorAll('#metricSelect button').forEach(b=>b.classList.remove('active'));
@@ -3108,7 +3173,13 @@ function renderPartyTurnoutCard(){
     document.getElementById('ptRep').textContent = p(vR, rR);
     document.getElementById('ptOther').textContent = p(vN, rN);
     document.getElementById('ptTotal').textContent = p(vD + vR + vN, rD + rR + rN);
+    const tD = rD ? vD / rD * 100 : 0, tR = rR ? vR / rR * 100 : 0, gap = tD - tR, ld = document.getElementById('ptLead');
+    if(rD && rR){
+      ld.textContent = Math.abs(gap) < 0.005 ? 'Even' : (gap > 0 ? 'D+' : 'R+') + Math.abs(gap).toFixed(2);
+      ld.style.color = Math.abs(gap) < 0.005 ? '' : (gap > 0 ? '#5b9bd9' : '#d4675a');
+    }else ld.textContent = '—';
     document.getElementById('ptSub').textContent = 'Votes cast ÷ registered voters of that party';
+    ld.parentElement.title = 'Turnout lead: the DEM turnout rate minus the REP turnout rate, in percentage points';
   }catch(e){}
 }
 
@@ -5524,6 +5595,8 @@ document.getElementById('metricSelect').addEventListener('click', e => {
   applyBarWidths();
   document.querySelectorAll('#metricSelect button').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
+  if(btn.dataset.metric === 'splitavg'){ saShow(true); return; }
+  saShow(false);
   currentMetric = btn.dataset.metric;
   // The history may have been loaded by the OTHER tab's slider; make sure
   // this tab's slider has the real range too.
@@ -11818,7 +11891,7 @@ async function renderAnalysis(){
   show('anHero', !isHouse && !isTurn); show('anTurnHero', isTurn); show('anHouseHero', isHouse);
   if(!isHouse){ const mp = document.getElementById('anMapPrompt'); if(mp) mp.style.display = 'none'; }
   show('anTurnMethod', isTurn); show('anMethod', !isTurn);
-  show('anCountyPanel', !isHouse && !isTurn); show('anTurnPanel', isTurn); show('anHousePanel', isHouse);
+  show('anCountyPanel', !isHouse && !isTurn); show('anTurnPanel', isTurn); show('anTurnPartyPanel', isTurn); show('anHousePanel', isHouse);
   show('anCompare', !isHouse && !isTurn); show('anNpa', !isHouse && !isTurn); show('anRaces', !isHouse && !isTurn);
   show('anRace_governor', anState.race === 'governor'); show('anRace_senate', anState.race === 'senate');
   document.querySelectorAll('#anViewSelect button').forEach(b => { b.style.display = (isHouse && !['forecast', 'vs24'].includes(b.dataset.view)) ? 'none' : ''; });
@@ -11832,6 +11905,7 @@ async function renderAnalysis(){
     anRenderTurnHero(M);
     document.getElementById('anBlurb').innerHTML = anHighlight(anBuildTurnoutBlurb(M));
     anRenderTurnTable(m);
+    if(typeof saRenderTurnParty === 'function') saRenderTurnParty(M);
   }else{
     anRenderHero(m, M);
     document.getElementById('anBlurb').innerHTML = anBuildBlurb(M);
@@ -11876,6 +11950,303 @@ function initAnalysis(){
 
 </script>
 
+
+<script>
+/* ============================================================
+   Split Averages tab + Projected Final Turnout by party
+   ------------------------------------------------------------
+   Everything here is read-only on the existing model: it replays
+   county_history_full.csv (statewide party shares by update, party
+   turnout projection by update) and, when present,
+   data/county_history_types.csv (Mail / Early / Election Day).
+   ============================================================ */
+const SA_COL = { d:'#5b9bd9', r:'#d4675a', n:'#c77dff', all:'#e6b655' };
+const SA_METHODS = [ { k:'ev', t:'EV', name:'In-Person Early' }, { k:'vbm', t:'VBM', name:'Mail' } ];
+const saState = { gran:'update', basis:'cum', tpMode:'pct', shown:false };
+let saReplayCache = null, saReplayRows = null, saTypesCache = null, saTypesRows = null;
+const saPts = v => (Math.abs(v) < 0.005 ? 'Even' : (v > 0 ? 'D+' : 'R+') + Math.abs(v).toFixed(2));
+const saStamp = t => t.toLocaleDateString('en-US', { month:'short', day:'numeric' }) + ', ' + t.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
+const saDayLabel = t => t.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+const saKey = d => d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+const saHover = { bgcolor:'rgba(21,27,40,0.78)', bordercolor:'rgba(124,135,156,0.35)', font:{ family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5' } };
+function saLayout(extra){
+  return Object.assign({ margin:{ t:8, r:12, b:36, l:48 }, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', showlegend:true,
+    legend:{ orientation:'h', y:-0.22, font:{ size:11, color:'#9aa4b8' } }, hovermode:'closest', font:{ family:'Inter, sans-serif', color:'#9aa4b8', size:11 },
+    xaxis:{ gridcolor:'#212a3b', tickfont:{ size:10 } }, yaxis:{ gridcolor:'#212a3b', tickfont:{ size:10 } } }, extra || {});
+}
+
+// ---- replay of county_history_full.csv: per update, every county's counted ballots by party ----
+async function saReplay(){
+  const rows = await ensureCountyHistoryLoaded();
+  if(saReplayCache && saReplayRows === rows) return saReplayCache;
+  const names = SIM_COUNTY_NAMES, by = {}, times = new Set();
+  rows.forEach(r => {
+    const n = normName(pick(r, ['County', 'County_x'])), t = parseHistoryTimestamp(pick(r, ['Timestamp']));
+    if(!n || !t || !SIM_REG[n]) return;
+    const dem = num(pick(r, ['DEM'])), rep = num(pick(r, ['REP'])), oth = num(pick(r, ['IND'])) + num(pick(r, ['NPA'])) + num(pick(r, ['OTHER']));
+    const tot = num(pick(r, ['TOTAL'])) || (dem + rep + oth);
+    (by[n] = by[n] || []).push([+t, dem, rep, tot]);
+    times.add(+t);
+  });
+  names.forEach(n => { if(by[n]) by[n].sort((a, b) => a[0] - b[0]); });
+  const idx = {};
+  const pts = [...times].sort((a, b) => a - b).map(t => {
+    const actual = {}, dem = {}, rep = {};
+    let D = 0, R = 0, T = 0;
+    names.forEach(n => {
+      const list = by[n]; let i = idx[n] === undefined ? -1 : idx[n];
+      while(list && i + 1 < list.length && list[i + 1][0] <= t) i++;
+      idx[n] = i;
+      const row = list && i >= 0 ? list[i] : null;
+      dem[n] = row ? row[1] : 0; rep[n] = row ? row[2] : 0; actual[n] = row ? row[3] : 0;
+      D += dem[n]; R += rep[n]; T += actual[n];
+    });
+    return { t:new Date(t), actual, dem, rep, D, R, N:Math.max(0, T - D - R), T };
+  });
+  saReplayRows = rows; saReplayCache = pts;
+  return pts;
+}
+// Same party projection as the Analysis model: banked ballots + the rest drawn from each county's unvoted registered voters.
+function saPartyProject(E, actual, dem, rep){
+  const sum = { d:0, r:0, n:0 };
+  SIM_COUNTY_NAMES.forEach(n => {
+    const reg = SIM_REG[n][0], rs = SIM_REG[n][1] / 100, ds = SIM_REG[n][2] / 100, ns = Math.max(0, 1 - rs - ds);
+    const aD = dem[n] || 0, aR = rep[n] || 0, aT = actual[n] || 0, aN = Math.max(0, aT - aD - aR), rem = Math.max(0, E[n] - aT);
+    const pool = { d:Math.max(0, reg * ds - aD), r:Math.max(0, reg * rs - aR), n:Math.max(0, reg * ns - aN) };
+    const pt = pool.d + pool.r + pool.n;
+    const mix = pt > 0 ? { d:pool.d / pt, r:pool.r / pt, n:pool.n / pt } : { d:ds, r:rs, n:ns };
+    sum.d += aD + rem * mix.d; sum.r += aR + rem * mix.r; sum.n += aN + rem * mix.n;
+  });
+  return sum;
+}
+function saRegByParty(){
+  const g = { d:0, r:0, n:0 };
+  SIM_COUNTY_NAMES.forEach(n => { const [reg, rs, ds] = SIM_REG[n]; g.r += reg * rs / 100; g.d += reg * ds / 100; g.n += reg * Math.max(0, 100 - rs - ds) / 100; });
+  return g;
+}
+
+// ---- Analysis tab: Projected Final Turnout by party ----
+let saTpSeq = 0, saTpCache = null;
+async function saRenderTurnParty(M){
+  const seq = ++saTpSeq, reg = saRegByParty();
+  let pts = [];
+  try{ pts = await saReplay(); }catch(e){ pts = []; }
+  if(seq !== saTpSeq) return;
+  if(!saTpCache || saTpCache.src !== pts){
+    saTpCache = { src:pts, list:pts.map(p => { const { E } = anProjectTurnout(p.actual), q = saPartyProject(E, p.actual, p.dem, p.rep); return { t:p.t, d:q.d, r:q.r, n:q.n }; }) };
+  }
+  const series = saTpCache.list.slice();
+  const now = { t:new Date(), d:M.party.d, r:M.party.r, n:M.party.n };
+  const l = series[series.length - 1];
+  if(!l || Math.abs(l.d - now.d) > 1 || Math.abs(l.r - now.r) > 1) series.push(now);
+  const pct = saState.tpMode === 'pct';
+  const val = (p, k) => pct ? p[k] / reg[k] * 100 : p[k];
+  const fmtV = v => pct ? v.toFixed(1) + '%' : fmt(Math.round(v));
+  const cur = series[series.length - 1], prev = series.length > 1 ? series[series.length - 2] : null;
+  const chip = (k, nm) => {
+    const v = val(cur, k), dv = prev ? v - val(prev, k) : 0;
+    const arrow = !prev || Math.abs(dv) < (pct ? 0.05 : 1) ? '' : ` <span class="${dv > 0 ? 'sa-up' : 'sa-dn'}" style="font-size:12px">${dv > 0 ? '▲' : '▼'} ${pct ? Math.abs(dv).toFixed(1) + ' pts' : fmt(Math.round(Math.abs(dv)))}</span>`;
+    return `<span class="nm" style="color:${SA_COL[k]}">${nm}</span><span class="big" style="color:${SA_COL[k]}">${fmtV(v)}</span>${arrow}`;
+  };
+  document.getElementById('anTpHead').innerHTML = chip('d', 'DEM') + chip('r', 'REP') + chip('n', 'NPA/Other') +
+    `<span class="sub">${prev ? 'change since the last update' : 'first update'}</span>`;
+  const mk = (k, nm) => ({ x:series.map(p => p.t), y:series.map(p => val(p, k)), type:'scatter', mode:'lines+markers', name:nm,
+    line:{ color:SA_COL[k], width:3 }, marker:{ size:7, color:SA_COL[k], line:{ color:'#0a0e17', width:1.2 } },
+    text:series.map(p => `<b>${saStamp(p.t)}</b><br>${nm}: ${fmtV(val(p, k))}` + (pct ? `<br>${fmt(Math.round(p[k]))} projected ballots of ${fmt(Math.round(reg[k]))} registered` : `<br>${(p[k] / reg[k] * 100).toFixed(1)}% of that party's registered voters`)),
+    hoverinfo:'text', hoverlabel:saHover });
+  const all = [].concat(...['d', 'r', 'n'].map(k => series.map(p => val(p, k))));
+  let lo = Math.min(...all), hi = Math.max(...all); const pad = Math.max((hi - lo) * 0.15, pct ? 1 : 5000);
+  await Plotly.react('anTpChart', [mk('d', 'DEM'), mk('r', 'REP'), mk('n', 'NPA/Other')], saLayout({
+    xaxis:{ gridcolor:'#212a3b', tickformat:'%b %-d<br>%-I %p', tickfont:{ size:10 } },
+    yaxis:{ gridcolor:'#212a3b', tickfont:{ size:10 }, range:[Math.max(0, lo - pad), hi + pad], ticksuffix:pct ? '%' : '', tickformat:pct ? '.0f' : ',.0f' } }), { displayModeBar:false, responsive:true });
+  document.getElementById('anTpNote').textContent = 'Each point is one logged update. A rising line means that party is on pace to turn out more of its registered voters than it was at the update before.';
+}
+document.getElementById('anTpMode').addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  saState.tpMode = b.dataset.m;
+  document.querySelectorAll('#anTpMode button').forEach(x => x.classList.toggle('active', x === b));
+  if(typeof anLast !== 'undefined' && anLast) saRenderTurnParty(anLast);
+});
+
+// ---- Split Averages tab ----
+function saShow(on){
+  saState.shown = on;
+  const v = document.getElementById('splitAvgView'), g = document.getElementById('liveGrid');
+  v.style.display = on ? '' : 'none'; g.style.display = on ? 'none' : '';
+  ['downloadMapPngBtn', 'dailyRecapBtn', 'downloadMapOnlyBtn'].forEach(id => { const el = document.getElementById(id); if(el && on) el.style.display = 'none'; });
+  if(!on){ if(typeof renderMap === 'function'){ try{ renderMap(); }catch(e){} } return; }
+  saRender();
+}
+async function saLoadTypes(){
+  if(typeof btTypeRows === 'undefined' || !btTypeRows || !btTypeRows.length) return null;
+  if(saTypesCache && saTypesRows === btTypeRows) return saTypesCache;
+  const rows = btTypeRows, by = {}, times = new Set();
+  rows.forEach(r => { (by[r.Code] = by[r.Code] || []).push(r); times.add(+r._t); });
+  Object.values(by).forEach(l => l.sort((a, b) => a._t - b._t));
+  const F = ['DEM', 'REP', 'NPA', 'OTHER'], idx = {};
+  const pts = [...times].sort((a, b) => a - b).map(t => {
+    const o = { t:new Date(t) };
+    SA_METHODS.concat([{ k:'ed', t:'ED' }]).forEach(m => { o[m.k] = [0, 0, 0]; });
+    Object.keys(by).forEach(code => {
+      const list = by[code]; let i = idx[code] === undefined ? -1 : idx[code];
+      while(i + 1 < list.length && +list[i + 1]._t <= t) i++;
+      idx[code] = i; if(i < 0) return;
+      const r = list[i];
+      SA_METHODS.concat([{ k:'ed', t:'ED' }]).forEach(m => {
+        o[m.k][0] += num(r['DEM ' + m.t]); o[m.k][1] += num(r['REP ' + m.t]); o[m.k][2] += num(r['NPA ' + m.t]) + num(r['OTHER ' + m.t]);
+      });
+    });
+    return o;
+  });
+  saTypesRows = rows; saTypesCache = pts;
+  return pts;
+}
+// pick points per the update/day toggle; "just that period" = the change since the previous point
+function saPeriods(pts, getV){
+  let cum;
+  if(saState.gran === 'day'){
+    const last = {}; pts.forEach(p => { last[saKey(p.t)] = p; });
+    cum = Object.keys(last).sort().map(k => last[k]);
+  }else cum = pts;
+  const labelOf = p => saState.gran === 'day' ? saDayLabel(p.t) : saStamp(p.t);
+  return cum.map((p, i) => {
+    const v = getV(p), pv = i ? getV(cum[i - 1]) : [0, 0, 0];
+    const use = saState.basis === 'cum' ? v : v.map((x, j) => Math.max(0, x - pv[j]));
+    return { t:p.t, label:labelOf(p), v:use, cum:v };
+  });
+}
+const saShares = v => { const t = v[0] + v[1] + v[2]; return t ? { d:v[0] / t * 100, r:v[1] / t * 100, n:v[2] / t * 100, t } : null; };
+
+async function saRender(){
+  const seq = (saRender.seq = (saRender.seq || 0) + 1);
+  let pts = [], types = null;
+  try{ pts = await saReplay(); }catch(e){}
+  try{ types = await saLoadTypes(); }catch(e){}
+  if(seq !== saRender.seq || !saState.shown) return;
+  const M = anCompute(); // Election Day forecast reuses the Projected Final Turnout model
+  const unit = saState.gran === 'day' ? 'day' : 'update';
+  document.getElementById('saMethNote').textContent = saState.basis === 'cum' ? '(running total of each method)' : `(only the ballots added each ${unit})`;
+
+  // cards
+  const cards = [];
+  SA_METHODS.forEach(m => {
+    if(!types){ cards.push(`<div class="sa-card"><div class="nm">${m.name}</div><div class="mini">Waiting for the by-method data (data/county_history_types.csv), which appears after the next scraper run.</div></div>`); return; }
+    const per = saPeriods(types, p => p[m.k]), last = per[per.length - 1], pv = per.length > 1 ? per[per.length - 2] : null;
+    const cs = last ? saShares(last.cum) : null;
+    if(!cs){ cards.push(`<div class="sa-card"><div class="nm">${m.name}</div><div class="mini">No ballots counted by this method yet.</div></div>`); return; }
+    const perc = per.length ? saPeriods(types, p => p[m.k]) : per;
+    const cumAll = types.length ? saShares(types[types.length - 1][m.k]) : cs;
+    // latest period's own split (just that update/day) and how the running average moved because of it
+    const prevCum = pv ? saShares(pv.cum) : null;
+    const shr = saShares(last.cum), mg = shr.d - shr.r, dm = prevCum ? mg - (prevCum.d - prevCum.r) : 0;
+    const lastNew = (() => { const a = last.cum, b = pv ? pv.cum : [0, 0, 0]; return saShares(a.map((x, j) => Math.max(0, x - b[j]))); })();
+    cards.push(`<div class="sa-card"><div class="nm">${m.name}</div>
+      <div class="big" style="color:${mg > 0 ? SA_COL.d : SA_COL.r}">${saPts(mg)}</div>
+      <div class="sa-bar"><i style="width:${shr.d}%;background:${SA_COL.d}"></i><i style="width:${shr.r}%;background:${SA_COL.r}"></i><i style="width:${shr.n}%;background:${SA_COL.n}"></i></div>
+      <div class="sa-split"><span style="color:${SA_COL.d}">DEM ${shr.d.toFixed(1)}%</span><span style="color:${SA_COL.r}">REP ${shr.r.toFixed(1)}%</span><span style="color:${SA_COL.n}">NPA ${shr.n.toFixed(1)}%</span></div>
+      <div class="mini">${fmt(Math.round(shr.t))} ballots · running average${prevCum && Math.abs(dm) >= 0.005 ? ` · <span class="${dm > 0 ? 'sa-up' : 'sa-dn'}">${dm > 0 ? '▲' : '▼'} ${Math.abs(dm).toFixed(2)} pts vs the ${unit} before</span>` : ''}
+      ${lastNew ? `<br>Latest ${unit} alone: ${saPts(lastNew.d - lastNew.r)} (D ${lastNew.d.toFixed(1)} · R ${lastNew.r.toFixed(1)} · N ${lastNew.n.toFixed(1)})` : ''}</div></div>`);
+  });
+  // Election Day forecast card: what is still to come
+  const reg = saRegByParty();
+  let bankD = 0, bankR = 0, bankN = 0;
+  COUNTIES.forEach(c => { bankD += c.dem || 0; bankR += c.rep || 0; bankN += Math.max(0, (c.total || 0) - (c.dem || 0) - (c.rep || 0)); });
+  const bankT = bankD + bankR + bankN;
+  const fin = M.party, edD = Math.max(0, fin.d - bankD), edR = Math.max(0, fin.r - bankR), edN = Math.max(0, fin.n - bankN), edT = edD + edR + edN;
+  const edShr = edT ? { d:edD / edT * 100, r:edR / edT * 100, n:edN / edT * 100 } : null;
+  const edActual = types && types.length ? saShares(types[types.length - 1].ed) : null;
+  if(edActual && edActual.t > 0){
+    cards.push(`<div class="sa-card"><div class="nm">Election Day</div><div class="big" style="color:${edActual.d > edActual.r ? SA_COL.d : SA_COL.r}">${saPts(edActual.d - edActual.r)}</div>
+      <div class="sa-bar"><i style="width:${edActual.d}%;background:${SA_COL.d}"></i><i style="width:${edActual.r}%;background:${SA_COL.r}"></i><i style="width:${edActual.n}%;background:${SA_COL.n}"></i></div>
+      <div class="sa-split"><span style="color:${SA_COL.d}">DEM ${edActual.d.toFixed(1)}%</span><span style="color:${SA_COL.r}">REP ${edActual.r.toFixed(1)}%</span><span style="color:${SA_COL.n}">NPA ${edActual.n.toFixed(1)}%</span></div>
+      <div class="mini">${fmt(Math.round(edActual.t))} ballots counted. Forecast for the whole day: ${saPts(edShr ? edShr.d - edShr.r : 0)}</div></div>`);
+  }else if(edShr){
+    cards.push(`<div class="sa-card"><div class="nm">Election Day<span class="tag">FORECAST</span></div><div class="big" style="color:${edShr.d > edShr.r ? SA_COL.d : SA_COL.r}">${saPts(edShr.d - edShr.r)}</div>
+      <div class="sa-bar"><i style="width:${edShr.d}%;background:${SA_COL.d}"></i><i style="width:${edShr.r}%;background:${SA_COL.r}"></i><i style="width:${edShr.n}%;background:${SA_COL.n}"></i></div>
+      <div class="sa-split"><span style="color:${SA_COL.d}">DEM ${edShr.d.toFixed(1)}%</span><span style="color:${SA_COL.r}">REP ${edShr.r.toFixed(1)}%</span><span style="color:${SA_COL.n}">NPA ${edShr.n.toFixed(1)}%</span></div>
+      <div class="mini">About ${fmt(Math.round(edT))} ballots still to come. Projected from each county's remaining registered voters by party and its turnout pace.</div></div>`);
+  }
+  document.getElementById('saCards').innerHTML = cards.join('');
+
+  // method margin chart
+  const traces = [];
+  if(types){
+    SA_METHODS.forEach((m, i) => {
+      const per = saPeriods(types, p => p[m.k]).map(p => ({ p, s:saShares(p.v) })).filter(o => o.s);
+      traces.push({ x:per.map(o => o.p.t), y:per.map(o => o.s.d - o.s.r), type:'scatter', mode:'lines+markers', name:m.name,
+        line:{ color:i ? '#e6b655' : '#4cc9f0', width:3, dash:i ? 'dash' : 'solid' }, marker:{ size:7 },
+        text:per.map(o => `<b>${o.p.label}</b><br>${m.name}: ${saPts(o.s.d - o.s.r)}<br>DEM ${o.s.d.toFixed(1)}% · REP ${o.s.r.toFixed(1)}% · NPA ${o.s.n.toFixed(1)}%<br>${fmt(Math.round(o.s.t))} ballots`), hoverinfo:'text', hoverlabel:saHover });
+    });
+    const all = saPeriods(types, p => [p.ev[0] + p.vbm[0] + p.ed[0], p.ev[1] + p.vbm[1] + p.ed[1], p.ev[2] + p.vbm[2] + p.ed[2]]).map(p => ({ p, s:saShares(p.v) })).filter(o => o.s);
+    traces.push({ x:all.map(o => o.p.t), y:all.map(o => o.s.d - o.s.r), type:'scatter', mode:'lines+markers', name:'All methods', line:{ color:'#9aa4b8', width:2, dash:'dot' }, marker:{ size:5 },
+      text:all.map(o => `<b>${o.p.label}</b><br>All methods: ${saPts(o.s.d - o.s.r)}`), hoverinfo:'text', hoverlabel:saHover });
+    await Plotly.react('saMethChart', traces, saLayout({
+      xaxis:{ gridcolor:'#212a3b', tickformat:saState.gran === 'day' ? '%b %-d' : '%b %-d<br>%-I %p', tickfont:{ size:10 } },
+      yaxis:{ gridcolor:'#212a3b', tickfont:{ size:10 }, zeroline:true, zerolinecolor:'#5a6580', ticksuffix:' pts' } }), { displayModeBar:false, responsive:true });
+  }else{
+    Plotly.purge('saMethChart');
+    document.getElementById('saMethChart').innerHTML = '<div class="sa-empty">The by-method chart fills in once the Mail / Early / Election Day data is published.</div>';
+  }
+
+  // party share chart
+  const per = saPeriods(pts, p => [p.D, p.R, p.N]).map(p => ({ p, s:saShares(p.v) })).filter(o => o.s);
+  const mkS = (k, nm, ix) => ({ x:per.map(o => o.p.t), y:per.map(o => o.s[k]), type:'scatter', mode:'lines+markers', name:nm, line:{ color:SA_COL[k], width:3 }, marker:{ size:7, color:SA_COL[k], line:{ color:'#0a0e17', width:1.2 } },
+    text:per.map(o => `<b>${o.p.label}</b><br>${nm}: ${o.s[k].toFixed(2)}%<br>${saPts(o.s.d - o.s.r)} · ${fmt(Math.round(o.s.t))} ballots`), hoverinfo:'text', hoverlabel:saHover });
+  if(per.length){
+    const c = per[per.length - 1].s, pr = per.length > 1 ? per[per.length - 2].s : null;
+    const chip = (k, nm) => { const dv = pr ? c[k] - pr[k] : 0; return `<span class="nm" style="color:${SA_COL[k]}">${nm}</span><span class="big" style="color:${SA_COL[k]}">${c[k].toFixed(1)}%</span>` + (pr && Math.abs(dv) >= 0.05 ? ` <span class="${dv > 0 ? 'sa-up' : 'sa-dn'}" style="font-size:12px">${dv > 0 ? '▲' : '▼'} ${Math.abs(dv).toFixed(1)}</span>` : ''); };
+    document.getElementById('saShareHead').innerHTML = chip('d', 'DEM') + chip('r', 'REP') + chip('n', 'NPA/Other') + `<span class="sub">${saState.basis === 'cum' ? 'of all ballots counted' : 'of ballots added in the latest ' + unit}</span>`;
+    const all = [].concat(...['d', 'r', 'n'].map(k => per.map(o => o.s[k]))); const lo = Math.min(...all), hi = Math.max(...all), pad = Math.max((hi - lo) * 0.12, 1);
+    await Plotly.react('saShareChart', [mkS('d', 'DEM'), mkS('r', 'REP'), mkS('n', 'NPA/Other')], saLayout({
+      xaxis:{ gridcolor:'#212a3b', tickformat:saState.gran === 'day' ? '%b %-d' : '%b %-d<br>%-I %p', tickfont:{ size:10 } },
+      yaxis:{ gridcolor:'#212a3b', tickfont:{ size:10 }, ticksuffix:'%', tickformat:'.0f', range:[Math.max(0, lo - pad), hi + pad] } }), { displayModeBar:false, responsive:true });
+  }
+  document.getElementById('saShareNote').textContent = saState.basis === 'cum'
+    ? `Each point is the running share of everything counted through that ${unit}.` : `Each point is the party mix of only the ballots added in that ${unit}, which shows who is voting right now.`;
+
+  saRenderNeeds(M, { bankD, bankR, bankN, bankT, edD, edR, edN, edT, edShr });
+}
+
+// What each party needs on Election Day (two-party vote model, same loyalty + NPA sliders as the Live tab)
+function saRenderNeeds(M, b){
+  const s = npaSplitToDem / 100, dl = demLoyalty / 100, rl = repLoyalty / 100;
+  document.getElementById('saNpa').value = npaSplitToDem;
+  document.getElementById('saNpaVal').textContent = `${npaSplitToDem.toFixed(1)}% D / ${(100 - npaSplitToDem).toFixed(1)}% R · loyalty ${demLoyalty.toFixed(0)}% D, ${repLoyalty.toFixed(0)}% R`;
+  const el = document.getElementById('saNeeds');
+  if(!b.edT || !b.edShr){ el.innerHTML = '<div class="sa-empty">Every projected ballot is already counted.</div>'; return; }
+  const kD = 2 * dl - 1, kR = 2 * rl - 1, kN = 2 * s - 1;
+  const banked = b.bankD * kD - b.bankR * kR + b.bankN * kN;         // net D-minus-R candidate votes already banked
+  const nEd = b.edN / b.edT, dEd = b.edD / b.edT, rEd = b.edR / b.edT;
+  const marginAt = (d, r) => banked + b.edT * (d * kD - r * kR + nEd * kN);
+  const fcMargin = marginAt(dEd, rEd), total = b.bankT + b.edT;
+  const den = kD + kR;
+  let dStar = null;
+  if(den > 0.01){ dStar = (-banked / b.edT + (1 - nEd) * kR - nEd * kN) / den; }
+  const rStar = dStar === null ? null : 1 - nEd - dStar;
+  const bankLead = banked / (b.bankT || 1) * 100;
+  const card = (nm, col, need, fc, ballots, other) => `<div class="sa-card"><div class="nm" style="color:${col}">${nm} need</div>
+    <div class="big" style="color:${col}">${need === null ? '—' : (Math.max(0, need) * 100).toFixed(1) + '%'}</div>
+    <div class="mini">of Election Day ballots to tie the state. Forecast: <b>${(fc * 100).toFixed(1)}%</b> (${need === null ? '' : (fc - need >= 0 ? '<span class="sa-up">' : '<span class="sa-dn">') + (fc - need >= 0 ? '+' : '−') + Math.abs((fc - need) * 100).toFixed(1) + ' pts</span> vs the break-even'}).<br>${need === null ? '' : `That is about ${fmt(Math.round(Math.max(0, need) * b.edT))} of the ${fmt(Math.round(b.edT))} ballots still to come.`}</div></div>`;
+  const ahead = fcMargin >= 0;
+  el.innerHTML = `<div class="sa-need">${card('Democrats', SA_COL.d, dStar, dEd)}${card('Republicans', SA_COL.r, rStar, rEd)}</div>
+    <div class="sa-verdict"><b>Banked so far:</b> ${saPts(bankLead)} among ${fmt(Math.round(b.bankT))} ballots on a candidate-vote basis. 
+    <b>Break-even Election Day mix:</b> DEM ${dStar === null ? '—' : (dStar * 100).toFixed(1) + '%'} · REP ${rStar === null ? '—' : (rStar * 100).toFixed(1) + '%'} · NPA ${(nEd * 100).toFixed(1)}% (NPA share held at the forecast).
+    If Election Day arrives as forecast, the final statewide margin lands around <b style="color:${ahead ? SA_COL.d : SA_COL.r}">${saPts(fcMargin / total * 100)}</b>.
+    Moving the NPA slider changes how much of the remaining NPA vote each side gets; ${Math.abs(dStar !== null ? (dStar - dEd) * 100 : 0) < 0.05 ? 'the forecast sits right on the line.' : (dStar > dEd ? 'Democrats are below the line and need to outperform the forecast' : 'Democrats are above the line') + (dStar > dEd ? ' by ' + ((dStar - dEd) * 100).toFixed(1) + ' pts of Election Day ballots.' : '.')}</div>`;
+}
+document.getElementById('saNpa').addEventListener('input', e => {
+  npaSplitToDem = parseFloat(e.target.value);
+  const live = document.getElementById('npaSlider'); if(live) live.value = 100 - npaSplitToDem;
+  try{ updateNpaSliderLabel(); }catch(_){}
+  if(saState.shown) saRender();
+});
+['saGran', 'saBasis'].forEach(id => document.getElementById(id).addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  saState[id === 'saGran' ? 'gran' : 'basis'] = b.dataset.g || b.dataset.b;
+  document.querySelectorAll('#' + id + ' button').forEach(x => x.classList.toggle('active', x === b));
+  saRender();
+}));
+</script>
 <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "fd5bb1f3f1224382a6c68221e97e0c9b"}'></script><!-- End Cloudflare Web Analytics -->
 </body>
 </html>

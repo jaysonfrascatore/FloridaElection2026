@@ -968,7 +968,15 @@
   .sa-key{ font-size:11.5px; color:var(--muted); margin:2px 0 0; }
   .sa-key i{ display:inline-block; width:18px; height:0; border-top:3px solid; vertical-align:middle; margin:0 4px 0 8px; }
   .sa-key i.dot{ border-top:2px dotted #9aa4b8; }
+  #saNpa{ background:linear-gradient(90deg,#5603ad 0%,#c77dff 50%,#820646 100%); }
+  #saNpa::-webkit-slider-thumb{ background:#F5B942; } #saNpa::-moz-range-thumb{ background:#F5B942; }
+  .sa-slidebox{ margin:10px 0 4px; padding:14px 16px; background:var(--panel-2); border:1px solid var(--border); border-radius:12px; }
+  .sa-slidebox .sa-ask{ font-size:13px; color:var(--text); line-height:1.5; margin-bottom:12px; }
+  .sa-ends{ display:flex; justify-content:space-between; gap:8px; font-family:var(--mono); font-size:10.5px; color:var(--muted-2); margin-top:8px; }
+  .sa-slideval{ font-family:var(--mono); font-size:13px; font-weight:600; margin-top:8px; text-align:center; }
   .sa-up{ color:#4ade80; } .sa-dn{ color:#f87171; }
+  .sa-shift{ margin-top:8px; font-size:13px; line-height:1.7; } .sa-shift .lbl{ color:var(--muted); margin-right:4px; } .sa-shift .was{ color:var(--muted); font-size:12px; }
+  .sa-legend-row{ display:flex; flex-wrap:wrap; gap:6px 14px; margin:8px 0 2px; font-size:11.5px; color:var(--muted); } .sa-legend-row i{ display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:5px; vertical-align:-2px; border:1px solid rgba(255,255,255,.12); }
   .sa-empty{ padding:16px; font-size:12.5px; color:var(--muted); border:1px dashed var(--border); border-radius:10px; margin-top:10px; }
   .sa-cd-label{ font-size:13px; color:var(--muted); margin-top:6px; }
   .sa-cd{ font-family:var(--mono); font-size:clamp(34px,7vw,58px); font-weight:700; color:#fff; line-height:1.1; margin:2px 0 6px; }
@@ -1265,7 +1273,7 @@
     <div class="panel sa-sec sa-reveal" id="saSecPace">
       <div class="sa-sec-head">
         <div class="sa-eyebrow">Split Averages</div>
-        <div class="segmented sa-seg" id="saGran"><button data-g="day" class="active">By day</button><button data-g="update">By update</button></div>
+        <div class="segmented sa-seg sa-gran"><button data-g="day" class="active">By day</button><button data-g="update">By update</button></div>
       </div>
       <div id="saPace"></div>
     </div>
@@ -12080,6 +12088,29 @@ function saSignedSegs(xs, ys){
 }
 function saAxisFmt(){ return saState.gran === 'day' ? '%b %-d' : '%b %-d<br>%-I %p'; }
 
+
+// ---- Live Results-style tooltip for any Split Averages chart or map (transparent, hover from anywhere) ----
+const saDot = c => `<span class="sorted-hover-dot" style="background:${c}"></span>`;
+const saRow = (c, nm, v, extra) => `<div class="sorted-hover-row">${saDot(c)}<b>${nm}</b>&nbsp;${v}${extra ? ` <span class="sorted-hover-gap">${extra}</span>` : ''}</div>`;
+function saAttachHtmlTip(el){
+  ['plotly_hover', 'plotly_click', 'plotly_unhover'].forEach(ev => { try{ el.removeAllListeners(ev); }catch(e){} });
+  const tip = ensureSortedHoverTooltipEl();
+  const show = d => {
+    const p = (d.points || []).find(q => typeof q.customdata === 'string'); if(!p) return;
+    tip.innerHTML = p.customdata; tip.style.display = 'block'; positionSortedHoverTooltip(tip, d.event);
+  };
+  el.on('plotly_hover', show); el.on('plotly_click', show);
+  el.on('plotly_unhover', () => { tip.style.display = 'none'; });
+}
+// "▲ 1.00 pts toward Democrats" for a change in a D-minus-R margin
+function saShift(dm){
+  if(dm === null || dm === undefined || !isFinite(dm)) return '<span style="color:var(--muted)">no earlier point to compare</span>';
+  if(Math.abs(dm) < 0.005) return '<span style="color:var(--muted)">no change</span>';
+  return `<span class="${dm > 0 ? 'sa-up' : 'sa-dn'}">${dm > 0 ? '▲' : '▼'} ${Math.abs(dm).toFixed(2)} pts toward ${dm > 0 ? 'Democrats' : 'Republicans'}</span>`;
+}
+function saGranBtns(){
+  return `<div class="segmented sa-seg sa-gran">${[['day', 'By day'], ['update', 'By update']].map(([g, t]) => `<button data-g="${g}" class="${saState.gran === g ? 'active' : ''}">${t}</button>`).join('')}</div>`;
+}
 // ---- count-up + fade reveal ----
 function saCountEl(c, v, dp, pre, suf, col){
   return `<span class="sa-count" data-v="${v}" data-dp="${dp}" data-pre="${pre}" data-suf="${suf || ''}" style="${col ? 'color:' + col : ''}">${pre}${v.toFixed(dp)}${suf || ''}</span>`;
@@ -12125,9 +12156,9 @@ function saPaceHTML(pts){
   pts.forEach(p => { last[saKey(p.t)] = p; });
   const days = Object.keys(last).sort().map(k => last[k]);
   const head = `<div class="sa-pace-title">Average daily gain in turnout, by party</div>
-    <div class="sa-note">How many percentage points per day the share of each party's <b>registered voters who have voted</b> has risen (the same numbers as the "Registered voters who have voted" box), averaged over the days tracked.</div>`;
+    <div class="sa-note">How many percentage points per day the share of each party's <b>registered voters who have voted</b> has risen (the same numbers as the "Registered voters who have voted" box), averaged over the last 7 days (the same window as the mail and early vote averages below).</div>`;
   if(days.length < 2) return head + '<div class="sa-empty">This fills in once at least two days of updates are logged.</div>';
-  const a = days[0], b = days[days.length - 1], n = days.length - 1;
+  const n = Math.min(7, days.length - 1), a = days[days.length - 1 - n], b = days[days.length - 1];
   const cell = (nm, col, v0, v1, regN, label) => {
     const r0 = v0 / regN * 100, r1 = v1 / regN * 100, per = (r1 - r0) / n;
     return `<div class="sa-pace-cell"><div class="nm" style="color:${col}">${nm}</div>
@@ -12139,8 +12170,8 @@ function saPaceHTML(pts){
     ${cell('REP', SA_COL.r, a.R, b.R, reg.r, 'registered Republicans')}
     ${cell('NPA/Other', SA_COL.n, a.N, b.N, reg.n, 'registered NPA/other voters')}
     ${cell('All voters', '#80ed99', a.T, b.T, reg.t, 'all registered voters')}</div>
-    <div class="sa-note" style="margin-top:10px">Averaged over ${n} day${n === 1 ? '' : 's'}, ${saDayLabel(a.t)} to ${saDayLabel(b.t)}.</div>
-    <div class="sa-key" style="margin-top:20px"><b style="color:var(--text)">County by county</b> · average daily gain in turnout, in percentage points per day (share of that county's registered voters who have voted)</div>
+    <div class="sa-note" style="margin-top:10px">${n < 7 ? 'Only ' + n + ' day' + (n === 1 ? '' : 's') + ' tracked so far, so this is the average so far' : '7-day average'}, ${saDayLabel(a.t)} to ${saDayLabel(b.t)}.</div>
+    <div class="sa-key" style="margin-top:20px"><b style="color:var(--text)">County by county</b> · 7-day average daily gain in turnout, in percentage points per day (share of that county's registered voters who have voted)</div>
     <div class="segmented sa-seg" id="saPaceParty" style="margin:8px 0 0;display:inline-flex">
       ${[['d', 'DEM'], ['r', 'REP'], ['n', 'NPA/Other'], ['t', 'All voters']].map(([k, nm]) => `<button data-p="${k}" class="${saState.paceParty === k ? 'active' : ''}">${nm}</button>`).join('')}</div>
     <div id="saPaceMap" style="height:460px;"></div>`;
@@ -12148,44 +12179,57 @@ function saPaceHTML(pts){
 
 // ---- section: one voting method (big 7-day average + color-changing margin line) ----
 function saMethodHTML(key, title, noun, types){
-  const get = p => p[key];
-  const daily = saIncs(types, get, 'day');
-  if(!daily.length) return { html:`<div class="sa-eyebrow">${title}</div><div class="sa-empty">Not enough ${noun} data yet. This fills in after two or more days of by-method updates.</div>`, draw:null };
-  const li = daily.length - 1, cur = saRoll(daily, li, 7), m = saMargin(cur), sh = saShares(cur);
-  if(m === null) return { html:`<div class="sa-eyebrow">${title}</div><div class="sa-empty">No ${noun} ballots counted yet.</div>`, draw:null };
-  const pm = li ? saMargin(saRoll(daily, li - 1, 7)) : null, dm = pm === null ? 0 : m - pm;
-  const nDays = Math.min(7, daily.length), lastDay = saMargin(daily[li].v);
-  const upd = saIncs(types, get, 'update'), lastUpd = upd.length ? saMargin(upd[upd.length - 1].v) : null;
-  const html = `<div class="sa-eyebrow">${title}</div>
-    <div class="sa-big">${saCountEl(0, Math.abs(m), 2, m >= 0 ? 'D+' : 'R+', '', saMarginColor(m))}</div>
-    <div class="sa-sub"><b>${nDays < 7 ? 'Average so far' : '7-day rolling average'}</b> · ${fmt(Math.round(cur[0] + cur[1] + cur[2]))} ${noun} ballots over ${nDays < 7 ? 'the last ' + nDays + ' day' + (nDays === 1 ? '' : 's') + ' tracked' : 'the last 7 days'}
-      ${pm !== null && Math.abs(dm) >= 0.005 ? ` · <span class="${dm > 0 ? 'sa-up' : 'sa-dn'}">${dm > 0 ? '▲' : '▼'} ${Math.abs(dm).toFixed(2)} pts toward ${dm > 0 ? 'Democrats' : 'Republicans'} since yesterday</span>` : ''}<br>
-      Latest day alone: <b>${lastDay === null ? '—' : saPts(lastDay)}</b>${lastUpd === null ? '' : ` · latest update alone: <b>${saPts(lastUpd)}</b>`}</div>
+  const get = p => p[key], Noun = noun[0].toUpperCase() + noun.slice(1);
+  const gran = saState.gran, base = saIncs(types, get, gran);
+  const head = `<div class="sa-sec-head"><div class="sa-eyebrow">${title}</div>${saGranBtns()}</div>`;
+  if(!base.length) return { html:head + `<div class="sa-empty">Not enough ${noun} data yet. This fills in after two or more updates of by-method data.</div>`, draw:null };
+  const li = base.length - 1, cur = saRoll(base, li, 7), m = saMargin(cur), sh = saShares(cur);
+  if(m === null) return { html:head + `<div class="sa-empty">No ${noun} ballots counted yet.</div>`, draw:null };
+  const prevRoll = li ? saMargin(saRoll(base, li - 1, 7)) : null, rawNow = saMargin(base[li].v), rawPrev = li ? saMargin(base[li - 1].v) : null;
+  const dAvg = prevRoll === null ? null : m - prevRoll, dRaw = rawNow === null || rawPrev === null ? null : rawNow - rawPrev;
+  const when = gran === 'day' ? '24 hours ago' : 'the previous update', unit = gran === 'day' ? 'Latest day' : 'Latest update';
+  const daily = saIncs(types, get, 'day'), nDays = Math.min(7, daily.length);
+  const html = head + `<div class="sa-big">${saCountEl(0, Math.abs(m), 2, m >= 0 ? 'D+' : 'R+', '', saMarginColor(m))}</div>
+    <div class="sa-sub"><b>${nDays < 7 ? 'Average so far' : '7-day rolling average'}</b> · ${fmt(Math.round(cur[0] + cur[1] + cur[2]))} ${noun} ballots ${nDays < 7 ? 'over the ' + nDays + ' day' + (nDays === 1 ? '' : 's') + ' tracked' : 'over the last 7 days'}</div>
+    <div class="sa-shift">
+      <div><span class="lbl">Average vs ${when}</span> ${saShift(dAvg)}${prevRoll === null ? '' : ` <span class="was">(${saPts(prevRoll)} → ${saPts(m)})</span>`}</div>
+      <div><span class="lbl">${unit} alone vs ${gran === 'day' ? '24 hours earlier' : when}</span> <b>${rawNow === null ? '—' : saPts(rawNow)}</b> · ${saShift(dRaw)}${rawPrev === null ? '' : ` <span class="was">(was ${saPts(rawPrev)})</span>`}</div>
+    </div>
     <div class="sa-bar"><i style="width:${sh.d}%;background:${SA_COL.d}"></i><i style="width:${sh.r}%;background:${SA_COL.r}"></i><i style="width:${sh.n}%;background:${SA_COL.n}"></i></div>
     <div class="sa-split"><span style="color:${SA_COL.d}">DEM ${sh.d.toFixed(1)}%</span><span style="color:${SA_COL.r}">REP ${sh.r.toFixed(1)}%</span><span style="color:${SA_COL.n}">NPA ${sh.n.toFixed(1)}%</span></div>
-    <div class="sa-chart-wrap"><div class="sa-key"><i style="border-color:${SA_COL.d}"></i>${noun[0].toUpperCase() + noun.slice(1)} margin of the ballots added each ${saState.gran}, blue when Democrats lead and red when Republicans do <i class="dot"></i>7-day rolling average</div>
-    <div id="saCh_${key}" style="height:260px;"></div></div>
+    <div class="sa-chart-wrap"><div class="sa-key"><i style="border-color:${SA_COL.d}"></i>${Noun} margin of the ballots added each ${gran}, blue when Democrats lead and red when Republicans do <i class="dot"></i>7-day rolling average</div>
+    <div id="saCh_${key}" style="height:270px;"></div></div>
     <div class="sa-key" style="margin-top:22px"><b style="color:var(--text)">County by county</b> · ${nDays < 7 ? 'average so far' : '7-day rolling average'} of ${noun} ballots, blue where Democrats lead and red where Republicans do</div>
     <div id="saMap_${key}" style="height:460px;"></div>`;
   const draw = async () => {
     saDrawMap(key, noun, nDays).catch(() => {});
-    const base = saIncs(types, get, saState.gran), incs = base.map((p, i) => ({ p, m:saMargin(p.v), rv:saRoll(base, i, 7), sh:saShares(p.v) })).filter(o => o.m !== null);
+    const incs = base.map((p, i) => ({ p, m:saMargin(p.v), rv:saRoll(base, i, 7), sh:saShares(p.v) })).filter(o => o.m !== null);
     if(!incs.length) return;
     const xs = incs.map(o => o.p.t), ys = incs.map(o => o.m), rm = incs.map(o => saMargin(o.rv));
     const traces = saSignedSegs(xs, ys).map(sg => ({ x:sg.x, y:sg.y, type:'scatter', mode:'lines', line:{ color:sg.c, width:3.5 }, hoverinfo:'skip', showlegend:false }));
     traces.unshift({ x:xs, y:rm, type:'scatter', mode:'lines', line:{ color:'#9aa4b8', width:1.6, dash:'dot' }, hoverinfo:'skip', showlegend:false });
-    traces.push({ x:xs, y:ys, type:'scatter', mode:'markers', showlegend:false, marker:{ size:9, color:ys.map(saMarginColor), line:{ color:'#0a0e17', width:1.5 } },
-      text:incs.map((o, i) => `<b>${o.p.label}</b><br>${noun[0].toUpperCase() + noun.slice(1)} ballots ${saState.gran === 'day' ? 'that day' : 'in this update'}: <b>${saPts(o.m)}</b><br>7-day average: ${saPts(rm[i])}<br>DEM ${o.sh.d.toFixed(1)}% · REP ${o.sh.r.toFixed(1)}% · NPA ${o.sh.n.toFixed(1)}%<br>${fmt(Math.round(o.sh.t))} ballots`),
-      hoverinfo:'text', hoverlabel:saTipBox });
-    const all = ys.concat(rm.filter(v => v !== null), [0]); let lo = Math.min(...all), hi = Math.max(...all); const pad = Math.max((hi - lo) * 0.15, 1.5);
-    await Plotly.react('saCh_' + key, traces, { margin:{ t:8, r:14, b:36, l:56 }, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', showlegend:false, hovermode:'closest', hoverdistance:-1,
+    const tipOf = (o, i) => {
+      const pv = i ? incs[i - 1] : null, dm = pv ? o.m - pv.m : null, dr = pv ? rm[i] - rm[i - 1] : null;
+      return `<div class="sorted-hover-date">${gran === 'day' ? o.p.label : formatSortedHoverDate(o.p.t)}</div>` +
+        saRow(saMarginColor(o.m), `${Noun} margin`, saPts(o.m), gran === 'day' ? 'that day' : 'this update') +
+        saRow('#9aa4b8', '7-day average', saPts(rm[i])) +
+        saRow(SA_COL.d, 'DEM', o.sh.d.toFixed(1) + '%') + saRow(SA_COL.r, 'REP', o.sh.r.toFixed(1) + '%') + saRow(SA_COL.n, 'NPA/Other', o.sh.n.toFixed(1) + '%') +
+        `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>BALLOTS</b>&nbsp;${fmt(Math.round(o.sh.t))}</div>` +
+        `<div class="sorted-hover-gain-header">Shift vs ${gran === 'day' ? '24 hours ago' : 'the previous update'}:</div>` +
+        `<div class="sorted-hover-row">${pv ? saShift(dm) : '<span style="color:#7c879c">first point</span>'}</div>` +
+        (pv ? `<div class="sorted-hover-row"><span class="sorted-hover-gap">7-day average: ${dr === null || Math.abs(dr) < 0.005 ? 'no change' : (dr > 0 ? '▲ ' : '▼ ') + Math.abs(dr).toFixed(2) + ' pts toward ' + (dr > 0 ? 'Democrats' : 'Republicans')}</span></div>` : '');
+    };
+    traces.push({ x:xs, y:ys, type:'scatter', mode:'markers', showlegend:false, marker:{ size:9, color:ys.map(saMarginColor), line:{ color:'#0a0e17', width:1.5 } }, customdata:incs.map(tipOf), hoverinfo:'none' });
+    const all = ys.concat(rm.filter(v => v !== null), [0]); const lo = Math.min(...all), hi = Math.max(...all), pad = Math.max((hi - lo) * 0.15, 1.5);
+    const el = document.getElementById('saCh_' + key);
+    await Plotly.react(el, traces, { margin:{ t:8, r:14, b:36, l:56 }, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', showlegend:false, hovermode:'x unified', hoverdistance:-1, hoverlabel:saBlank,
       font:{ family:'Inter, sans-serif', color:'#9aa4b8', size:11 },
-      xaxis:{ gridcolor:'#212a3b', tickformat:saAxisFmt(), tickfont:{ size:10 } },
+      xaxis:{ gridcolor:'#212a3b', tickformat:saAxisFmt(), tickfont:{ size:10 }, showspikes:true, spikemode:'across', spikesnap:'cursor', spikethickness:1, spikecolor:'#5a6580', spikedash:'solid' },
       yaxis:{ gridcolor:'#212a3b', tickfont:{ size:10 }, ticksuffix:' pts', zeroline:true, zerolinecolor:'#5a6580', range:[lo - pad, hi + pad] } }, { displayModeBar:false, responsive:true });
+    saAttachHtmlTip(el);
   };
   return { html, draw };
 }
-
 
 // ---- county-by-county map of a method's rolling average ----
 function saCountyAvg(key){
@@ -12213,12 +12257,12 @@ async function saDrawMap(key, noun, nDays){
   const names = SIM_COUNTY_NAMES.filter(c => FL_FIPS[c]);
   const vals = names.map(c => res.out[c] ? res.out[c].m : null);
   const mx = Math.max(10, Math.ceil(Math.max(...vals.filter(v => v !== null).map(Math.abs), 0) / 5) * 5);
-  const hover = names.map((c, i) => { const o = res.out[c]; return o ? `<b>${c}</b><br>${noun[0].toUpperCase() + noun.slice(1)} average: <b>${saPts(o.m)}</b><br>DEM ${o.d.toFixed(1)}% · REP ${o.r.toFixed(1)}% · NPA ${o.nn.toFixed(1)}%<br>${fmt(Math.round(o.t))} ballots` : `<b>${c}</b><br>No ${noun} ballots in this window`; });
+  const hover = names.map(c => { const o = res.out[c]; return `<div class="sorted-hover-date">${c} County</div>` + (o ? saRow(saMarginColor(o.m), `${noun[0].toUpperCase() + noun.slice(1)} average`, saPts(o.m)) + saRow(SA_COL.d, 'DEM', o.d.toFixed(1) + '%') + saRow(SA_COL.r, 'REP', o.r.toFixed(1) + '%') + saRow(SA_COL.n, 'NPA/Other', o.nn.toFixed(1) + '%') + `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>BALLOTS</b>&nbsp;${fmt(Math.round(o.t))}</div>` : `<div class="sorted-hover-row"><span class="sorted-hover-gap">No ${noun} ballots in this window</span></div>`); });
   const base = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z:names.map(() => 0), featureidkey:'id', zmin:0, zmax:1, colorscale:[[0, '#222b3d'], [1, '#222b3d']], showscale:false, marker:{ line:{ color:'#0a0e17', width:1 } }, hoverinfo:'skip' };
   const tr = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z:vals, featureidkey:'id', zmin:-mx, zmax:mx, zmid:0,
-    colorscale:[[0, '#b5382f'], [0.3, '#d98a82'], [0.5, '#e4e7ee'], [0.7, '#8fb8e3'], [1, '#2f6fb5']], text:hover, hoverinfo:'text', hoverlabel:saTipBox,
+    colorscale:[[0, '#b5382f'], [0.3, '#d98a82'], [0.5, '#e4e7ee'], [0.7, '#8fb8e3'], [1, '#2f6fb5']], customdata:hover, hoverinfo:'none',
     marker:{ line:{ color:'#0a0e17', width:1 } }, colorbar:{ orientation:'h', thickness:10, len:0.55, y:-0.02, x:0.5, ticksuffix:' pts', tickfont:{ size:10, color:'#9aa4b8' }, outlinewidth:0, tickvals:[-mx, 0, mx], ticktext:['R+' + mx, 'Even', 'D+' + mx] } };
-  await Plotly.react(el, [base, tr], { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:34, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });
+  await Plotly.react(el, [base, tr], { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:34, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });  saAttachHtmlTip(el);
 }
 
 // ---- county map: average daily turnout gain for one party ----
@@ -12227,7 +12271,7 @@ async function saDrawPaceMap(pts){
   await ensureGeojson();
   const last = {}; pts.forEach(p => { last[saKey(p.t)] = p; });
   const days = Object.keys(last).sort().map(k => last[k]); if(days.length < 2) return;
-  const a = days[0], b = days[days.length - 1], n = days.length - 1, P = saState.paceParty;
+  const n = Math.min(7, days.length - 1), a = days[days.length - 1 - n], b = days[days.length - 1], P = saState.paceParty;
   const names = SIM_COUNTY_NAMES.filter(c => FL_FIPS[c]), out = {};
   names.forEach(c => {
     const [reg, rs, ds] = SIM_REG[c], rg = { d:reg * ds / 100, r:reg * rs / 100 }; rg.n = Math.max(1, reg - rg.d - rg.r); rg.t = reg;
@@ -12239,11 +12283,12 @@ async function saDrawPaceMap(pts){
   const vals = names.map(c => out[c] ? out[c].per : null), nm = { d:'Democrats', r:'Republicans', n:'NPA/other voters', t:'all voters' }[P];
   const sv = vals.filter(v => v !== null).sort((x, y) => x - y), mx = Math.max(0.5, (sv[Math.floor(sv.length * 0.95)] || 0.5) * 1.1);
   const hi = { d:'#2f6fb5', r:'#b5382f', n:'#8a3fd1', t:'#2e9e62' }[P];
-  const hover = names.map((c, i) => out[c] ? `<b>${c}</b><br>Avg gain: <b>+${out[c].per.toFixed(2)} pts/day</b><br>Now at ${out[c].now.toFixed(1)}% of registered ${nm}` : `<b>${c}</b><br>No data`);
+  const pc = { d:SA_COL.d, r:SA_COL.r, n:SA_COL.n, t:'#80ed99' }[P];
+  const hover = names.map(c => `<div class="sorted-hover-date">${c} County</div>` + (out[c] ? saRow(pc, 'Avg daily gain', `+${out[c].per.toFixed(2)} pts/day`) + saRow(pc, 'Now at', out[c].now.toFixed(1) + '%', 'of registered ' + nm) : `<div class="sorted-hover-row"><span class="sorted-hover-gap">No data</span></div>`));
   const base = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z:names.map(() => 0), featureidkey:'id', zmin:0, zmax:1, colorscale:[[0, '#222b3d'], [1, '#222b3d']], showscale:false, marker:{ line:{ color:'#0a0e17', width:1 } }, hoverinfo:'skip' };
-  const tr = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z:vals, featureidkey:'id', zmin:0, zmax:mx, colorscale:[[0, '#e8ecf3'], [1, hi]], text:hover, hoverinfo:'text', hoverlabel:saTipBox,
+  const tr = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z:vals, featureidkey:'id', zmin:0, zmax:mx, colorscale:[[0, '#e8ecf3'], [1, hi]], customdata:hover, hoverinfo:'none',
     marker:{ line:{ color:'#0a0e17', width:1 } }, colorbar:{ orientation:'h', thickness:10, len:0.55, y:-0.02, x:0.5, tickfont:{ size:10, color:'#9aa4b8' }, outlinewidth:0, tickformat:'.1f' } };
-  await Plotly.react(el, [base, tr], { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:34, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });
+  await Plotly.react(el, [base, tr], { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:34, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });  saAttachHtmlTip(el);
 }
 document.getElementById('splitAvgView').addEventListener('click', e => {
   const b = e.target.closest('#saPaceParty button'); if(!b) return;
@@ -12285,19 +12330,33 @@ function saEdHTML(M, types, meth){
     ${ed ? `<div class="sa-note" style="margin-top:12px">Expected Election Day mix of the roughly ${fmt(Math.round(edT))} ballots still to come:</div>
     <div class="sa-bar"><i style="width:${ed.d}%;background:${SA_COL.d}"></i><i style="width:${ed.r}%;background:${SA_COL.r}"></i><i style="width:${ed.n}%;background:${SA_COL.n}"></i></div>
     <div class="sa-split"><span style="color:${SA_COL.d}">DEM ${ed.d.toFixed(1)}%</span><span style="color:${SA_COL.r}">REP ${ed.r.toFixed(1)}%</span><span style="color:${SA_COL.n}">NPA ${ed.n.toFixed(1)}%</span></div>` : ''}
-    <div class="sa-proj-title">Projected outcome of the Election Day vote, county by county</div>
+    <div class="sa-proj-title">Election Day Only Forecast</div>
     <div class="sa-key" style="margin:2px 0 6px"><b style="color:var(--gold)">Current forecast based on estimated turnout models</b></div>
-    <div class="sa-note">Only the ballots still to come after today's count. Turnout by party comes from the Projected Final Turnout model, which looks at turnout in the 2018, 2022 and 2024 elections and this year's pace, and assumes ${demLoyalty.toFixed(0)}% of Democrats and ${repLoyalty.toFixed(0)}% of Republicans vote for their own party. NPA/other voters follow the NPA slider below.</div>
+    <div class="sa-note">How the vote expected to come in on Election Day should look in each county: only the ballots still to come after today's count. Turnout by party comes from the Projected Final Turnout model, which looks at turnout in the 2018, 2022 and 2024 elections and this year's pace, and assumes ${demLoyalty.toFixed(0)}% of Democrats and ${repLoyalty.toFixed(0)}% of Republicans vote for their own party. <span style="color:#c77dff">NPA/other</span> voters follow the slider at the bottom of this section.</div>
+    <div id="saEdFc"></div>
+    <div class="sa-key" style="margin-top:18px"><b style="color:var(--text)">County by county</b> · Election Day Only Forecast</div>
     <div id="saEdMap" style="height:460px;"></div>
-    <div class="sa-proj-title">How much of the NPA vote does each party need to win statewide?</div>
-    <div class="sa-note">Uses the projected final turnout by party above. Move the slider to see what a different NPA split would mean for the statewide result.</div>
-    <div class="sa-slider"><label for="saNpa">NPA/Other split</label><input type="range" id="saNpa" min="0" max="100" step="0.5" value="${npaSplitToDem}"><span id="saNpaVal"></span></div>
+    <div class="sa-legend-row" id="saEdLegend"></div>
+    <div class="sa-proj-title" style="margin-top:28px">Final Forecast</div>
+    <div class="sa-key" style="margin:2px 0 6px"><b style="color:var(--gold)">Current forecast based on estimated turnout models</b></div>
+    <div class="sa-note">The projected final result in each county once every vote is in: the ballots already counted plus the Election Day vote above, with the same turnout model and party loyalty.</div>
+    <div id="saFinFc"></div>
+    <div class="sa-key" style="margin-top:18px"><b style="color:var(--text)">County by county</b> · Final Forecast</div>
+    <div id="saFinMap" style="height:460px;"></div>
+    <div class="sa-legend-row" id="saFinLegend"></div>
+    <div class="sa-proj-title">How much of the <span style="color:#c77dff">NPA/Other</span> vote does each party need to win statewide?</div>
+    <div class="sa-slidebox">
+      <div class="sa-ask">Adjust the slider to distribute the <span style="color:#c77dff">NPA/Other</span> vote to Democrats or Republicans to see the forecasted results.</div>
+      <input type="range" id="saNpa" class="adj-slider" min="0" max="100" step="0.5" value="${100 - npaSplitToDem}">
+      <div class="sa-ends"><span><b style="color:#5b9bd9">D</b> · all <span style="color:#c77dff">NPA/other</span> to Democrats</span><span>Even split</span><span><b style="color:#d4675a">R</b> · all <span style="color:#c77dff">NPA/other</span> to Republicans</span></div>
+      <div class="sa-slideval" id="saNpaVal"></div>
+    </div>
     <div id="saNeeds"></div>`;
 }
 function saRenderNeeds(){
   const b = saState.ctx; if(!b) return;
   const p = b.M.party, dl = demLoyalty / 100, rl = repLoyalty / 100, s = npaSplitToDem / 100;
-  const val = document.getElementById('saNpaVal'); if(val) val.textContent = `${npaSplitToDem.toFixed(1)}% D / ${(100 - npaSplitToDem).toFixed(1)}% R`;
+  const val = document.getElementById('saNpaVal'); if(val) val.innerHTML = `<span style="color:#5b9bd9">${npaSplitToDem.toFixed(1)}% D</span> <span style="color:var(--muted)">/</span> <span style="color:#d4675a">${(100 - npaSplitToDem).toFixed(1)}% R</span>`;
   const el = document.getElementById('saNeeds'); if(!el) return;
   const kD = 2 * dl - 1, kR = 2 * rl - 1, base = p.d * kD - p.r * kR, tot = p.d + p.r + p.n;
   if(!p.n){ el.innerHTML = '<div class="sa-empty">No NPA/other ballots are projected.</div>'; return; }
@@ -12307,11 +12366,83 @@ function saRenderNeeds(){
   const note = x => x <= 0 ? 'win even with none of them' : x >= 1 ? 'cannot win on NPA votes alone' : '';
   const card = (nm, c, need, raw) => `<div class="sa-card"><div class="nm" style="color:${c}">${nm} need</div>
     <div class="big2" style="color:${c}">${raw <= 0 ? '0%' : raw >= 1 ? '100%+' : (need * 100).toFixed(1) + '%'}</div>
-    <div class="mini">of NPA/other voters statewide to win${note(raw) ? ' (' + note(raw) + ')' : ''}.${raw > 0 && raw < 1 ? `<br>About ${fmt(Math.round(need * p.n))} of the ${fmt(Math.round(p.n))} NPA/other ballots projected.` : ''}</div></div>`;
+    <div class="mini">of <span style="color:#c77dff">NPA/other</span> voters statewide to win${note(raw) ? ' (' + note(raw) + ')' : ''}.${raw > 0 && raw < 1 ? `<br>About ${fmt(Math.round(need * p.n))} of the ${fmt(Math.round(p.n))} <span style="color:#c77dff">NPA/other</span> ballots projected.` : ''}</div></div>`;
   el.innerHTML = `<div class="sa-need">${card('Democrats', SA_COL.d, dNeed, sStar)}${card('Republicans', SA_COL.r, rNeed, 1 - sStar)}</div>
     <div class="sa-verdict">This uses the projected final turnout by party, <b style="color:${SA_COL.d}">${fmt(Math.round(p.d))} Democratic</b>, <b style="color:${SA_COL.r}">${fmt(Math.round(p.r))} Republican</b> and <b style="color:${SA_COL.n}">${fmt(Math.round(p.n))} NPA/other</b> ballots, with ${demLoyalty.toFixed(0)}% of Democrats and ${repLoyalty.toFixed(0)}% of Republicans voting for their own party's candidate.
-    Under those assumptions the two parties tie when NPA/other voters split <b>${(sStar * 100).toFixed(1)}% Democratic / ${((1 - sStar) * 100).toFixed(1)}% Republican</b>.
-    At the slider's setting (${npaSplitToDem.toFixed(1)}% D), the statewide result would be <b style="color:${margin >= 0 ? SA_COL.d : SA_COL.r}">${saPts(margin)}</b>.</div>`;
+    Under those assumptions the two parties tie when <span style="color:#c77dff">NPA/other</span> voters split <b style="color:#5b9bd9">${(sStar * 100).toFixed(1)}% Democratic</b> / <b style="color:#d4675a">${((1 - sStar) * 100).toFixed(1)}% Republican</b>.
+    At the slider's setting (<b style="color:#5b9bd9">${npaSplitToDem.toFixed(1)}% D</b> / <b style="color:#d4675a">${(100 - npaSplitToDem).toFixed(1)}% R</b>), the statewide result would be <b style="color:${margin >= 0 ? SA_COL.d : SA_COL.r}">${saPts(margin)}</b>.</div>`;
+}
+
+// ---- Forecasted margin: Election Day only, and Final (everything combined), tracked by update and by day ----
+let saFcCache = null;
+function saFcSums(E, actual, dem, rep){
+  const ed = { d:0, r:0, n:0 }, bk = { d:0, r:0, n:0 };
+  SIM_COUNTY_NAMES.forEach(n => {
+    const reg = SIM_REG[n][0], rs = SIM_REG[n][1] / 100, ds = SIM_REG[n][2] / 100, ns = Math.max(0, 1 - rs - ds);
+    const aD = dem[n] || 0, aR = rep[n] || 0, aT = actual[n] || 0, aN = Math.max(0, aT - aD - aR), rem = Math.max(0, (E[n] || 0) - aT);
+    const pool = { d:Math.max(0, reg * ds - aD), r:Math.max(0, reg * rs - aR), n:Math.max(0, reg * ns - aN) }, pt = pool.d + pool.r + pool.n;
+    const mix = pt > 0 ? { d:pool.d / pt, r:pool.r / pt, n:pool.n / pt } : { d:ds, r:rs, n:ns };
+    ed.d += rem * mix.d; ed.r += rem * mix.r; ed.n += rem * mix.n; bk.d += aD; bk.r += aR; bk.n += aN;
+  });
+  const fin = { d:bk.d + ed.d, r:bk.r + ed.r, n:bk.n + ed.n };
+  ed.t = ed.d + ed.r + ed.n; fin.t = fin.d + fin.r + fin.n;
+  return { ed, fin };
+}
+function saFcBuild(pts, M){
+  if(!saFcCache || saFcCache.src !== pts) saFcCache = { src:pts, list:pts.map(p => { const { E } = anProjectTurnout(p.actual); return Object.assign({ t:p.t, T:p.T }, saFcSums(E, p.actual, p.dem, p.rep)); }) };
+  const list = saFcCache.list.slice(), act = {}, dem = {}, rep = {}; let T = 0;
+  COUNTIES.forEach(c => { act[c.county] = c.total || 0; dem[c.county] = c.dem || 0; rep[c.county] = c.rep || 0; T += c.total || 0; });
+  const live = Object.assign({ t:new Date(), T }, saFcSums(M.E, act, dem, rep)), l = list[list.length - 1];
+  if(l && Math.abs(l.T - T) <= 1){ live.t = l.t; list[list.length - 1] = live; } else list.push(live);
+  return list;
+}
+function saFcMargin(o){
+  const t = o.d + o.r + o.n; if(!t) return null;
+  const dl = demLoyalty / 100, rl = repLoyalty / 100, s = npaSplitToDem / 100;
+  return ((o.d * dl + o.r * (1 - rl) + o.n * s) - (o.r * rl + o.d * (1 - dl) + o.n * (1 - s))) / t * 100;
+}
+async function saFcRender(animate){
+  const list0 = saState.fc; if(!list0) return;
+  const gran = saState.gran;
+  let list = list0;
+  if(gran === 'day'){ const last = {}; list0.forEach(p => { last[saKey(p.t)] = p; }); list = Object.keys(last).sort().map(k => last[k]); }
+  const cfg = [
+    ['ed', 'saEdFc', 'ballots still to come on Election Day', 'STILL TO COME', 'Margin of the Election Day vote only, from the Projected Final Turnout model (2018, 2022 and 2024 turnout plus this year\'s pace) and the registered voters who have not voted yet.'],
+    ['fin', 'saFinFc', 'ballots in the final count', 'PROJECTED BALLOTS', 'Margin of the whole race once the ballots already counted and the Election Day vote are combined.']
+  ];
+  for(const [k, id, noun, tot, desc] of cfg){
+    const box = document.getElementById(id); if(!box) continue;
+    const rows = list.map(p => ({ p, o:p[k], m:saFcMargin(p[k]) })).filter(r => r.m !== null);
+    const head = `<div class="sa-sec-head"><div class="sa-eyebrow">Forecasted margin</div>${saGranBtns()}</div>`;
+    if(!rows.length){ box.innerHTML = head + '<div class="sa-empty">No ballots projected yet.</div>'; continue; }
+    const li = rows.length - 1, cur = rows[li], pv = li ? rows[li - 1] : null, dm = pv ? cur.m - pv.m : null;
+    const when = gran === 'day' ? '24 hours ago' : 'the previous update';
+    const bigTxt = (cur.m >= 0 ? 'D+' : 'R+') + Math.abs(cur.m).toFixed(2);
+    box.innerHTML = head + `<div class="sa-big">${animate ? saCountEl(0, Math.abs(cur.m), 2, cur.m >= 0 ? 'D+' : 'R+', '', saMarginColor(cur.m)) : `<span style="color:${saMarginColor(cur.m)}">${bigTxt}</span>`}</div>
+      <div class="sa-sub"><b>${k === 'ed' ? 'Election Day Only Forecast' : 'Final Forecast'}</b> · about ${fmt(Math.round(cur.o.t))} ${noun}. ${desc} Assumes ${demLoyalty.toFixed(0)}% of Democrats and ${repLoyalty.toFixed(0)}% of Republicans vote their party, and <span style="color:#c77dff">NPA/other</span> voters split <b style="color:#5b9bd9">${npaSplitToDem.toFixed(1)}% D</b> / <b style="color:#d4675a">${(100 - npaSplitToDem).toFixed(1)}% R</b>.</div>
+      <div class="sa-shift"><div><span class="lbl">Forecast vs ${when}</span> ${saShift(dm)}${pv ? ` <span class="was">(${saPts(pv.m)} → ${saPts(cur.m)})</span>` : ''}</div></div>
+      <div class="sa-chart-wrap"><div class="sa-key">Forecasted margin after each ${gran}, blue when Democrats are projected ahead and red when Republicans are</div>
+      <div id="${id}Ch" style="height:250px;"></div></div>`;
+    const xs = rows.map(r => r.p.t), ys = rows.map(r => r.m);
+    const traces = saSignedSegs(xs, ys).map(sg => ({ x:sg.x, y:sg.y, type:'scatter', mode:'lines', line:{ color:sg.c, width:3.5 }, hoverinfo:'skip', showlegend:false }));
+    const tipOf = (r, i) => {
+      const q = i ? rows[i - 1] : null, d = q ? r.m - q.m : null, t = r.o.t;
+      return `<div class="sorted-hover-date">${gran === 'day' ? saDayLabel(r.p.t) : formatSortedHoverDate(r.p.t)}</div>` +
+        saRow(saMarginColor(r.m), 'Forecasted margin', saPts(r.m)) +
+        saRow(SA_COL.d, 'DEM', (r.o.d / t * 100).toFixed(1) + '%') + saRow(SA_COL.r, 'REP', (r.o.r / t * 100).toFixed(1) + '%') + saRow(SA_COL.n, 'NPA/Other', (r.o.n / t * 100).toFixed(1) + '%') +
+        `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>${tot}</b>&nbsp;${fmt(Math.round(t))}</div>` +
+        `<div class="sorted-hover-gain-header">Shift vs ${gran === 'day' ? '24 hours ago' : 'the previous update'}:</div>` +
+        `<div class="sorted-hover-row">${q ? saShift(d) : '<span style="color:#7c879c">first point</span>'}</div>`;
+    };
+    traces.push({ x:xs, y:ys, type:'scatter', mode:'markers', showlegend:false, marker:{ size:9, color:ys.map(saMarginColor), line:{ color:'#0a0e17', width:1.5 } }, customdata:rows.map(tipOf), hoverinfo:'none' });
+    const lo = Math.min(...ys, 0), hi = Math.max(...ys, 0), pad = Math.max((hi - lo) * 0.18, 1.5);
+    const el = document.getElementById(id + 'Ch');
+    await Plotly.react(el, traces, { margin:{ t:8, r:14, b:36, l:56 }, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', showlegend:false, hovermode:'x unified', hoverdistance:-1, hoverlabel:saBlank,
+      font:{ family:'Inter, sans-serif', color:'#9aa4b8', size:11 },
+      xaxis:{ gridcolor:'#212a3b', tickformat:saAxisFmt(), tickfont:{ size:10 }, showspikes:true, spikemode:'across', spikesnap:'cursor', spikethickness:1, spikecolor:'#5a6580', spikedash:'solid' },
+      yaxis:{ gridcolor:'#212a3b', tickfont:{ size:10 }, ticksuffix:' pts', zeroline:true, zerolinecolor:'#5a6580', range:[lo - pad, hi + pad] } }, { displayModeBar:false, responsive:true });
+    saAttachHtmlTip(el);
+  }
 }
 // ---- Election Day map: projected outcome of the ballots still to come, county by county ----
 function saCountyED(M){
@@ -12327,38 +12458,61 @@ function saCountyED(M){
   });
   return out;
 }
-async function saDrawEdMap(){
-  const el = document.getElementById('saEdMap'); const b = saState.ctx; if(!el || !b) return;
-  await ensureGeojson();
-  const ed = saCountyED(b.M), dl = demLoyalty / 100, rl = repLoyalty / 100, s = npaSplitToDem / 100;
-  const names = SIM_COUNTY_NAMES.filter(c => FL_FIPS[c]);
-  const res = {};
-  names.forEach(c => {
-    const o = ed[c]; if(!o || !o.t) return;
-    const D = o.d * dl + o.r * (1 - rl) + o.n * s, R = o.r * rl + o.d * (1 - dl) + o.n * (1 - s);
-    res[c] = { m:(D - R) / o.t * 100, t:o.t, d:o.d / o.t * 100, r:o.r / o.t * 100, n:o.n / o.t * 100 };
+const SA_ED_CATS = ['Safe R', 'Likely R', 'Lean R', 'Tilt R', 'Tilt D', 'Lean D', 'Likely D', 'Safe D'].map(k => ({ key:k, color:k === 'Tilt D' ? TILT_D_COLOR : k === 'Tilt R' ? TILT_R_COLOR : RATING_CATS.find(c => c.key === k).color }));
+function saRatingOf(m){   // m in points; the regular tiers, with Tilt D / Tilt R in place of Toss Up
+  const r = ratingLabelForMargin(m / 100);
+  return r === 'Toss Up' ? (m > 0 ? 'Tilt D' : 'Tilt R') : (r === 'Tie' ? 'Tilt D' : r);
+}
+function saCountyFinal(M){
+  const ed = saCountyED(M), byName = {}; COUNTIES.forEach(c => { byName[c.county] = c; });
+  const out = {};
+  SIM_COUNTY_NAMES.forEach(n => {
+    const c = byName[n], aD = c ? (c.dem || 0) : 0, aR = c ? (c.rep || 0) : 0, aN = c ? Math.max(0, (c.total || 0) - (c.dem || 0) - (c.rep || 0)) : 0, e = ed[n];
+    const d = aD + e.d, r = aR + e.r, nn = aN + e.n;
+    out[n] = { d, r, n:nn, t:d + r + nn };
   });
-  const vals = names.map(c => res[c] ? res[c].m : null);
-  const av = vals.filter(v => v !== null).map(Math.abs).sort((x, y) => x - y), mx = Math.max(10, Math.ceil((av[Math.floor(av.length * 0.95)] || 0) / 5) * 5);
-  const hover = names.map(c => { const o = res[c]; return o ? `<b>${c}</b><br>Projected Election Day vote: <b>${saPts(o.m)}</b><br>About ${fmt(Math.round(o.t))} ballots still to come<br>Expected mix: DEM ${o.d.toFixed(1)}% · REP ${o.r.toFixed(1)}% · NPA ${o.n.toFixed(1)}%` : `<b>${c}</b><br>No Election Day ballots projected`; });
+  return out;
+}
+async function saDrawForecastMap(elId, legId, data, rowLabel, totalLabel, noneMsg){
+  const el = document.getElementById(elId); if(!el) return;
+  await ensureGeojson();
+  const dl = demLoyalty / 100, rl = repLoyalty / 100, s = npaSplitToDem / 100;
+  const names = SIM_COUNTY_NAMES.filter(c => FL_FIPS[c]), res = {};
+  names.forEach(c => {
+    const o = data[c]; if(!o || !o.t) return;
+    const D = o.d * dl + o.r * (1 - rl) + o.n * s, R = o.r * rl + o.d * (1 - dl) + o.n * (1 - s);
+    const m = (D - R) / o.t * 100;
+    res[c] = { m, rating:saRatingOf(m), t:o.t, d:o.d / o.t * 100, r:o.r / o.t * 100, n:o.n / o.t * 100 };
+  });
+  const z = names.map(c => res[c] ? SA_ED_CATS.findIndex(k => k.key === res[c].rating) + 0.5 : null);
+  const hover = names.map(c => { const o = res[c]; const col = o ? SA_ED_CATS.find(k => k.key === o.rating).color : '#9aa4b8';
+    return `<div class="sorted-hover-date">${c} County</div>` + (o ? saRow(col, 'Forecast', o.rating, saPts(o.m)) + saRow(SA_COL.d, 'DEM', o.d.toFixed(1) + '%') + saRow(SA_COL.r, 'REP', o.r.toFixed(1) + '%') + saRow(SA_COL.n, 'NPA/Other', o.n.toFixed(1) + '%') + `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>${totalLabel}</b>&nbsp;${fmt(Math.round(o.t))}</div>` : `<div class="sorted-hover-row"><span class="sorted-hover-gap">${noneMsg}</span></div>`); });
   const base = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z:names.map(() => 0), featureidkey:'id', zmin:0, zmax:1, colorscale:[[0, '#222b3d'], [1, '#222b3d']], showscale:false, marker:{ line:{ color:'#0a0e17', width:1 } }, hoverinfo:'skip' };
-  const tr = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z:vals, featureidkey:'id', zmin:-mx, zmax:mx, zmid:0,
-    colorscale:[[0, '#b5382f'], [0.3, '#d98a82'], [0.5, '#e4e7ee'], [0.7, '#8fb8e3'], [1, '#2f6fb5']], text:hover, hoverinfo:'text', hoverlabel:saTipBox,
-    marker:{ line:{ color:'#0a0e17', width:1 } }, colorbar:{ orientation:'h', thickness:10, len:0.55, y:-0.02, x:0.5, ticksuffix:' pts', tickfont:{ size:10, color:'#9aa4b8' }, outlinewidth:0, tickvals:[-mx, 0, mx], ticktext:['R+' + mx, 'Even', 'D+' + mx] } };
-  await Plotly.react(el, [base, tr], { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:34, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });
+  const tr = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z, featureidkey:'id', zmin:0, zmax:SA_ED_CATS.length, colorscale:stepColorscale(SA_ED_CATS),
+    customdata:hover, hoverinfo:'none', marker:{ line:{ color:'#0a0e17', width:1 } }, showscale:false };
+  await Plotly.react(el, [base, tr], { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:6, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });
+  saAttachHtmlTip(el);
+  const lg = document.getElementById(legId);
+  if(lg) lg.innerHTML = SA_ED_CATS.slice().reverse().map(k => `<span><i style="background:${k.color}"></i>${k.key}</span>`).join('');
+}
+async function saDrawEdMap(){
+  const b = saState.ctx; if(!b) return;
+  await saDrawForecastMap('saEdMap', 'saEdLegend', saCountyED(b.M), 'Forecast', 'STILL TO COME', 'No Election Day ballots projected');
+  await saDrawForecastMap('saFinMap', 'saFinLegend', saCountyFinal(b.M), 'Forecast', 'PROJECTED BALLOTS', 'No ballots projected');
 }
 document.getElementById('splitAvgView').addEventListener('input', e => {
   if(e.target.id !== 'saNpa') return;
-  npaSplitToDem = parseFloat(e.target.value);
+  npaSplitToDem = 100 - parseFloat(e.target.value);
   const live = document.getElementById('npaSlider'); if(live) live.value = 100 - npaSplitToDem;
   try{ updateNpaSliderLabel(); }catch(_){}
   saRenderNeeds();
   saDrawEdMap().catch(() => {});
+  saFcRender(false).catch(() => {});
 });
-document.getElementById('saGran').addEventListener('click', e => {
-  const b = e.target.closest('button'); if(!b) return;
+document.getElementById('splitAvgView').addEventListener('click', e => {
+  const b = e.target.closest('.sa-gran button'); if(!b) return;
   saState.gran = b.dataset.g;
-  document.querySelectorAll('#saGran button').forEach(x => x.classList.toggle('active', x === b));
+  document.querySelectorAll('#splitAvgView .sa-gran button').forEach(x => x.classList.toggle('active', x.dataset.g === saState.gran));
   saRender();
 });
 
@@ -12387,6 +12541,7 @@ async function saRender(){
   sec('saSecEd', saEdHTML(M, types, edMeth));
   saRenderNeeds();
   saDrawEdMap().catch(() => {});
+  try{ saState.fc = saFcBuild(pts, M); saFcRender(true).catch(() => {}); }catch(e){ console.error(e); }
   // party share chart
   const per = saIncsCum(pts);
   const shareEl = document.getElementById('saShareChart');

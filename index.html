@@ -12141,7 +12141,7 @@ function saObserve(){
   if(!('IntersectionObserver' in window)){ els.forEach(e => { e.classList.add('sa-in'); }); return; }
   saObs = new IntersectionObserver(es => es.forEach(en => {
     if(en.isIntersecting && !en.target.classList.contains('sa-in')){ en.target.classList.add('sa-in'); saRunCounts(en.target); saObs.unobserve(en.target); }
-  }), { threshold:0.2 });
+  }), { threshold:0, rootMargin:'0px 0px -12% 0px' });   // any overlap counts: the Election Day section is several screens tall on a phone, so a percentage-of-element threshold was never reached
   els.forEach(e => { if(!e.classList.contains('sa-in')) saObs.observe(e); });
 }
 

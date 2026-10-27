@@ -7,16 +7,16 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 26th, 2026 at 11:00pm Eastern Time
+Updated at October 27th, 2026 at 11:00am Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-17
+67
 
 Unchanged Counties:
-True
+False
 
 Rejected County Updates:
 0
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-1,244,557
+1,280,873
 
 REP:
-1,257,293
+1,297,675
 
 OTHER:
-651,066
+672,413
 
 TOTAL:
-3,152,916
+3,250,961
 
 STATEWIDE SUMMARY
 =================================
 
-🔴 Republicans lead by 12,736 votes statewide.
+🔴 Republicans lead by 16,802 votes statewide.
 
 Margin Change:
-+0.02% toward Democrats
+-0.07% toward Republicans
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +4,810
-🔴 REP: +3,842
-🟣 OTHER: +2,385
-🟢 TOTAL: +11,037
+🔵 DEM: +36,316
+🔴 REP: +40,382
+🟣 OTHER: +21,347
+🟢 TOTAL: +98,045
 
 REJECTED COUNTY UPDATES
 =================================
@@ -72,46 +72,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️11 PM Florida EV & VBM Update
+🗳️11 AM Florida EV & VBM Update
 
-New votes have been cast in 17 counties over the last hour, with the largest update coming from Lake County.
+New votes have been cast in 67 counties over the last hour, with the largest update coming from Miami-Dade County.
 
-🔵 DEM: +4,810
-🔴 REP: +3,842
-🟣 OTHER: +2,385
-🟢 TOTAL: +11,037
+🔵 DEM: +36,316
+🔴 REP: +40,382
+🟣 OTHER: +21,347
+🟢 TOTAL: +98,045
 
-🔴 Republicans lead by 12,736 votes statewide.
+🔴 Republicans lead by 16,802 votes statewide.
 
-🔴 Margin Change: +0.02% toward Democrats
+🔴 Margin Change: -0.07% toward Republicans
 
 Largest County Updates
 
 
-🥇Lake County
+🥇Miami-Dade County
 
-🔵 DEM: +1,747
-🔴 REP: +2,796
-🟣 OTHER: +1,261
-🟢 TOTAL: +5,804
-
-
-
-🥈Palm Beach County
-
-🔵 DEM: +2,029
-🔴 REP: +545
-🟣 OTHER: +680
-🟢 TOTAL: +3,254
+🔵 DEM: +4,582
+🔴 REP: +3,460
+🟣 OTHER: +2,806
+🟢 TOTAL: +10,848
 
 
 
-🥉Orange County
+🥈Hillsborough County
 
-🔵 DEM: +457
-🔴 REP: +174
-🟣 OTHER: +224
-🟢 TOTAL: +855
+🔵 DEM: +4,005
+🔴 REP: +2,990
+🟣 OTHER: +2,120
+🟢 TOTAL: +9,115
+
+
+
+🥉Pinellas County
+
+🔵 DEM: +3,411
+🔴 REP: +2,368
+🟣 OTHER: +1,508
+🟢 TOTAL: +7,287
 
 
 

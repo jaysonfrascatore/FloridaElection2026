@@ -12179,7 +12179,16 @@ function saPaceHTML(pts){
 }
 
 // ---- section: one voting method (big 7-day average + color-changing margin line) ----
+// In-person early voting counts only from Oct 19 on. Anything logged earlier (the Broward September exception) is left out;
+// the last point before the start only serves as the baseline, so Oct 19's own ballots are still counted.
+const SA_EV_START = 20261019;
+function saStartFilter(key, types){
+  if(key !== 'ev' || !types) return types;
+  const kept = types.filter(p => saKey(p.t) >= SA_EV_START), prior = types.filter(p => saKey(p.t) < SA_EV_START);
+  return prior.length ? [prior[prior.length - 1]].concat(kept) : kept;
+}
 function saMethodHTML(key, title, noun, types){
+  types = saStartFilter(key, types);
   const get = p => p[key], Noun = noun[0].toUpperCase() + noun.slice(1);
   const gran = saState.gran, base = saIncs(types, get, gran);
   const head = `<div class="sa-sec-head"><div class="sa-eyebrow">${title}</div>${saGranBtns()}</div>`;
@@ -12236,7 +12245,8 @@ function saMethodHTML(key, title, noun, types){
 function saCountyAvg(key){
   const rows = btTypeRows; if(!rows || !rows.length) return null;
   const col = { vbm:'VBM', ev:'EV', ed:'ED' }[key];
-  const days = [...new Set(rows.map(r => r._k))].sort((a, b) => a - b);
+  let days = [...new Set(rows.map(r => r._k))].sort((a, b) => a - b);
+  if(key === 'ev'){ const pr = days.filter(k => k < SA_EV_START), kp = days.filter(k => k >= SA_EV_START); days = pr.length ? [pr[pr.length - 1]].concat(kp) : kp; }
   if(days.length < 2) return null;
   const n = Math.min(7, days.length - 1), endKey = days[days.length - 1], startKey = days[days.length - 1 - n];
   const by = {}; rows.forEach(r => { (by[r.Code] = by[r.Code] || []).push(r); });

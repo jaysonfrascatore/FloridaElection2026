@@ -1257,7 +1257,7 @@
       <button data-metric="move">Margin move</button>
       <button data-metric="updated">Counties Updated</button>
       <button data-metric="dropwinner">Drop Winners</button>
-      <button data-metric="splitavg">Split Averages</button>
+      <button data-metric="splitavg">More Splits</button>
     </div>
     <div class="next-update" id="nextUpdateClock" aria-live="off">
       <div class="nu-label" id="nuLabel">Next update</div>
@@ -1275,7 +1275,7 @@
   <div id="splitAvgView" style="display:none">
     <div class="panel sa-sec sa-reveal" id="saSecPace">
       <div class="sa-sec-head">
-        <div class="sa-eyebrow">Split Averages</div>
+        <div class="sa-eyebrow">More Splits</div>
         <div class="segmented sa-seg sa-gran"><button data-g="day" class="active">By day</button><button data-g="update">By update</button></div>
       </div>
       <div id="saPace"></div>
@@ -5071,13 +5071,12 @@ function partyTurnoutCardText(){
   }
   if(I.hasPrior){
     const ch = Math.abs(I.leaderChange).toFixed(2);
-    out += parseFloat(ch) === 0 ? ', unchanged compared to the previous update.' : `, ${I.leaderChange > 0 ? 'an increase' : 'a decrease'} compared to the previous update.`;
+    out += parseFloat(ch) === 0 ? ', unchanged compared to the previous update.' : `, ${I.leaderChange > 0 ? 'an' : 'a'} ${ch}% ${I.leaderChange > 0 ? 'increase' : 'decrease'} compared to the previous update.`;
   }else out += '.';
-  const first = I.leader === 'Republicans' ? ['Republicans', I.now.r, 'Democrats', I.now.d] : ['Democrats', I.now.d, 'Republicans', I.now.r];
-  out += `\n${first[0]} have ${pc(first[1])} turnout, ${first[2]} have ${pc(first[3])} turnout and NPA/Other has ${pc(I.now.n)} turnout.`;
+  out += `\n\n\u{1F535} DEM: ${pc(I.now.d)} turnout\n\u{1F534} REP: ${pc(I.now.r)} turnout\n\u{1F7E3} OTHER: ${pc(I.now.n)} turnout`;
   if(I.hasPrior){
     const sg = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2) + '%';
-    out += `\n\nIncrease by party:\n\u{1F535} DEM: ${sg(I.inc.d)}\n\u{1F534} REP: ${sg(I.inc.r)}\n\u{1F7E3} NPA/Other: ${sg(I.inc.n)}`;
+    out += `\n\nIncrease by party:\n\u{1F535} DEM: ${sg(I.inc.d)}\n\u{1F534} REP: ${sg(I.inc.r)}\n\u{1F7E3} OTHER: ${sg(I.inc.n)}`;
   }
   return out;
 }

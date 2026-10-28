@@ -12493,7 +12493,7 @@ function saDailyHTML(key, title, noun, types){
     </div>
     <div class="sa-bar"><i style="width:${cur.sh.d}%;background:${SA_COL.d}"></i><i style="width:${cur.sh.r}%;background:${SA_COL.r}"></i><i style="width:${cur.sh.n}%;background:${SA_COL.n}"></i></div>
     <div class="sa-split"><span style="color:${SA_COL.d}">DEM ${cur.sh.d.toFixed(1)}%</span><span style="color:${SA_COL.r}">REP ${cur.sh.r.toFixed(1)}%</span><span style="color:${SA_COL.n}">NPA ${cur.sh.n.toFixed(1)}%</span></div>
-    <div class="sa-chart-wrap"><div class="sa-key"><i style="border-color:${SA_COL.d}"></i>${Noun} margin of each day's ballots after every update, starting fresh each day, blue when Democrats lead and red when Republicans do <i class="dot"></i>7-day rolling average</div>
+    <div class="sa-chart-wrap"><div class="sa-key"><i style="border-color:${SA_COL.d}"></i>${Noun} margin of each day's ballots after every update, one continuous line, restarting from that day's own ballots each morning, blue when Democrats lead and red when Republicans do <i class="dot"></i>7-day rolling average</div>
     <div id="saCh_${key}" style="height:270px;"></div></div>
     <div class="sa-key" style="margin-top:22px"><b style="color:var(--text)">County by county</b> · ${nDays < 7 ? 'average so far' : '7-day rolling average'} of ${noun} ballots, blue where Democrats lead and red where Republicans do</div>
     <div id="saMap_${key}" style="height:460px;"></div>`;
@@ -12502,11 +12502,8 @@ function saDailyHTML(key, title, noun, types){
     const traces = [], allRows = [];
     const ry = inc.map((o, i) => saMargin(saRoll(inc, i, 7)));
     traces.push({ x:inc.map(o => o.t), y:ry, type:'scatter', mode:'lines', line:{ color:'#9aa4b8', width:1.6, dash:'dot' }, hoverinfo:'skip', showlegend:false });
-    days.forEach(d => {
-      const xs = d.rows.map(o => o.p.t), ys = d.rows.map(o => o.m);
-      saSignedSegs(xs, ys).forEach(sg => traces.push({ x:sg.x, y:sg.y, type:'scatter', mode:'lines', line:{ color:sg.c, width:3.5 }, hoverinfo:'skip', showlegend:false }));
-      d.rows.forEach((o, i) => allRows.push({ o, i, d }));
-    });
+    days.forEach(d => d.rows.forEach((o, i) => allRows.push({ o, i, d })));
+    saSignedSegs(allRows.map(r => r.o.p.t), allRows.map(r => r.o.m)).forEach(sg => traces.push({ x:sg.x, y:sg.y, type:'scatter', mode:'lines', line:{ color:sg.c, width:3.5 }, hoverinfo:'skip', showlegend:false }));
     const tipOf = r => { const o = r.o, q = r.i ? r.d.rows[r.i - 1] : null;
       return `<div class="sorted-hover-date">${formatSortedHoverDate(o.p.t)}</div>` +
         saRow(saMarginColor(o.m), `${Noun} margin, ${dayName(o.p.t)} so far`, saPts(o.m)) +

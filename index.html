@@ -12063,7 +12063,7 @@ function initAnalysis(){
    ============================================================ */
 const SA_COL = { d:'#5b9bd9', r:'#d4675a', n:'#c77dff' };
 const SA_DAY = 86400000;
-const saState = { gran:'day', shown:false, tpMode:'pct', ctx:null, paceParty:'d' };
+const saState = { swing:false, gran:'day', shown:false, tpMode:'pct', ctx:null, paceParty:'d' };
 let saReplayCache = null, saReplayRows = null, saTypesCache = null, saTypesRows = null;
 const saPts = v => Math.abs(v) < 0.005 ? 'Even' : (v > 0 ? 'D+' : 'R+') + Math.abs(v).toFixed(2);
 const saStamp = t => t.toLocaleDateString('en-US', { month:'short', day:'numeric' }) + ', ' + t.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
@@ -12202,8 +12202,10 @@ function saShift(dm){
   if(Math.abs(dm) < 0.005) return '<span style="color:var(--muted)">no change</span>';
   return `<span class="${dm > 0 ? 'sa-up' : 'sa-dn'}">${dm > 0 ? '▲' : '▼'} ${Math.abs(dm).toFixed(2)} pts toward ${dm > 0 ? 'Democrats' : 'Republicans'}</span>`;
 }
-function saGranBtns(){
-  return `<div class="segmented sa-seg sa-gran">${[['day', 'By day'], ['update', 'By update']].map(([g, t]) => `<button data-g="${g}" class="${saState.gran === g ? 'active' : ''}">${t}</button>`).join('')}</div>`;
+function saGranBtns(sw){   // sw: also offer the Update Swing view (used by the mail / early / Election Day sections)
+  const opts = [['day', 'By day'], ['update', 'By update']].concat(sw ? [['swing', 'Update Swing']] : []);
+  const on = g => g === 'swing' ? !!saState.swing : (saState.gran === g && !(sw && saState.swing));
+  return `<div class="segmented sa-seg sa-gran">${opts.map(([g, t]) => `<button data-g="${g}" class="${on(g) ? 'active' : ''}">${t}</button>`).join('')}</div>`;
 }
 // ---- count-up + fade reveal ----
 function saCountEl(c, v, dp, pre, suf, col){
@@ -12406,9 +12408,11 @@ function saStartFilter(key, types){
 }
 function saMethodHTML(key, title, noun, types){
   types = saStartFilter(key, types);
+  if(saState.gran === 'update' && !saState.swing) return saRunHTML(key, title, noun, types);
+  const swingView = saState.gran === 'update' && saState.swing;
   const get = p => p[key], Noun = noun[0].toUpperCase() + noun.slice(1);
   const gran = saState.gran, base = saIncs(types, get, gran);
-  const head = `<div class="sa-sec-head"><div class="sa-eyebrow">${title}</div>${saGranBtns()}</div>`;
+  const head = `<div class="sa-sec-head"><div class="sa-eyebrow">${title}${swingView ? ' \u00b7 Update Swing' : ''}</div>${saGranBtns(true)}</div>`;
   if(!base.length) return { html:head + `<div class="sa-empty">Not enough ${noun} data yet. This fills in after two or more updates of by-method data.</div>`, draw:null };
   const li = base.length - 1, cur = saRoll(base, li, 7), m = saMargin(cur), sh = saShares(cur);
   if(m === null) return { html:head + `<div class="sa-empty">No ${noun} ballots counted yet.</div>`, draw:null };
@@ -12416,22 +12420,15 @@ function saMethodHTML(key, title, noun, types){
   const dAvg = prevRoll === null ? null : m - prevRoll, dRaw = rawNow === null || rawPrev === null ? null : rawNow - rawPrev;
   const when = gran === 'day' ? '11 PM yesterday' : 'the previous update', unit = gran === 'day' ? 'Latest day' : 'Latest update';
   const daily = saIncs(types, get, 'day'), nDays = Math.min(7, daily.length);
-  // By update: the margin each recent update came in at (the ballots added in that update), newest last.
-  const recent = gran === 'update' ? base.slice(-6).map(p => ({ l:p.label, m:saMargin(p.v) })).filter(o => o.m !== null) : [];
-  const recentHtml = recent.length ? `<div class="sa-recent"><span class="lbl">Margin of each update</span>${recent.map(o => `<span class="sa-chip"><i>${o.l}</i><b style="color:${saMarginColor(o.m)}">${saPts(o.m)}</b></span>`).join('')}</div>` : '';
   const html = head + `<div class="sa-big">${saCountEl(0, Math.abs(m), 2, m >= 0 ? 'D+' : 'R+', '', saMarginColor(m))}</div>
     <div class="sa-sub"><b>${nDays < 7 ? 'Average so far' : '7-day rolling average'}</b> · ${fmt(Math.round(cur[0] + cur[1] + cur[2]))} ${noun} ballots ${nDays < 7 ? 'over the ' + nDays + ' day' + (nDays === 1 ? '' : 's') + ' tracked' : 'over the last 7 days'}</div>
     <div class="sa-shift">
       <div><span class="lbl">Average vs ${when}</span> ${saShift(dAvg)}${prevRoll === null ? '' : ` <span class="was">(${saPts(prevRoll)} → ${saPts(m)})</span>`}</div>
-      ${gran === 'update'
-        ? `<div><span class="lbl">Latest update margin</span> <b style="color:${rawNow === null ? 'inherit' : saMarginColor(rawNow)}">${rawNow === null ? '—' : saPts(rawNow)}</b>${rawPrev === null ? '' : ` <span class="was">(the previous update came in at ${saPts(rawPrev)})</span>`}</div>
-      <div><span class="lbl">Update swing</span> ${saShift(dRaw)}</div>`
-        : `<div><span class="lbl">${unit} alone vs ${when}</span> <b style="color:${rawNow === null ? 'inherit' : saMarginColor(rawNow)}">${rawNow === null ? '—' : saPts(rawNow)}</b>${rawPrev === null ? '' : ` <span class="was">(the day before came in at ${saPts(rawPrev)})</span>`} · ${saShift(dRaw)}</div>`}
+      <div><span class="lbl">${unit} alone vs ${when}</span> <b style="color:${rawNow === null ? 'inherit' : saMarginColor(rawNow)}">${rawNow === null ? '—' : saPts(rawNow)}</b>${rawPrev === null ? '' : ` <span class="was">(${gran === 'day' ? 'the day before' : 'the previous update'} came in at ${saPts(rawPrev)})</span>`} · ${saShift(dRaw)}</div>
     </div>
-    ${recentHtml}
     <div class="sa-bar"><i style="width:${sh.d}%;background:${SA_COL.d}"></i><i style="width:${sh.r}%;background:${SA_COL.r}"></i><i style="width:${sh.n}%;background:${SA_COL.n}"></i></div>
     <div class="sa-split"><span style="color:${SA_COL.d}">DEM ${sh.d.toFixed(1)}%</span><span style="color:${SA_COL.r}">REP ${sh.r.toFixed(1)}%</span><span style="color:${SA_COL.n}">NPA ${sh.n.toFixed(1)}%</span></div>
-    <div class="sa-chart-wrap"><div class="sa-key"><i style="border-color:${SA_COL.d}"></i>${Noun} margin of the ballots added each ${gran}, blue when Democrats lead and red when Republicans do <i class="dot"></i>7-day rolling average</div>
+    <div class="sa-chart-wrap"><div class="sa-key"><i style="border-color:${SA_COL.d}"></i>${Noun} margin of the ballots added in each ${gran}, blue when Democrats lead and red when Republicans do <i class="dot"></i>7-day rolling average</div>
     <div id="saCh_${key}" style="height:270px;"></div></div>
     <div class="sa-key" style="margin-top:22px"><b style="color:var(--text)">County by county</b> · ${nDays < 7 ? 'average so far' : '7-day rolling average'} of ${noun} ballots, blue where Democrats lead and red where Republicans do</div>
     <div id="saMap_${key}" style="height:460px;"></div>`;
@@ -12456,6 +12453,55 @@ function saMethodHTML(key, title, noun, types){
     traces.push({ x:xs, y:ys, type:'scatter', mode:'markers', showlegend:false, marker:{ size:9, color:ys.map(saMarginColor), line:{ color:'#0a0e17', width:1.5 } }, customdata:incs.map(tipOf), hoverinfo:'none' });
     const all = ys.concat(rm.filter(v => v !== null), [0]); const lo = Math.min(...all), hi = Math.max(...all), pad = Math.max((hi - lo) * 0.15, 1.5);
     const el = document.getElementById('saCh_' + key);
+    await saPlot(el, traces, { margin:{ t:8, r:14, b:36, l:56 }, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', showlegend:false, hovermode:'x unified', hoverdistance:-1, hoverlabel:saBlank,
+      font:{ family:'Inter, sans-serif', color:'#9aa4b8', size:11 },
+      xaxis:{ gridcolor:'#212a3b', tickformat:saAxisFmt(), tickfont:{ size:10 }, showspikes:true, spikemode:'across', spikesnap:'cursor', spikethickness:1, spikecolor:'#5a6580', spikedash:'solid' },
+      yaxis:{ gridcolor:'#212a3b', tickfont:{ size:10 }, ticksuffix:' pts', zeroline:true, zerolinecolor:'#5a6580', range:[lo - pad, hi + pad] } }, { displayModeBar:false, responsive:true });
+    saAttachHtmlTip(el);
+  };
+  return { html, draw };
+}
+
+
+// ---- By update: the running margin of everything counted so far in one voting method, after each update ----
+function saRunHTML(key, title, noun, types){
+  const get = p => p[key], Noun = noun[0].toUpperCase() + noun.slice(1);
+  const head = `<div class="sa-sec-head"><div class="sa-eyebrow">${title}</div>${saGranBtns(true)}</div>`;
+  const hasBase = key === 'ev' && types.length > 0 && saKey(types[0].t) < SA_EV_START;
+  const pre = hasBase ? get(types[0]) : [0, 0, 0], list = hasBase ? types.slice(1) : types;   // early vote: nothing from before Oct 19 counts
+  const rows = list.map((p, i) => { const v = get(p).map((x, j) => Math.max(0, x - pre[j])); return { p, v, m:saMargin(v), sh:saShares(v) }; }).filter(o => o.m !== null);
+  if(!rows.length) return { html:head + `<div class="sa-empty">${types.length ? 'No ' + noun + ' ballots counted yet.' : 'Not enough ' + noun + ' data yet. This fills in after the next update of by-method data.'}</div>`, draw:null };
+  const li = rows.length - 1, cur = rows[li], pv = li ? rows[li - 1] : null;
+  const inc = saIncs(types, get, 'update'), daily = saIncs(types, get, 'day'), nDays = Math.min(7, daily.length);
+  const avg = inc.length ? saMargin(saRoll(inc, inc.length - 1, 7)) : null;
+  const html = head + `<div class="sa-big">${saCountEl(0, Math.abs(cur.m), 2, cur.m >= 0 ? 'D+' : 'R+', '', saMarginColor(cur.m))}</div>
+    <div class="sa-sub"><b>Running margin</b> of all ${noun} ballots counted so far · ${fmt(Math.round(cur.sh.t))} ballots after the ${saStamp(cur.p.t)} update</div>
+    <div class="sa-shift">
+      ${pv ? `<div><span class="lbl">Previous update</span> <b style="color:${saMarginColor(pv.m)}">${saPts(pv.m)}</b> <span class="was">(${saStamp(pv.p.t)})</span></div>` : ''}
+      ${avg === null ? '' : `<div><span class="lbl">7-day rolling average</span> <b style="color:${saMarginColor(avg)}">${saPts(avg)}</b> <span class="was">(the margin of just the last 7 days of ${noun} ballots)</span></div>`}
+    </div>
+    <div class="sa-bar"><i style="width:${cur.sh.d}%;background:${SA_COL.d}"></i><i style="width:${cur.sh.r}%;background:${SA_COL.r}"></i><i style="width:${cur.sh.n}%;background:${SA_COL.n}"></i></div>
+    <div class="sa-split"><span style="color:${SA_COL.d}">DEM ${cur.sh.d.toFixed(1)}%</span><span style="color:${SA_COL.r}">REP ${cur.sh.r.toFixed(1)}%</span><span style="color:${SA_COL.n}">NPA ${cur.sh.n.toFixed(1)}%</span></div>
+    <div class="sa-chart-wrap"><div class="sa-key"><i style="border-color:${SA_COL.d}"></i>Running ${noun} margin after each update, blue when Democrats lead and red when Republicans do <i class="dot"></i>7-day rolling average</div>
+    <div id="saCh_${key}" style="height:270px;"></div></div>
+    <div class="sa-key" style="margin-top:22px"><b style="color:var(--text)">County by county</b> · ${nDays < 7 ? 'average so far' : '7-day rolling average'} of ${noun} ballots, blue where Democrats lead and red where Republicans do</div>
+    <div id="saMap_${key}" style="height:460px;"></div>`;
+  const draw = async () => {
+    saDrawMap(key, noun, nDays).catch(() => {});
+    const xs = rows.map(o => o.p.t), ys = rows.map(o => o.m);
+    const rx = inc.map(o => o.t), ry = inc.map((o, i) => saMargin(saRoll(inc, i, 7)));
+    const traces = [{ x:rx, y:ry, type:'scatter', mode:'lines', line:{ color:'#9aa4b8', width:1.6, dash:'dot' }, hoverinfo:'skip', showlegend:false }]
+      .concat(saSignedSegs(xs, ys).map(sg => ({ x:sg.x, y:sg.y, type:'scatter', mode:'lines', line:{ color:sg.c, width:3.5 }, hoverinfo:'skip', showlegend:false })));
+    const tipOf = (o, i) => {
+      const q = i ? rows[i - 1] : null;
+      return `<div class="sorted-hover-date">${formatSortedHoverDate(o.p.t)}</div>` +
+        saRow(saMarginColor(o.m), `${Noun} margin so far`, saPts(o.m)) +
+        (q ? saRow(saMarginColor(q.m), 'Previous update', saPts(q.m)) : '') +
+        saRow(SA_COL.d, 'DEM', o.sh.d.toFixed(1) + '%') + saRow(SA_COL.r, 'REP', o.sh.r.toFixed(1) + '%') + saRow(SA_COL.n, 'NPA/Other', o.sh.n.toFixed(1) + '%') +
+        `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>BALLOTS SO FAR</b>&nbsp;${fmt(Math.round(o.sh.t))}</div>`;
+    };
+    traces.push({ x:xs, y:ys, type:'scatter', mode:'markers', showlegend:false, marker:{ size:rows.length > 40 ? 6 : 9, color:ys.map(saMarginColor), line:{ color:'#0a0e17', width:1.5 } }, customdata:rows.map(tipOf), hoverinfo:'none' });
+    const all = ys.concat(ry.filter(v => v !== null), [0]), lo = Math.min(...all), hi = Math.max(...all), pad = Math.max((hi - lo) * 0.15, 1.5), el = document.getElementById('saCh_' + key);
     await saPlot(el, traces, { margin:{ t:8, r:14, b:36, l:56 }, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', showlegend:false, hovermode:'x unified', hoverdistance:-1, hoverlabel:saBlank,
       font:{ family:'Inter, sans-serif', color:'#9aa4b8', size:11 },
       xaxis:{ gridcolor:'#212a3b', tickformat:saAxisFmt(), tickfont:{ size:10 }, showspikes:true, spikemode:'across', spikesnap:'cursor', spikethickness:1, spikecolor:'#5a6580', spikedash:'solid' },
@@ -12784,8 +12830,8 @@ document.getElementById('splitAvgView').addEventListener('input', e => {
 });
 document.getElementById('splitAvgView').addEventListener('click', e => {
   const b = e.target.closest('.sa-gran button'); if(!b) return;
-  saState.gran = b.dataset.g;
-  document.querySelectorAll('#splitAvgView .sa-gran button').forEach(x => x.classList.toggle('active', x.dataset.g === saState.gran));
+  if(b.dataset.g === 'swing'){ saState.gran = 'update'; saState.swing = true; } else { saState.gran = b.dataset.g; saState.swing = false; }
+  document.querySelectorAll('#splitAvgView .sa-gran').forEach(w => { const hasSw = !!w.querySelector('[data-g=swing]'); w.querySelectorAll('button').forEach(x => { const g = x.dataset.g; x.classList.toggle('active', g === 'swing' ? !!saState.swing : (saState.gran === g && !(hasSw && saState.swing))); }); });
   saRender();
 });
 

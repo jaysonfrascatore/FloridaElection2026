@@ -1278,6 +1278,7 @@
       </div>
       <div id="saPace"></div>
     </div>
+    <div class="panel sa-sec sa-reveal" id="saSecTurn"></div>
     <div class="panel sa-sec sa-reveal" id="saSecVbm"></div>
     <div class="panel sa-sec sa-reveal" id="saSecEv"></div>
     <div class="panel sa-sec sa-reveal" id="saSecEd"></div>
@@ -9296,6 +9297,14 @@ function ensureSortedHoverTooltipEl(){
     sortedHoverTooltipEl = document.createElement('div');
     sortedHoverTooltipEl.className = 'sorted-hover-tooltip';
     document.body.appendChild(sortedHoverTooltipEl);
+    // A tap on a phone shows the tooltip but never fires "unhover", so it used to stay on screen (and stay put while the page
+    // scrolled). Hide it whenever the page scrolls, the finger drags, or anything outside a chart is pressed.
+    const hideTip = () => { sortedHoverTooltipEl.style.display = 'none'; };
+    window.addEventListener('scroll', hideTip, { passive:true });
+    document.addEventListener('touchmove', hideTip, { passive:true });
+    document.addEventListener('wheel', hideTip, { passive:true });
+    document.addEventListener('pointerdown', e => { if(!(e.target.closest && e.target.closest('.js-plotly-plot'))) hideTip(); }, true);
+    document.addEventListener('visibilitychange', hideTip);
   }
   return sortedHoverTooltipEl;
 }
@@ -11990,6 +11999,14 @@ const saStamp = t => t.toLocaleDateString('en-US', { month:'short', day:'numeric
 const saDayLabel = t => t.toLocaleDateString('en-US', { month:'short', day:'numeric' });
 const saKey = d => d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
 const saTipBox = { bgcolor:'rgba(21,27,40,0.68)', bordercolor:'rgba(124,135,156,0.35)', font:{ family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5' } };
+// Locked charts and maps: no drag, pan, zoom or double-click reset, so a swipe or scroll never moves them (hover/tap tooltips still work).
+function saPlot(el, data, layout, config){
+  layout = layout || {};
+  layout.dragmode = false;
+  ['xaxis', 'yaxis'].forEach(a => { layout[a] = Object.assign({}, layout[a], { fixedrange:true }); });
+  if(layout.geo) layout.geo = Object.assign({}, layout.geo, { fixedrange:true });
+  return Plotly.react(el, data, layout, Object.assign({}, config, { scrollZoom:false, doubleClick:false, showAxisDragHandles:false, showTips:false, displayModeBar:false }));
+}
 const saBlank = { bgcolor:'rgba(0,0,0,0)', bordercolor:'rgba(0,0,0,0)', font:{ color:'rgba(0,0,0,0)', size:1 } };
 const saMargin = v => { const t = v[0] + v[1] + v[2]; return t ? (v[0] - v[1]) / t * 100 : null; };
 const saShares = v => { const t = v[0] + v[1] + v[2]; return t ? { d:v[0] / t * 100, r:v[1] / t * 100, n:v[2] / t * 100, t } : null; };
@@ -12156,6 +12173,45 @@ function saShow(on){
   saRender().then(saObserve);
 }
 
+
+// ---- Turnout margin: DEM turnout rate minus REP turnout rate (share of each party's registered voters who have voted), since the first logged count ----
+function saTurnMarginRows(pts){
+  const reg = saRegByParty();
+  let list = pts;
+  if(saState.gran === 'day'){ const last = {}; pts.forEach(p => { last[saKey(p.t)] = p; }); list = Object.keys(last).sort().map(k => last[k]); }
+  list = list.filter(p => saKey(p.t) >= SA_EV_START);   // charts start on Oct 19
+  return list.map(p => { const d = p.D / reg.d * 100, r = p.R / reg.r * 100, n = p.N / reg.n * 100; return { p, d, r, n, m:d - r, t:p.T }; });
+}
+function saTurnMarginHTML(pts){
+  const gran = saState.gran, head = `<div class="sa-sec-head"><div class="sa-eyebrow">Margin of party turnout</div>${saGranBtns()}</div>`;
+  const rows = saTurnMarginRows(pts);
+  if(rows.length < 1) return { html:head + '<div class="sa-empty">This fills in once ballots are logged.</div>', draw:null };
+  const li = rows.length - 1, cur = rows[li], pv = li ? rows[li - 1] : null, dm = pv ? cur.m - pv.m : null;
+  const when = gran === 'day' ? '24 hours ago' : 'the previous update', first = rows[0];
+  const html = head + `<div class="sa-big">${saCountEl(0, Math.abs(cur.m), 2, cur.m >= 0 ? 'D+' : 'R+', '', saMarginColor(cur.m))}</div>
+    <div class="sa-sub"><b>Turnout lead</b> · the share of registered Democrats who have voted (<b style="color:${SA_COL.d}">${cur.d.toFixed(2)}%</b>) minus the share of registered Republicans who have voted (<b style="color:${SA_COL.r}">${cur.r.toFixed(2)}%</b>), in points. Same measure as the "Registered voters who have voted" box. Tracked since ${saDayLabel(first.p.t)}.</div>
+    <div class="sa-shift"><div><span class="lbl">Lead vs ${when}</span> ${saShift(dm)}${pv ? ` <span class="was">(${saPts(pv.m)} → ${saPts(cur.m)})</span>` : ''}</div></div>
+    <div class="sa-chart-wrap"><div class="sa-key">Democratic turnout rate minus Republican turnout rate after each ${gran}, blue when Democrats' voters have turned out more and red when Republicans' have</div>
+    <div id="saTurnMarginCh" style="height:290px;"></div></div>`;
+  const draw = async () => {
+    const xs = rows.map(r => r.p.t), ys = rows.map(r => r.m);
+    const traces = saSignedSegs(xs, ys).map(sg => ({ x:sg.x, y:sg.y, type:'scatter', mode:'lines', line:{ color:sg.c, width:3.5 }, hoverinfo:'skip', showlegend:false }));
+    const tipOf = (r, i) => { const q = i ? rows[i - 1] : null;
+      return `<div class="sorted-hover-date">${gran === 'day' ? saDayLabel(r.p.t) : formatSortedHoverDate(r.p.t)}</div>` + saRow(saMarginColor(r.m), 'Turnout lead', saPts(r.m)) +
+        saRow(SA_COL.d, 'DEM turnout', r.d.toFixed(2) + '%') + saRow(SA_COL.r, 'REP turnout', r.r.toFixed(2) + '%') + saRow(SA_COL.n, 'NPA/Other turnout', r.n.toFixed(2) + '%') +
+        `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>BALLOTS</b>&nbsp;${fmt(Math.round(r.t))}</div>` +
+        `<div class="sorted-hover-gain-header">Shift vs ${gran === 'day' ? '24 hours ago' : 'the previous update'}:</div><div class="sorted-hover-row">${q ? saShift(r.m - q.m) : '<span style="color:#7c879c">first point</span>'}</div>`; };
+    traces.push({ x:xs, y:ys, type:'scatter', mode:'markers', showlegend:false, marker:{ size:14, opacity:0 }, customdata:rows.map(tipOf), hoverinfo:'none' });
+    const lo = Math.min(...ys, 0), hi = Math.max(...ys, 0), pad = Math.max((hi - lo) * 0.15, 0.6), el = document.getElementById('saTurnMarginCh');
+    await saPlot(el, traces, { margin:{ t:8, r:14, b:36, l:56 }, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', showlegend:false, hovermode:'x unified', hoverdistance:-1, hoverlabel:saBlank,
+      font:{ family:'Inter, sans-serif', color:'#9aa4b8', size:11 },
+      xaxis:{ gridcolor:'#212a3b', tickformat:saAxisFmt(), tickfont:{ size:10 }, showspikes:true, spikemode:'across', spikesnap:'cursor', spikethickness:1, spikecolor:'#5a6580', spikedash:'solid' },
+      yaxis:{ gridcolor:'#212a3b', tickfont:{ size:10 }, ticksuffix:' pts', zeroline:true, zerolinecolor:'#5a6580', range:[lo - pad, hi + pad] } }, { displayModeBar:false, responsive:true });
+    saAttachHtmlTip(el);
+  };
+  return { html, draw };
+}
+
 // ---- section: average daily gain in turnout, by party ----
 function saPaceHTML(pts){
   const reg = saRegByParty(), last = {};
@@ -12237,7 +12293,7 @@ function saMethodHTML(key, title, noun, types){
     traces.push({ x:xs, y:ys, type:'scatter', mode:'markers', showlegend:false, marker:{ size:9, color:ys.map(saMarginColor), line:{ color:'#0a0e17', width:1.5 } }, customdata:incs.map(tipOf), hoverinfo:'none' });
     const all = ys.concat(rm.filter(v => v !== null), [0]); const lo = Math.min(...all), hi = Math.max(...all), pad = Math.max((hi - lo) * 0.15, 1.5);
     const el = document.getElementById('saCh_' + key);
-    await Plotly.react(el, traces, { margin:{ t:8, r:14, b:36, l:56 }, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', showlegend:false, hovermode:'x unified', hoverdistance:-1, hoverlabel:saBlank,
+    await saPlot(el, traces, { margin:{ t:8, r:14, b:36, l:56 }, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', showlegend:false, hovermode:'x unified', hoverdistance:-1, hoverlabel:saBlank,
       font:{ family:'Inter, sans-serif', color:'#9aa4b8', size:11 },
       xaxis:{ gridcolor:'#212a3b', tickformat:saAxisFmt(), tickfont:{ size:10 }, showspikes:true, spikemode:'across', spikesnap:'cursor', spikethickness:1, spikecolor:'#5a6580', spikedash:'solid' },
       yaxis:{ gridcolor:'#212a3b', tickfont:{ size:10 }, ticksuffix:' pts', zeroline:true, zerolinecolor:'#5a6580', range:[lo - pad, hi + pad] } }, { displayModeBar:false, responsive:true });
@@ -12278,7 +12334,7 @@ async function saDrawMap(key, noun, nDays){
   const tr = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z:vals, featureidkey:'id', zmin:-mx, zmax:mx, zmid:0,
     colorscale:[[0, '#b5382f'], [0.3, '#d98a82'], [0.5, '#e4e7ee'], [0.7, '#8fb8e3'], [1, '#2f6fb5']], customdata:hover, hoverinfo:'none',
     marker:{ line:{ color:'#0a0e17', width:1 } }, colorbar:{ orientation:'h', thickness:10, len:0.55, y:-0.02, x:0.5, ticksuffix:' pts', tickfont:{ size:10, color:'#9aa4b8' }, outlinewidth:0, tickvals:[-mx, 0, mx], ticktext:['R+' + mx, 'Even', 'D+' + mx] } };
-  await Plotly.react(el, [base, tr], { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:34, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });  saAttachHtmlTip(el);
+  await saPlot(el, [base, tr], { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:34, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });  saAttachHtmlTip(el);
 }
 
 // ---- county map: average daily turnout gain for one party ----
@@ -12304,7 +12360,7 @@ async function saDrawPaceMap(pts){
   const base = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z:names.map(() => 0), featureidkey:'id', zmin:0, zmax:1, colorscale:[[0, '#222b3d'], [1, '#222b3d']], showscale:false, marker:{ line:{ color:'#0a0e17', width:1 } }, hoverinfo:'skip' };
   const tr = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z:vals, featureidkey:'id', zmin:0, zmax:mx, colorscale:[[0, '#e8ecf3'], [1, hi]], customdata:hover, hoverinfo:'none',
     marker:{ line:{ color:'#0a0e17', width:1 } }, colorbar:{ orientation:'h', thickness:10, len:0.55, y:-0.02, x:0.5, tickfont:{ size:10, color:'#9aa4b8' }, outlinewidth:0, tickformat:'.1f' } };
-  await Plotly.react(el, [base, tr], { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:34, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });  saAttachHtmlTip(el);
+  await saPlot(el, [base, tr], { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:34, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });  saAttachHtmlTip(el);
 }
 document.getElementById('splitAvgView').addEventListener('click', e => {
   const b = e.target.closest('#saPaceParty button'); if(!b) return;
@@ -12432,6 +12488,7 @@ async function saFcRender(animate){
   const gran = saState.gran;
   let list = list0;
   if(gran === 'day'){ const last = {}; list0.forEach(p => { last[saKey(p.t)] = p; }); list = Object.keys(last).sort().map(k => last[k]); }
+  list = list.filter(p => saKey(p.t) >= SA_EV_START);   // charts start on Oct 19
   const cfg = [
     ['ed', 'saEdFc', 'ballots still to come on Election Day', 'STILL TO COME', 'Margin of the Election Day vote only, from the Projected Final Turnout model (2018, 2022 and 2024 turnout plus this year\'s pace) and the registered voters who have not voted yet.'],
     ['fin', 'saFinFc', 'ballots in the final count', 'PROJECTED BALLOTS', 'Margin of the whole race once the ballots already counted and the Election Day vote are combined.']
@@ -12447,7 +12504,7 @@ async function saFcRender(animate){
     box.innerHTML = head + `<div class="sa-big">${animate ? saCountEl(0, Math.abs(cur.m), 2, cur.m >= 0 ? 'D+' : 'R+', '', saMarginColor(cur.m)) : `<span style="color:${saMarginColor(cur.m)}">${bigTxt}</span>`}</div>
       <div class="sa-sub"><b>${k === 'ed' ? 'Election Day Only Forecast' : 'Final Forecast'}</b> · about ${fmt(Math.round(cur.o.t))} ${noun}. ${desc} <b>Based on party registration only</b>, since how people actually vote has to be assumed: ${demLoyalty.toFixed(1).replace(/\.0$/,'')}% of Democrats and ${repLoyalty.toFixed(1).replace(/\.0$/,'')}% of Republicans vote their party, and <span style="color:#c77dff">NPA/other</span> voters split <b style="color:#5b9bd9">${npaSplitToDem.toFixed(1)}% D</b> / <b style="color:#d4675a">${(100 - npaSplitToDem).toFixed(1)}% R</b>.</div>
       <div class="sa-shift"><div><span class="lbl">Forecast vs ${when}</span> ${saShift(dm)}${pv ? ` <span class="was">(${saPts(pv.m)} → ${saPts(cur.m)})</span>` : ''}</div></div>
-      <div class="sa-chart-wrap"><div class="sa-key">Forecasted margin after each ${gran} (solid), blue when Democrats are projected ahead and red when Republicans are. Dotted: ${k === 'ed' ? 'the margin of the Election Day vote still to come, as the count fills in' : 'the margin of all ballots counted as the count fills in'} through Nov 3</div>
+      <div class="sa-chart-wrap"><div class="sa-key">Forecasted margin after each ${gran} (solid), blue when Democrats are projected ahead and red when Republicans are. <span style="color:#ff6fae">Dotted pink</span>: ${k === 'ed' ? 'the margin of the Election Day vote still to come, as the count fills in through Nov 3' : 'the latest forecast held steady through Nov 3, since it only moves when the count or your sliders do'}</div>
       <div id="${id}Ch" style="height:250px;"></div></div>`;
     const xs = rows.map(r => r.p.t), ys = rows.map(r => r.m);
     const traces = saSignedSegs(xs, ys).map(sg => ({ x:sg.x, y:sg.y, type:'scatter', mode:'lines', line:{ color:sg.c, width:3.5 }, hoverinfo:'skip', showlegend:false }));
@@ -12460,28 +12517,28 @@ async function saFcRender(animate){
         `<div class="sorted-hover-gain-header">Shift vs ${gran === 'day' ? '24 hours ago' : 'the previous update'}:</div>` +
         `<div class="sorted-hover-row">${q ? saShift(d) : '<span style="color:#7c879c">first point</span>'}</div>`;
     };
-    traces.push({ x:xs, y:ys, type:'scatter', mode:'markers', showlegend:false, marker:{ size:9, color:ys.map(saMarginColor), line:{ color:'#0a0e17', width:1.5 } }, customdata:rows.map(tipOf), hoverinfo:'none' });
+    traces.push({ x:xs, y:ys, type:'scatter', mode:'markers', showlegend:false, marker:{ size:14, opacity:0 }, customdata:rows.map(tipOf), hoverinfo:'none' });
     // projected path to Nov 3 (dotted)
     const PP = saState.fcPath; let pxs = [], pys = [], ptip = [];
     if(PP){
       const fin = PP.fin, remOf = q => ({ d:Math.max(0, fin.d - q.d), r:Math.max(0, fin.r - q.r), n:Math.max(0, fin.n - q.n) });
       const seq = [{ t:PP.cur.t, o:{ d:PP.cur.d, r:PP.cur.r, n:PP.cur.n } }].concat(PP.proj.map(q => ({ t:q.t, o:{ d:q.d, r:q.r, n:q.n } })));
-      const vals = seq.map(q => ({ t:q.t, o:k === 'ed' ? remOf(q.o) : q.o }));
+      const vals = seq.map(q => ({ t:q.t, o:k === 'ed' ? remOf(q.o) : fin }));   // Final: the projected final total, so the line continues from the solid forecast
       if(k === 'ed' && vals.length > 1) vals[vals.length - 1].o = vals[vals.length - 2].o;   // Election Day: the whole vote still to come
       vals.forEach((q, i) => {
         const o = q.o, mm = saFcMargin(o); if(mm === null) return;
         const isLast = i === vals.length - 1, tt = o.d + o.r + o.n;
         pxs.push(q.t); pys.push(mm);
-        ptip.push(`<div class="sorted-hover-date">${i === 0 ? 'Now' : isLast ? 'Nov 3 · Election Day' : saDayLabel(q.t)} · ${i === 0 ? 'latest count' : 'Projected'}</div>` + saRow(saMarginColor(mm), k === 'ed' ? 'Election Day margin still to come' : 'Margin of all ballots counted', saPts(mm)) +
+        ptip.push(`<div class="sorted-hover-date">${i === 0 ? 'Now' : isLast ? 'Nov 3 · Election Day' : saDayLabel(q.t)} · ${i === 0 ? 'latest count' : k === 'ed' ? 'Projected' : 'Forecast carried forward'}</div>` + saRow(saMarginColor(mm), k === 'ed' ? 'Election Day margin still to come' : 'Forecasted margin', saPts(mm)) +
           saRow(SA_COL.d, 'DEM', (o.d / tt * 100).toFixed(1) + '%') + saRow(SA_COL.r, 'REP', (o.r / tt * 100).toFixed(1) + '%') + saRow(SA_COL.n, 'NPA/Other', (o.n / tt * 100).toFixed(1) + '%') +
           `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>${k === 'ed' ? 'STILL TO COME' : 'BALLOTS'}</b>&nbsp;${fmt(Math.round(tt))}</div>`);
       });
-      saSignedSegs(pxs, pys).forEach(sg => traces.push({ x:sg.x, y:sg.y, type:'scatter', mode:'lines', line:{ color:sg.c, width:3, dash:'dot' }, hoverinfo:'skip', showlegend:false }));
-      traces.push({ x:pxs, y:pys, type:'scatter', mode:'markers', showlegend:false, marker:{ size:7, color:pys.map(saMarginColor), symbol:'circle-open', line:{ width:1.5, color:pys.map(saMarginColor) } }, customdata:ptip, hoverinfo:'none' });
+      traces.push({ x:pxs, y:pys, type:'scatter', mode:'lines', line:{ color:'#ff6fae', width:3, dash:'dot' }, hoverinfo:'skip', showlegend:false });
+      traces.push({ x:pxs, y:pys, type:'scatter', mode:'markers', showlegend:false, marker:{ size:14, opacity:0 }, customdata:ptip, hoverinfo:'none' });
     }
     const lo = Math.min(...ys, ...pys, 0), hi = Math.max(...ys, ...pys, 0), pad = Math.max((hi - lo) * 0.18, 1.5);
     const el = document.getElementById(id + 'Ch');
-    await Plotly.react(el, traces, { margin:{ t:8, r:14, b:36, l:56 }, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', showlegend:false, hovermode:'x unified', hoverdistance:-1, hoverlabel:saBlank,
+    await saPlot(el, traces, { margin:{ t:8, r:14, b:36, l:56 }, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', showlegend:false, hovermode:'x unified', hoverdistance:-1, hoverlabel:saBlank,
       font:{ family:'Inter, sans-serif', color:'#9aa4b8', size:11 },
       xaxis:{ gridcolor:'#212a3b', tickformat:saAxisFmt(), tickfont:{ size:10 }, showspikes:true, spikemode:'across', spikesnap:'cursor', spikethickness:1, spikecolor:'#5a6580', spikedash:'solid' },
       yaxis:{ gridcolor:'#212a3b', tickfont:{ size:10 }, ticksuffix:' pts', zeroline:true, zerolinecolor:'#5a6580', range:[lo - pad, hi + pad] } }, { displayModeBar:false, responsive:true });
@@ -12534,7 +12591,7 @@ async function saDrawForecastMap(elId, legId, data, rowLabel, totalLabel, noneMs
   const base = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z:names.map(() => 0), featureidkey:'id', zmin:0, zmax:1, colorscale:[[0, '#222b3d'], [1, '#222b3d']], showscale:false, marker:{ line:{ color:'#0a0e17', width:1 } }, hoverinfo:'skip' };
   const tr = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z, featureidkey:'id', zmin:0, zmax:SA_ED_CATS.length, colorscale:stepColorscale(SA_ED_CATS),
     customdata:hover, hoverinfo:'none', marker:{ line:{ color:'#0a0e17', width:1 } }, showscale:false };
-  await Plotly.react(el, [base, tr], { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:6, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });
+  await saPlot(el, [base, tr], { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:6, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });
   saAttachHtmlTip(el);
   const lg = document.getElementById(legId);
   if(lg) lg.innerHTML = SA_ED_CATS.slice().reverse().map(k => `<span><i style="background:${k.color}"></i>${k.key}</span>`).join('');
@@ -12580,6 +12637,7 @@ async function saRender(){
   document.getElementById('saPace').innerHTML = saPaceHTML(pts);
   saDrawPaceMap(pts).catch(() => {});
   const draws = [];
+  { const r = saTurnMarginHTML(pts); sec('saSecTurn', r.html); if(r.draw) draws.push(r.draw); }
   const waiting = t => `<div class="sa-eyebrow">${t}</div><div class="sa-empty">Waiting for the by-method data (data/county_history_types.csv), which appears after the next scraper run.</div>`;
   const meths = {};
   [['vbm', 'Mail ballots only', 'mail', 'saSecVbm'], ['ev', 'In-person early vote only', 'early', 'saSecEv']].forEach(([k, t, noun, id]) => {
@@ -12603,7 +12661,7 @@ async function saRender(){
     document.getElementById('saShareHead').innerHTML = chip('d', 'DEM') + chip('r', 'REP') + chip('n', 'NPA/Other') + `<div>Running share of everything counted, after each ${saState.gran}. Hover anywhere on the chart.</div>`;
     const mk = (k, nm) => ({ x:per.map(o => o.p.t), y:per.map(o => o.s[k]), type:'scatter', mode:'lines+markers', name:nm, line:{ color:SA_COL[k], width:3 }, marker:{ size:7, color:SA_COL[k], line:{ color:'#0a0e17', width:1.2 } }, hoverinfo:'none' });
     const all = [].concat(...['d', 'r', 'n'].map(k => per.map(o => o.s[k]))); const lo = Math.min(...all), hi = Math.max(...all), pad = Math.max((hi - lo) * 0.12, 1);
-    await Plotly.react(shareEl, [mk('d', 'DEM %'), mk('r', 'REP %'), mk('n', 'NPA/Other %')], saUnifiedLayout({ tickformat:saAxisFmt(), yaxis:{ gridcolor:'#212a3b', tickfont:{ size:10 }, ticksuffix:'%', tickformat:'.0f', range:[Math.max(0, lo - pad), hi + pad] } }), { displayModeBar:false, responsive:true });
+    await saPlot(shareEl, [mk('d', 'DEM %'), mk('r', 'REP %'), mk('n', 'NPA/Other %')], saUnifiedLayout({ tickformat:saAxisFmt(), yaxis:{ gridcolor:'#212a3b', tickfont:{ size:10 }, ticksuffix:'%', tickformat:'.0f', range:[Math.max(0, lo - pad), hi + pad] } }), { displayModeBar:false, responsive:true });
     saAttachTip(shareEl, (n, y) => y.toFixed(2) + '%');
   }
   for(const d of draws) await d();
@@ -12647,7 +12705,7 @@ async function saRenderTurnParty(M){
   const mk = (k, nm) => ({ x:series.map(p => p.t), y:series.map(p => val(p, k)), type:'scatter', mode:'lines+markers', name:nm, line:{ color:SA_COL[k], width:3 }, marker:{ size:7, color:SA_COL[k], line:{ color:'#0a0e17', width:1.2 } }, hoverinfo:'none' });
   const all = [].concat(...['d', 'r', 'n'].map(k => series.map(p => val(p, k))));
   const lo = Math.min(...all), hi = Math.max(...all), pad = Math.max((hi - lo) * 0.15, pct ? 1 : 5000), el = document.getElementById('anTpChart');
-  await Plotly.react(el, [mk('d', 'DEM'), mk('r', 'REP'), mk('n', 'NPA/Other')], saUnifiedLayout({ tickformat:'%b %-d<br>%-I %p',
+  await saPlot(el, [mk('d', 'DEM'), mk('r', 'REP'), mk('n', 'NPA/Other')], saUnifiedLayout({ tickformat:'%b %-d<br>%-I %p',
     yaxis:{ gridcolor:'#212a3b', tickfont:{ size:10 }, range:[Math.max(0, lo - pad), hi + pad], ticksuffix:pct ? '%' : '', tickformat:pct ? '.0f' : ',.0f' } }), { displayModeBar:false, responsive:true });
   saAttachTip(el, (n, y) => pct ? y.toFixed(1) + '%' : fmt(Math.round(y)));
   document.getElementById('anTpNote').textContent = 'Each point is one logged update. Hover anywhere on the chart to see all three parties at that update.';
@@ -12685,12 +12743,13 @@ async function saRenderTurnPath(M, pts, reg, seq){
   if(seq !== undefined && seq !== saTpSeq) return;
   const pct = saState.tpMode === 'pct', val = (o, k) => pct ? o[k] / reg[k] * 100 : o[k], fmtV = v => pct ? v.toFixed(1) + '%' : fmt(Math.round(v));
   document.getElementById('anTrHead').innerHTML = KS.map(k => `<span class="nm" style="color:${SA_COL[k]}">${NM[k]}</span><span class="big" style="color:${SA_COL[k]}">${fmtV(val(fin, k))}</span>`).join('') + `<span class="sub">projected final on Nov 3 (now ${KS.map(k => `<span style="color:${SA_COL[k]}">${fmtV(val(cur, k))}</span>`).join(' · ')})</span>`;
-  const all = act.map(o => Object.assign({}, o, { kind:'Counted', inc:null })).concat(proj);
+  const actS = act.filter(o => saKey(o.t) >= SA_EV_START);   // plotted from Oct 19; the pace above still uses every logged day
+  const all = actS.map(o => Object.assign({}, o, { kind:'Counted', inc:null })).concat(proj);
   const xs = all.map(o => o.t);
-  const nA = act.length;
+  const nA = actS.length;
   const trs = [];
   KS.forEach(k => {
-    trs.push({ x:act.map(o => o.t), y:act.map(o => val(o, k)), type:'scatter', mode:'lines+markers', line:{ color:SA_COL[k], width:3 }, marker:{ size:6, color:SA_COL[k], line:{ color:'#0a0e17', width:1 } }, hoverinfo:'skip', showlegend:false, name:NM[k] });
+    trs.push({ x:actS.map(o => o.t), y:actS.map(o => val(o, k)), type:'scatter', mode:'lines', line:{ color:SA_COL[k], width:3 }, hoverinfo:'skip', showlegend:false, name:NM[k] });
     trs.push({ x:[cur.t].concat(proj.map(o => o.t)), y:[val(cur, k)].concat(proj.map(o => val(o, k))), type:'scatter', mode:'lines', line:{ color:SA_COL[k], width:3, dash:'dot' }, hoverinfo:'skip', showlegend:false, name:NM[k] + ' projected' });
   });
   const tip = (o, i) => {
@@ -12707,7 +12766,7 @@ async function saRenderTurnPath(M, pts, reg, seq){
   lay.shapes = [{ type:'line', xref:'x', yref:'paper', x0:cur.t, x1:cur.t, y0:0, y1:1, line:{ color:'#5a6580', width:1, dash:'dash' } }, { type:'line', xref:'x', yref:'paper', x0:edT, x1:edT, y0:0, y1:1, line:{ color:'#F5B942', width:1, dash:'dash' } }];
   lay.annotations = [{ xref:'x', yref:'paper', x:cur.t, y:1.02, text:'Now', showarrow:false, font:{ size:10, color:'#9aa4b8' } }, { xref:'x', yref:'paper', x:edT, y:1.02, text:'Election Day', showarrow:false, xanchor:'right', font:{ size:10, color:'#F5B942' } }];
   lay.margin.t = 22;
-  await Plotly.react(el, trs, lay, { displayModeBar:false, responsive:true });
+  await saPlot(el, trs, lay, { displayModeBar:false, responsive:true });
   saAttachHtmlTip(el);
   document.getElementById('anTrNote').textContent = `Dotted lines assume each party keeps adding ballots at its own last-${n7 || 7}-day daily pace through Nov 2, and the rest of the projected final turnout votes on Election Day. Hover anywhere on the chart.`;
 }

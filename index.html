@@ -3450,6 +3450,32 @@ async function exportDailyRecapPng(btn){
       x.fillStyle = GRAY; x.font = '600 12px ' + mono; x.fillText(t[0], t[3], 286);
       x.fillStyle = t[2]; x.font = '600 28px ' + mono; x.fillText(t[1], t[3], 320);
     });
+    // Small party-turnout box in the top right corner of the statewide box: share of each party's registered voters who have voted,
+    // the turnout lead, and its move against the end of the previous day (the 11pm update).
+    {
+      const reg = saRegByParty(), pct = (v, g) => g ? v / g * 100 : 0;
+      const tD = pct(cum.d, reg.d), tR = pct(cum.r, reg.r), tN = pct(cum.n, reg.n), lead = tD - tR;
+      const prevKeys = Array.from(new Set(btTypeRows.map(r => r._k))).filter(k => k < key).sort((a, b) => a - b);
+      const pk = prevKeys.length ? prevKeys[prevKeys.length - 1] : null;
+      let move = null, pText = '';
+      if(pk !== null){ const pc = btCumThrough(pk); move = lead - (pct(pc.d, reg.d) - pct(pc.r, reg.r)); const pd = new Date(Math.floor(pk / 10000), Math.floor(pk / 100) % 100 - 1, pk % 100); pText = '11PM ' + pd.toLocaleDateString('en-US', { month:'short', day:'numeric' }).toUpperCase(); }
+      const bx = 712, by = 194, bw = 308, bh = 72;
+      x.fillStyle = '#0a0e17'; x.beginPath(); x.roundRect(bx, by, bw, bh, 10); x.fill();
+      x.strokeStyle = '#212a3b'; x.lineWidth = 1; x.stroke();
+      x.fillStyle = GRAY; x.font = '600 10px ' + mono; x.fillText('PARTY TURNOUT \u00b7 % OF REGISTERED', bx + 12, by + 17);
+      [['DEM', tD, BLUE, 12], ['REP', tR, RED, 108], ['NPA', tN, PURPLE, 204]].forEach(t => {
+        x.fillStyle = t[2]; x.font = '600 13px ' + mono; x.fillText(t[0] + ' ' + t[1].toFixed(1) + '%', bx + t[3], by + 38);
+      });
+      x.fillStyle = GRAY; x.font = '600 10px ' + mono; x.fillText('LEAD', bx + 12, by + 58);
+      x.fillStyle = mCol(lead); x.font = '600 14px ' + mono; x.fillText(saPts(lead), bx + 48, by + 58);
+      if(move !== null){
+        const up = move >= 0, flat = Math.abs(move) < 0.005, ac = flat ? GRAY : (up ? '#4ade80' : '#ef4444'), mv = (up ? '+' : '\u2212') + Math.abs(move).toFixed(2), ax = bx + 132, ay = by + 58;
+        if(!flat){ x.fillStyle = ac; x.beginPath(); if(up){ x.moveTo(ax, ay); x.lineTo(ax + 11, ay); x.lineTo(ax + 5.5, ay - 10); } else { x.moveTo(ax, ay - 10); x.lineTo(ax + 11, ay - 10); x.lineTo(ax + 5.5, ay); } x.closePath(); x.fill(); }
+        x.fillStyle = ac; x.font = '600 13px ' + mono; x.fillText(mv, ax + 17, ay);
+        const mw = x.measureText(mv).width;
+        x.fillStyle = GRAY; x.font = '10px ' + mono; x.fillText('vs ' + pText, ax + 17 + mw + 6, ay);
+      }
+    }
     // The day only: lead sentence first, then the four tiles
     x.fillStyle = mCol(dm); x.font = '600 22px ' + sans;
     x.fillText(Math.abs(D - R) === 0 ? 'Democrats and Republicans are even on ' + dayShort : (D > R ? 'Democrats' : 'Republicans') + (finished ? ' won ' : ' lead ') + dayShort + ' by ' + f(Math.abs(D - R)) + ' votes (' + mText(dm) + ')', 48, 380);

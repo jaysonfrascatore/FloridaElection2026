@@ -976,6 +976,8 @@
   .sa-ends{ display:flex; justify-content:space-between; gap:8px; font-family:var(--mono); font-size:10.5px; color:var(--muted-2); margin-top:8px; }
   .sa-slideval{ font-family:var(--mono); font-size:13px; font-weight:600; margin-top:8px; text-align:center; }
   .sa-up{ color:#4ade80; } .sa-dn{ color:#f87171; }
+  .sa-recent{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 8px; margin-top:6px; font-size:12px; } .sa-recent .lbl{ color:var(--muted); margin-right:2px; }
+  .sa-chip{ background:var(--panel-2); border:1px solid var(--border); border-radius:8px; padding:3px 8px; font-family:var(--mono); font-size:11.5px; display:inline-flex; gap:7px; } .sa-chip i{ font-style:normal; color:var(--muted); }
   .sa-shift{ margin-top:8px; font-size:13px; line-height:1.7; } .sa-shift .lbl{ color:var(--muted); margin-right:4px; } .sa-shift .was{ color:var(--muted); font-size:12px; }
   .sa-legend-row{ display:flex; flex-wrap:wrap; gap:6px 14px; margin:8px 0 2px; font-size:11.5px; color:var(--muted); } .sa-legend-row i{ display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:5px; vertical-align:-2px; border:1px solid rgba(255,255,255,.12); }
   .sa-empty{ padding:16px; font-size:12.5px; color:var(--muted); border:1px dashed var(--border); border-radius:10px; margin-top:10px; }
@@ -5038,6 +5040,47 @@ function splitBlockText(label, short, info){
   return out;
 }
 
+// ---- Turnout by party registration: the live numbers, the card text and the PNG ----
+// Share of each party's registered voters who have voted, now and at the previous update (this update's own new ballots come
+// from the live feed's per-county "new" columns), so the same figures feed the page, the carousel card and the PNG.
+function partyTurnoutInfo(){
+  const reg = { d:0, r:0, n:0 };
+  SIM_COUNTY_NAMES.forEach(n => { const [rg, rs, ds] = SIM_REG[n]; reg.r += rg * rs / 100; reg.d += rg * ds / 100; reg.n += rg * Math.max(0, 100 - rs - ds) / 100; });
+  reg.t = reg.d + reg.r + reg.n;
+  const sum = f => COUNTIES.reduce((a, c) => a + f(c), 0);
+  const cur = { d:sum(c => c.dem || 0), r:sum(c => c.rep || 0), n:sum(c => (c.ind || 0) + (c.npa || 0) + (c.other || 0)) };
+  const nw = { d:sum(c => c.demNew || 0), r:sum(c => c.repNew || 0), n:sum(c => c.otherNew || 0) };
+  const prev = { d:cur.d - nw.d, r:cur.r - nw.r, n:cur.n - nw.n };
+  const rate = (v, g) => g ? v / g * 100 : 0;
+  const now = { d:rate(cur.d, reg.d), r:rate(cur.r, reg.r), n:rate(cur.n, reg.n) };
+  const was = { d:rate(prev.d, reg.d), r:rate(prev.r, reg.r), n:rate(prev.n, reg.n) };
+  const hasCurrent = (cur.d + cur.r + cur.n) > 0, hasPrior = (prev.d + prev.r) > 0 && (nw.d + nw.r + nw.n) >= 0;
+  const lead = now.d - now.r, leadWas = was.d - was.r;
+  const leader = Math.abs(lead) < 0.005 ? null : (lead > 0 ? 'Democrats' : 'Republicans');
+  const leaderChange = leader ? (leader === 'Democrats' ? 1 : -1) * (lead - leadWas) : 0;   // + = the current leader's lead grew
+  return { reg, cur, nw, now, was, inc:{ d:now.d - was.d, r:now.r - was.r, n:now.n - was.n }, hasCurrent, hasPrior, lead, leadWas, leadMove:lead - leadWas, leader, leaderChange };
+}
+function partyTurnoutCardText(){
+  const I = partyTurnoutInfo(); if(!I.hasCurrent) return '';
+  const pc = v => v.toFixed(2) + '%';
+  let out = 'Turnout by Party Registration\n\n';
+  if(!I.leader) out += 'Democrats and Republicans are tied in voter turnout';
+  else{
+    const second = I.leader === 'Democrats' ? 'Republicans' : 'Democrats';
+    out += `${I.leader} have ${aOrAnForNumber(parseFloat(Math.abs(I.lead).toFixed(2)))} ${pc(Math.abs(I.lead))} lead over ${second} in voter turnout`;
+  }
+  if(I.hasPrior){
+    const ch = Math.abs(I.leaderChange).toFixed(2);
+    out += parseFloat(ch) === 0 ? ', unchanged compared to the previous update.' : `, ${I.leaderChange > 0 ? 'an increase' : 'a decrease'} compared to the previous update.`;
+  }else out += '.';
+  const first = I.leader === 'Republicans' ? ['Republicans', I.now.r, 'Democrats', I.now.d] : ['Democrats', I.now.d, 'Republicans', I.now.r];
+  out += `\n${first[0]} have ${pc(first[1])} turnout, ${first[2]} have ${pc(first[3])} turnout and NPA/Other has ${pc(I.now.n)} turnout.`;
+  if(I.hasPrior){
+    const sg = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2) + '%';
+    out += `\n\nIncrease by party:\n\u{1F535} DEM: ${sg(I.inc.d)}\n\u{1F534} REP: ${sg(I.inc.r)}\n\u{1F7E3} NPA/Other: ${sg(I.inc.n)}`;
+  }
+  return out;
+}
 function buildTweetSections(){
   const list = COUNTIES;
   const sign = n => (n>=0?'+':'') + fmt(n);
@@ -5307,6 +5350,8 @@ ${topDropsText}
   cards.push(section2);
   if(marginCard) cards.push(marginCard);
   if(turnoutCard) cards.push(turnoutCard);
+  let partyCard = ''; try{ partyCard = partyTurnoutCardText(); }catch(e){}
+  if(partyCard) cards.push(partyCard);
   cards.push(section3);
   return cards;
 }
@@ -12200,6 +12245,76 @@ function saShow(on){
 }
 
 
+
+// ---- Turnout by party registration: the PNG (the numbers and card text are defined with the update summary cards) ----
+async function downloadPartyTurnoutPng(btn){
+  const label = btn ? btn.textContent : ''; if(btn){ btn.textContent = 'Rendering…'; btn.disabled = true; }
+  try{
+    const I = partyTurnoutInfo(); if(!I.hasCurrent) throw new Error('no votes have been counted yet');
+    const summary = liveResultsSummary();
+    const scale = 2, W = 900, pad = 24, indent = 18, explPx = 21, sans = 'Inter, Arial, sans-serif', mono = 'IBM Plex Mono, monospace';
+    const BLUE = '#5b9bd9', RED = '#d4675a', PURPLE = '#c77dff', GRAY = '#7c879c', GOLD = '#d8b466', WHITE = '#e9edf5', UP = '#4ade80', DOWN = '#ef4444';
+    const pc = v => v.toFixed(2) + '%', ptsOf = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2) + ' pts';
+    // the explanation sentence, as styled runs (same helpers as the Margin Move image)
+    const runs = [];
+    if(!I.leader) runs.push({ text:'Democrats and Republicans are tied in voter turnout' });
+    else{
+      const second = I.leader === 'Democrats' ? 'Republicans' : 'Democrats', party = I.leader === 'Democrats' ? 'D' : 'R';
+      runs.push({ text:I.leader, bold:true, party }, { text:' have ' + aOrAnForNumber(parseFloat(Math.abs(I.lead).toFixed(2))) + ' ' }, { text:pc(Math.abs(I.lead)) + ' lead', bold:true, party }, { text:' over ' + second + ' in voter turnout' });
+    }
+    if(I.hasPrior){
+      const ch = Math.abs(I.leaderChange).toFixed(2);
+      runs.push({ text:parseFloat(ch) === 0 ? ', unchanged compared to the previous update.' : ', ' + (I.leaderChange > 0 ? 'an increase' : 'a decrease') + ' compared to the previous update.' });
+    }else runs.push({ text:'.' });
+    const scratch = document.createElement('canvas').getContext('2d');
+    const lines = wrapRuns(runs, (W - pad * 2 - indent) * scale, tok => { scratch.font = `${tok.bold ? 700 : 400} ${Math.round(explPx * scale)}px ${sans}`; return scratch.measureText(tok.text).width; });
+    const headerH = 132, explLineH = 31, explTop = headerH + 26, explH = lines.length * explLineH;
+    const cardsTop = explTop + explH + 28, cardH = 196, gap = 14, cardW = (W - pad * 2 - gap * 2) / 3;
+    const leadTop = cardsTop + cardH + 18, leadH = 156, totalH = leadTop + leadH + 52;
+    const cv = document.createElement('canvas'); cv.width = W * scale; cv.height = totalH * scale;
+    const x = cv.getContext('2d'); x.fillStyle = '#0a0e17'; x.fillRect(0, 0, cv.width, cv.height); x.textBaseline = 'alphabetic';
+    drawStatewideHeader(x, summary, scale, 'Florida Vote Tracker 2026 — Turnout by Party Registration');
+    const accent = I.leader === 'Democrats' ? BLUE : (I.leader === 'Republicans' ? RED : '#556076');
+    x.fillStyle = accent; x.fillRect(pad * scale, (explTop - 2) * scale, 5 * scale, (explH + 4) * scale);
+    drawRichLines(x, lines, (pad + indent) * scale, (explTop + 20) * scale, explLineH, explPx, scale);
+    // three party cards: turnout, the change since the previous update (with an arrow), and a turnout bar
+    const arrow = (cx, cy, up, color, sz) => { x.fillStyle = color; x.beginPath(); if(up){ x.moveTo(cx, cy); x.lineTo(cx + sz, cy); x.lineTo(cx + sz / 2, cy - sz * 0.9); } else { x.moveTo(cx, cy - sz * 0.9); x.lineTo(cx + sz, cy - sz * 0.9); x.lineTo(cx + sz / 2, cy); } x.closePath(); x.fill(); };
+    [['DEM', 'Democrats', I.now.d, I.inc.d, I.reg.d, I.cur.d, BLUE], ['REP', 'Republicans', I.now.r, I.inc.r, I.reg.r, I.cur.r, RED], ['NPA/OTHER', 'NPA/Other', I.now.n, I.inc.n, I.reg.n, I.cur.n, PURPLE]].forEach((t, i) => {
+      const cx0 = pad + i * (cardW + gap), S = v => v * scale;
+      x.fillStyle = '#131a28'; x.beginPath(); x.roundRect(S(cx0), S(cardsTop), S(cardW), S(cardH), S(14)); x.fill();
+      x.fillStyle = GRAY; x.font = `600 ${S(13)}px ${mono}`; x.fillText(t[0] + ' TURNOUT', S(cx0 + 18), S(cardsTop + 32));
+      x.fillStyle = t[6]; x.font = `600 ${S(40)}px ${mono}`; x.fillText(pc(t[2]), S(cx0 + 18), S(cardsTop + 86));
+      if(I.hasPrior){
+        const up = t[3] >= 0, flat = Math.abs(t[3]) < 0.005, col = flat ? GRAY : (up ? UP : DOWN);
+        if(!flat) arrow(S(cx0 + 18), S(cardsTop + 120), up, col, S(15));
+        x.fillStyle = col; x.font = `600 ${S(18)}px ${mono}`; x.fillText(ptsOf(t[3]), S(cx0 + (flat ? 18 : 40)), S(cardsTop + 120));
+        x.fillStyle = GRAY; x.font = `${S(12)}px ${sans}`; x.fillText('vs the previous update', S(cx0 + 18), S(cardsTop + 140));
+      }else{ x.fillStyle = GRAY; x.font = `${S(12)}px ${sans}`; x.fillText('first update logged', S(cx0 + 18), S(cardsTop + 126)); }
+      x.fillStyle = '#212a3b'; x.fillRect(S(cx0 + 18), S(cardsTop + 156), S(cardW - 36), S(8));
+      x.fillStyle = t[6]; x.fillRect(S(cx0 + 18), S(cardsTop + 156), S((cardW - 36) * Math.min(1, t[2] / 100)), S(8));
+      x.fillStyle = GRAY; x.font = `${S(12)}px ${sans}`; x.fillText(fmt(t[5]) + ' of ' + fmt(Math.round(t[4])) + ' registered', S(cx0 + 18), S(cardsTop + 184));
+    });
+    // the difference between the parties
+    const S = v => v * scale;
+    x.fillStyle = '#131a28'; x.beginPath(); x.roundRect(S(pad), S(leadTop), S(W - pad * 2), S(leadH), S(14)); x.fill();
+    x.fillStyle = GOLD; x.font = `600 ${S(13)}px ${mono}`; x.fillText('DIFFERENCE IN PARTY REGISTRATION TURNOUT', S(pad + 18), S(leadTop + 32));
+    const leadCol = !I.leader ? WHITE : (I.leader === 'Democrats' ? BLUE : RED);
+    x.fillStyle = leadCol; x.font = `600 ${S(46)}px ${mono}`; x.fillText(formatMarginLabel(I.lead).replace('%', ''), S(pad + 18), S(leadTop + 92));
+    x.font = `600 ${S(46)}px ${mono}`; const lw = x.measureText(formatMarginLabel(I.lead).replace('%', '')).width / scale;
+    if(I.hasPrior){
+      const up = I.leadMove >= 0, flat = Math.abs(I.leadMove) < 0.005, col = flat ? GRAY : (up ? UP : DOWN), ax = pad + 18 + lw + 26;
+      if(!flat) arrow(S(ax), S(leadTop + 86), up, col, S(20));
+      x.fillStyle = col; x.font = `600 ${S(22)}px ${mono}`; x.fillText(ptsOf(I.leadMove), S(ax + (flat ? 0 : 30)), S(leadTop + 86));
+      x.fillStyle = GRAY; x.font = `${S(13)}px ${sans}`; x.fillText('vs the previous update (was ' + (I.leadWas === 0 ? 'Even' : formatMarginLabel(I.leadWas).replace('%', '')) + ')', S(ax + (flat ? 0 : 30)), S(leadTop + 108));
+    }
+    x.fillStyle = GRAY; x.font = `${S(12.5)}px ${sans}`; x.fillText('Democratic turnout rate (' + pc(I.now.d) + ') minus Republican turnout rate (' + pc(I.now.r) + '), as a share of each party’s registered voters.', S(pad + 18), S(leadTop + 144));
+    x.fillStyle = GRAY; x.font = `${S(11)}px ${mono}`; x.fillText('Parties are by voter registration  ·  jaysonfrascatore.github.io/FloridaElection2026  ·  Created by Jayson Frascatore', S(pad), S(totalH - 20));
+    const a = document.createElement('a'); a.href = cv.toDataURL('image/png'); a.download = 'florida-turnout-by-party-' + filenameSafeTimestamp(summary.asOfText) + '.png';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }catch(err){ alert('Could not make the turnout image: ' + err.message); }
+  finally{ if(btn){ btn.textContent = label; btn.disabled = false; } }
+}
+
 // ---- Turnout margin: DEM turnout rate minus REP turnout rate (share of each party's registered voters who have voted), since the first logged count ----
 function saTurnMarginRows(pts){
   const reg = saRegByParty();
@@ -12213,7 +12328,7 @@ function saTurnMarginHTML(pts){
   const rows = saTurnMarginRows(pts);
   if(rows.length < 1) return { html:head + '<div class="sa-empty">This fills in once ballots are logged.</div>', draw:null };
   const li = rows.length - 1, cur = rows[li], pv = li ? rows[li - 1] : null, dm = pv ? cur.m - pv.m : null;
-  const when = gran === 'day' ? '24 hours ago' : 'the previous update', first = rows[0];
+  const when = gran === 'day' ? '11 PM yesterday' : 'the previous update', first = rows[0];
   const html = head + `<div class="sa-big">${saCountEl(0, Math.abs(cur.m), 2, cur.m >= 0 ? 'D+' : 'R+', '', saMarginColor(cur.m))}</div>
     <div class="sa-sub"><b>Turnout lead</b> · the share of registered Democrats who have voted (<b style="color:${SA_COL.d}">${cur.d.toFixed(2)}%</b>) minus the share of registered Republicans who have voted (<b style="color:${SA_COL.r}">${cur.r.toFixed(2)}%</b>), in points. Same measure as the "Registered voters who have voted" box. Tracked since ${saDayLabel(first.p.t)}.</div>
     <div class="sa-shift"><div><span class="lbl">Lead vs ${when}</span> ${saShift(dm)}${pv ? ` <span class="was">(${saPts(pv.m)} → ${saPts(cur.m)})</span>` : ''}</div></div>
@@ -12226,7 +12341,7 @@ function saTurnMarginHTML(pts){
       return `<div class="sorted-hover-date">${gran === 'day' ? saDayLabel(r.p.t) : formatSortedHoverDate(r.p.t)}</div>` + saRow(saMarginColor(r.m), 'Turnout lead', saPts(r.m)) +
         saRow(SA_COL.d, 'DEM turnout', r.d.toFixed(2) + '%') + saRow(SA_COL.r, 'REP turnout', r.r.toFixed(2) + '%') + saRow(SA_COL.n, 'NPA/Other turnout', r.n.toFixed(2) + '%') +
         `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>BALLOTS</b>&nbsp;${fmt(Math.round(r.t))}</div>` +
-        `<div class="sorted-hover-gain-header">Shift vs ${gran === 'day' ? '24 hours ago' : 'the previous update'}:</div><div class="sorted-hover-row">${q ? saShift(r.m - q.m) : '<span style="color:#7c879c">first point</span>'}</div>`; };
+        `<div class="sorted-hover-gain-header">Shift vs ${gran === 'day' ? '11 PM yesterday' : 'the previous update'}:</div><div class="sorted-hover-row">${q ? saShift(r.m - q.m) : '<span style="color:#7c879c">first point</span>'}</div>`; };
     traces.push({ x:xs, y:ys, type:'scatter', mode:'markers', showlegend:false, marker:{ size:14, opacity:0 }, customdata:rows.map(tipOf), hoverinfo:'none' });
     const lo = Math.min(...ys, 0), hi = Math.max(...ys, 0), pad = Math.max((hi - lo) * 0.15, 0.6), el = document.getElementById('saTurnMarginCh');
     await saPlot(el, traces, { margin:{ t:8, r:14, b:36, l:56 }, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', showlegend:false, hovermode:'x unified', hoverdistance:-1, hoverlabel:saBlank,
@@ -12239,11 +12354,26 @@ function saTurnMarginHTML(pts){
 }
 
 // ---- section: average daily gain in turnout, by party ----
+function saTurnoutTopHTML(){
+  const I = partyTurnoutInfo();
+  if(!I.hasCurrent) return '';
+  const cell = (nm, col, v, inc, who) => `<div class="sa-pace-cell"><div class="nm" style="color:${col}">${nm}</div>
+      <div class="sa-med" style="color:${col}">${saCountEl(0, v, 2, '', '%')}</div>
+      <div class="mini">of registered ${who}${I.hasPrior && Math.abs(inc) >= 0.005 ? ` · <span class="${inc > 0 ? 'sa-up' : 'sa-dn'}">${inc > 0 ? '\u25B2' : '\u25BC'} ${Math.abs(inc).toFixed(2)} pts</span> since the last update` : ''}</div></div>`;
+  const lc = !I.leader ? 'var(--text)' : (I.leader === 'Democrats' ? SA_COL.d : SA_COL.r);
+  const lead = `<div class="sa-pace-cell"><div class="nm" style="color:${lc}">Turnout lead</div>
+      <div class="sa-med" style="color:${lc}">${saPts(I.lead)}</div>
+      <div class="mini">DEM minus REP turnout${I.hasPrior && Math.abs(I.leadMove) >= 0.005 ? ` · <span class="${I.leadMove > 0 ? 'sa-up' : 'sa-dn'}">${I.leadMove > 0 ? '\u25B2' : '\u25BC'} ${Math.abs(I.leadMove).toFixed(2)} pts</span> since the last update` : ''}</div></div>`;
+  return `<div class="sa-sec-head" style="margin-top:4px"><div class="sa-pace-title" style="margin:0">Turnout by party registration</div><button class="sim-btn" id="saPartyPng" title="Download the Turnout by Party Registration image">Download PNG</button></div>
+    <div class="sa-note">The share of each party's <b>registered voters who have voted</b> so far, and how much it moved on the latest update. The averages below show how fast it is rising.</div>
+    <div class="sa-pace-grid">${cell('DEM', SA_COL.d, I.now.d, I.inc.d, 'Democrats')}${cell('REP', SA_COL.r, I.now.r, I.inc.r, 'Republicans')}${cell('NPA/Other', SA_COL.n, I.now.n, I.inc.n, 'NPA/other voters')}${lead}</div>
+    <div style="height:22px"></div>`;
+}
 function saPaceHTML(pts){
   const reg = saRegByParty(), last = {};
   pts.forEach(p => { last[saKey(p.t)] = p; });
   const days = Object.keys(last).sort().map(k => last[k]);
-  const head = `<div class="sa-pace-title">Average daily gain in turnout, by party</div>
+  const head = saTurnoutTopHTML() + `<div class="sa-pace-title">Average daily gain in turnout, by party</div>
     <div class="sa-note">How many percentage points per day the share of each party's <b>registered voters who have voted</b> has risen (the same numbers as the "Registered voters who have voted" box), averaged over the last 7 days (the same window as the mail and early vote averages below).</div>`;
   if(days.length < 2) return head + '<div class="sa-empty">This fills in once at least two days of updates are logged.</div>';
   const n = Math.min(7, days.length - 1), a = days[days.length - 1 - n], b = days[days.length - 1];
@@ -12284,14 +12414,21 @@ function saMethodHTML(key, title, noun, types){
   if(m === null) return { html:head + `<div class="sa-empty">No ${noun} ballots counted yet.</div>`, draw:null };
   const prevRoll = li ? saMargin(saRoll(base, li - 1, 7)) : null, rawNow = saMargin(base[li].v), rawPrev = li ? saMargin(base[li - 1].v) : null;
   const dAvg = prevRoll === null ? null : m - prevRoll, dRaw = rawNow === null || rawPrev === null ? null : rawNow - rawPrev;
-  const when = gran === 'day' ? '24 hours ago' : 'the previous update', unit = gran === 'day' ? 'Latest day' : 'Latest update';
+  const when = gran === 'day' ? '11 PM yesterday' : 'the previous update', unit = gran === 'day' ? 'Latest day' : 'Latest update';
   const daily = saIncs(types, get, 'day'), nDays = Math.min(7, daily.length);
+  // By update: the margin each recent update came in at (the ballots added in that update), newest last.
+  const recent = gran === 'update' ? base.slice(-6).map(p => ({ l:p.label, m:saMargin(p.v) })).filter(o => o.m !== null) : [];
+  const recentHtml = recent.length ? `<div class="sa-recent"><span class="lbl">Margin of each update</span>${recent.map(o => `<span class="sa-chip"><i>${o.l}</i><b style="color:${saMarginColor(o.m)}">${saPts(o.m)}</b></span>`).join('')}</div>` : '';
   const html = head + `<div class="sa-big">${saCountEl(0, Math.abs(m), 2, m >= 0 ? 'D+' : 'R+', '', saMarginColor(m))}</div>
     <div class="sa-sub"><b>${nDays < 7 ? 'Average so far' : '7-day rolling average'}</b> · ${fmt(Math.round(cur[0] + cur[1] + cur[2]))} ${noun} ballots ${nDays < 7 ? 'over the ' + nDays + ' day' + (nDays === 1 ? '' : 's') + ' tracked' : 'over the last 7 days'}</div>
     <div class="sa-shift">
       <div><span class="lbl">Average vs ${when}</span> ${saShift(dAvg)}${prevRoll === null ? '' : ` <span class="was">(${saPts(prevRoll)} → ${saPts(m)})</span>`}</div>
-      <div><span class="lbl">${unit} alone vs ${gran === 'day' ? '24 hours earlier' : when}</span> <b>${rawNow === null ? '—' : saPts(rawNow)}</b> · ${saShift(dRaw)}${rawPrev === null ? '' : ` <span class="was">(was ${saPts(rawPrev)})</span>`}</div>
+      ${gran === 'update'
+        ? `<div><span class="lbl">Latest update margin</span> <b style="color:${rawNow === null ? 'inherit' : saMarginColor(rawNow)}">${rawNow === null ? '—' : saPts(rawNow)}</b>${rawPrev === null ? '' : ` <span class="was">(the previous update came in at ${saPts(rawPrev)})</span>`}</div>
+      <div><span class="lbl">Update swing</span> ${saShift(dRaw)}</div>`
+        : `<div><span class="lbl">${unit} alone vs ${when}</span> <b style="color:${rawNow === null ? 'inherit' : saMarginColor(rawNow)}">${rawNow === null ? '—' : saPts(rawNow)}</b>${rawPrev === null ? '' : ` <span class="was">(the day before came in at ${saPts(rawPrev)})</span>`} · ${saShift(dRaw)}</div>`}
     </div>
+    ${recentHtml}
     <div class="sa-bar"><i style="width:${sh.d}%;background:${SA_COL.d}"></i><i style="width:${sh.r}%;background:${SA_COL.r}"></i><i style="width:${sh.n}%;background:${SA_COL.n}"></i></div>
     <div class="sa-split"><span style="color:${SA_COL.d}">DEM ${sh.d.toFixed(1)}%</span><span style="color:${SA_COL.r}">REP ${sh.r.toFixed(1)}%</span><span style="color:${SA_COL.n}">NPA ${sh.n.toFixed(1)}%</span></div>
     <div class="sa-chart-wrap"><div class="sa-key"><i style="border-color:${SA_COL.d}"></i>${Noun} margin of the ballots added each ${gran}, blue when Democrats lead and red when Republicans do <i class="dot"></i>7-day rolling average</div>
@@ -12312,7 +12449,7 @@ function saMethodHTML(key, title, noun, types){
         saRow('#9aa4b8', '7-day average', saPts(rm[i])) +
         saRow(SA_COL.d, 'DEM', o.sh.d.toFixed(1) + '%') + saRow(SA_COL.r, 'REP', o.sh.r.toFixed(1) + '%') + saRow(SA_COL.n, 'NPA/Other', o.sh.n.toFixed(1) + '%') +
         `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>BALLOTS</b>&nbsp;${fmt(Math.round(o.sh.t))}</div>` +
-        `<div class="sorted-hover-gain-header">Shift vs ${gran === 'day' ? '24 hours ago' : 'the previous update'}:</div>` +
+        `<div class="sorted-hover-gain-header">${gran === 'day' ? 'Shift vs 11 PM yesterday' : 'Update swing vs the previous update'}:</div>` +
         `<div class="sorted-hover-row">${pv ? saShift(dm) : '<span style="color:#7c879c">first point</span>'}</div>` +
         (pv ? `<div class="sorted-hover-row"><span class="sorted-hover-gap">7-day average: ${dr === null || Math.abs(dr) < 0.005 ? 'no change' : (dr > 0 ? '▲ ' : '▼ ') + Math.abs(dr).toFixed(2) + ' pts toward ' + (dr > 0 ? 'Democrats' : 'Republicans')}</span></div>` : '');
     };
@@ -12389,6 +12526,7 @@ async function saDrawPaceMap(pts){
   await saPlot(el, [base, tr], { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:34, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });  saAttachHtmlTip(el);
 }
 document.getElementById('splitAvgView').addEventListener('click', e => {
+  const pb = e.target.closest('#saPartyPng'); if(pb){ downloadPartyTurnoutPng(pb); return; }
   const b = e.target.closest('#saPaceParty button'); if(!b) return;
   saState.paceParty = b.dataset.p;
   document.querySelectorAll('#saPaceParty button').forEach(x => x.classList.toggle('active', x === b));
@@ -12525,7 +12663,7 @@ async function saFcRender(animate){
     const head = `<div class="sa-sec-head"><div class="sa-eyebrow">Forecasted margin</div>${saGranBtns()}</div>`;
     if(!rows.length){ box.innerHTML = head + '<div class="sa-empty">No ballots projected yet.</div>'; continue; }
     const li = rows.length - 1, cur = rows[li], pv = li ? rows[li - 1] : null, dm = pv ? cur.m - pv.m : null;
-    const when = gran === 'day' ? '24 hours ago' : 'the previous update';
+    const when = gran === 'day' ? '11 PM yesterday' : 'the previous update';
     const bigTxt = (cur.m >= 0 ? 'D+' : 'R+') + Math.abs(cur.m).toFixed(2);
     box.innerHTML = head + `<div class="sa-big">${animate ? saCountEl(0, Math.abs(cur.m), 2, cur.m >= 0 ? 'D+' : 'R+', '', saMarginColor(cur.m)) : `<span style="color:${saMarginColor(cur.m)}">${bigTxt}</span>`}</div>
       <div class="sa-sub"><b>${k === 'ed' ? 'Election Day Only Forecast' : 'Final Forecast'}</b> · about ${fmt(Math.round(cur.o.t))} ${noun}. ${desc} <b>Based on party registration only</b>, since how people actually vote has to be assumed: ${demLoyalty.toFixed(1).replace(/\.0$/,'')}% of Democrats and ${repLoyalty.toFixed(1).replace(/\.0$/,'')}% of Republicans vote their party, and <span style="color:#c77dff">NPA/other</span> voters split <b style="color:#5b9bd9">${npaSplitToDem.toFixed(1)}% D</b> / <b style="color:#d4675a">${(100 - npaSplitToDem).toFixed(1)}% R</b>.</div>
@@ -12540,7 +12678,7 @@ async function saFcRender(animate){
         saRow(saMarginColor(r.m), 'Forecasted margin', saPts(r.m)) +
         saRow(SA_COL.d, 'DEM', (r.o.d / t * 100).toFixed(1) + '%') + saRow(SA_COL.r, 'REP', (r.o.r / t * 100).toFixed(1) + '%') + saRow(SA_COL.n, 'NPA/Other', (r.o.n / t * 100).toFixed(1) + '%') +
         `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>${tot}</b>&nbsp;${fmt(Math.round(t))}</div>` +
-        `<div class="sorted-hover-gain-header">Shift vs ${gran === 'day' ? '24 hours ago' : 'the previous update'}:</div>` +
+        `<div class="sorted-hover-gain-header">Shift vs ${gran === 'day' ? '11 PM yesterday' : 'the previous update'}:</div>` +
         `<div class="sorted-hover-row">${q ? saShift(d) : '<span style="color:#7c879c">first point</span>'}</div>`;
     };
     traces.push({ x:xs, y:ys, type:'scatter', mode:'markers', showlegend:false, marker:{ size:14, opacity:0 }, customdata:rows.map(tipOf), hoverinfo:'none' });

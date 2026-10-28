@@ -1,0 +1,123 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Election ID:
+FL-2026-General
+
+Run Time:
+Updated at October 28th, 2026 at 3:00pm Eastern Time
+
+Counties Loaded:
+67 / 67
+
+Updated Counties:
+67
+
+Unchanged Counties:
+False
+
+Rejected County Updates:
+0
+
+STATEWIDE TOTALS
+=================================
+
+DEM:
+1,470,021
+
+REP:
+1,522,867
+
+OTHER:
+787,347
+
+TOTAL:
+3,780,235
+
+STATEWIDE SUMMARY
+=================================
+
+🔴 Republicans lead by 52,846 votes statewide.
+
+Margin Change:
+-0.22% toward Republicans
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +58,233
+🔴 REP: +73,374
+🟣 OTHER: +37,232
+🟢 TOTAL: +168,839
+
+REJECTED COUNTY UPDATES
+=================================
+
+
+No county updates were rejected.
+
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+Escambia
+
+Likely R → Safe R
+
+Margin Move:
+-0.002
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️3 PM Florida EV & VBM Update
+
+New votes have been cast in 67 counties over the last hour, with the largest update coming from Miami-Dade County.
+
+🔵 DEM: +58,233
+🔴 REP: +73,374
+🟣 OTHER: +37,232
+🟢 TOTAL: +168,839
+
+🔴 Republicans lead by 52,846 votes statewide.
+
+🔴 Margin Change: -0.22% toward Republicans
+
+Largest County Updates
+
+
+🥇Miami-Dade County
+
+🔵 DEM: +6,449
+🔴 REP: +6,079
+🟣 OTHER: +4,523
+🟢 TOTAL: +17,051
+
+
+
+🥈Broward County
+
+🔵 DEM: +7,442
+🔴 REP: +3,309
+🟣 OTHER: +3,461
+🟢 TOTAL: +14,212
+
+
+
+🥉Palm Beach County
+
+🔵 DEM: +4,352
+🔴 REP: +3,802
+🟣 OTHER: +2,866
+🟢 TOTAL: +11,020
+
+
+
+#Florida #EarlyVoting #VoteByMail

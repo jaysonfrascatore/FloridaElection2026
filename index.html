@@ -6961,6 +6961,9 @@ function btTableRows(){
   const all = btDayActive() ? { d:btDayStat.all[0], r:btDayStat.all[1], n:btDayStat.all[2] } : (tickStat && historicalSnapshots[historicalSliderIndex] ? sum(historicalSnapshots[historicalSliderIndex]) : sum(COUNTIES));
   const mk = (label, x, key) => ({ label, key, d:x.d, r:x.r, n:x.n });
   const BS = btDayActive() ? btDayStat : (tickStat || btStat);
+  // Before Oct 19, 11 AM mail was the only voting method, and the by-method file only has Broward then. So the slider shows the
+  // whole-state total under the name "Vote by Mail" and drops the other rows, instead of a Broward-only mail number.
+  if(tickStat && btSliderTick() < new Date(2026, 9, 19, 11, 0)) return [mk('Vote by Mail', all, 'all')];
   return [
     mk('Total Vote', all, 'all'),
     mk('Vote by Mail', { d:BS.vbm[0], r:BS.vbm[1], n:BS.vbm[2] }, 'vbm'),

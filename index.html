@@ -12701,23 +12701,26 @@ function saEdHTML(M, types, meth){
   COUNTIES.forEach(c => { bD += c.dem || 0; bR += c.rep || 0; bN += Math.max(0, (c.total || 0) - (c.dem || 0) - (c.rep || 0)); });
   const fin = M.party, edD = Math.max(0, fin.d - bD), edR = Math.max(0, fin.r - bR), edN = Math.max(0, fin.n - bN), edT = edD + edR + edN;
   saState.ctx = { M, bD, bR, bN, bT:bD + bR + bN, edD, edR, edN, edT };
+  // Election Day only: what is left once the rest of early voting and mail have been counted.
+  const cEd = saCountyED(M), eS = { d:0, r:0, n:0 }; Object.keys(cEd).forEach(n => { eS.d += cEd[n].d; eS.r += cEd[n].r; eS.n += cEd[n].n; });
+  const eD = eS.d, eR = eS.r, eN = eS.n, eT = eD + eR + eN;
   const cd = saCountdownText();
   const col = (nm, c, fr, er, edB) => `<div class="sa-pace-cell"><div class="nm" style="color:${c}">${nm}</div>
     <div class="sa-med" style="color:${c}">${saCountEl(0, fr, 1, '', '%')}</div>
     <div class="mini">projected final turnout · Election Day adds about <b style="color:var(--text)">+${er.toFixed(1)} pts</b> (${fmt(Math.round(edB))} ballots)</div></div>`;
   const rd = fin.d / reg.d * 100, rr = fin.r / reg.r * 100, rn = fin.n / reg.n * 100, rt = (fin.d + fin.r + fin.n) / reg.t * 100;
-  const ed = edT ? { d:edD / edT * 100, r:edR / edT * 100, n:edN / edT * 100 } : null;
+  const ed = eT ? { d:eD / eT * 100, r:eR / eT * 100, n:eN / eT * 100 } : null;
   return `<div class="sa-eyebrow">Election Day</div>
     <div class="sa-cd-label">${cd ? 'Polls close in' : 'Polls are closed'}</div>
     <div class="sa-cd" id="saCd">${cd || 'Polls are closed'}</div>
     <div class="sa-sub">Tue, Nov 3 · 7:00 PM ET. ${cd ? 'Election Day ballots show up here as soon as they are counted.' : ''}</div>
     ${meth || ''}
     <div class="sa-proj-title">Projected party turnout once every vote is counted</div>
-    <div class="sa-note">Share of each party's registered voters expected to have voted, from the Projected Final Turnout model (county by county). Election Day is what is still to come after today's count.</div>
+    <div class="sa-note">Share of each party's registered voters expected to have voted, from the Projected Final Turnout model (county by county). Election Day is what is left after the rest of early voting (ends Oct 31 in 51 counties, Nov 1 in 16) and mail ballots through Nov 2 are counted.</div>
     <div class="sa-pace-grid">
-      ${col('DEM', SA_COL.d, rd, rd - bD / reg.d * 100, edD)}${col('REP', SA_COL.r, rr, rr - bR / reg.r * 100, edR)}
-      ${col('NPA/Other', SA_COL.n, rn, rn - bN / reg.n * 100, edN)}${col('All voters', '#80ed99', rt, rt - (bD + bR + bN) / reg.t * 100, edT)}</div>
-    ${ed ? `<div class="sa-note" style="margin-top:12px">Expected Election Day mix of the roughly ${fmt(Math.round(edT))} ballots still to come:</div>
+      ${col('DEM', SA_COL.d, rd, eD / reg.d * 100, eD)}${col('REP', SA_COL.r, rr, eR / reg.r * 100, eR)}
+      ${col('NPA/Other', SA_COL.n, rn, eN / reg.n * 100, eN)}${col('All voters', '#80ed99', rt, eT / reg.t * 100, eT)}</div>
+    ${ed ? `<div class="sa-note" style="margin-top:12px">Expected Election Day mix of the roughly ${fmt(Math.round(eT))} ballots cast on Election Day itself:</div>
     <div class="sa-bar"><i style="width:${ed.d}%;background:${SA_COL.d}"></i><i style="width:${ed.r}%;background:${SA_COL.r}"></i><i style="width:${ed.n}%;background:${SA_COL.n}"></i></div>
     <div class="sa-split"><span style="color:${SA_COL.d}">DEM ${ed.d.toFixed(1)}%</span><span style="color:${SA_COL.r}">REP ${ed.r.toFixed(1)}%</span><span style="color:${SA_COL.n}">NPA ${ed.n.toFixed(1)}%</span></div>` : ''}
     <div class="sa-proj-title">Election Day Only Forecast</div>
@@ -12774,25 +12777,61 @@ function saRenderNeeds(){
 }
 
 // ---- Forecasted margin: Election Day only, and Final (everything combined), tracked by update and by day ----
+// ---- What still comes in before Election Day: the rest of early voting (ends Oct 31 in 51 counties, Nov 1 in 16; nothing but mail on Nov 2) plus mail ----
+let saPreSrc = null, saPreIdx = null; const saPreCache = {};
+function saPreIndex(){
+  if(typeof btTypeRows === 'undefined' || !btTypeRows || !btTypeRows.length) return null;
+  if(saPreSrc === btTypeRows) return saPreIdx;
+  const by = {}; btTypeRows.forEach(r => { (by[r.Code] = by[r.Code] || []).push(r); });
+  Object.values(by).forEach(l => l.sort((a, b) => a._t - b._t));
+  saPreSrc = btTypeRows; saPreIdx = by; Object.keys(saPreCache).forEach(k => delete saPreCache[k]); return by;
+}
+function saLatestType(){ let m = 0; (typeof btTypeRows !== 'undefined' && btTypeRows || []).forEach(r => { if(r._t && +r._t > m) m = +r._t; }); return m ? new Date(m) : new Date(); }
+// Per county and per day: ballots expected from early voting (only on days that county is still open) and from mail (through Nov 2), at each county's own last-3-day pace.
+function saPreEd(asOf){
+  const by = saPreIndex(); if(!by || !asOf || asOf < new Date(2026, 9, 19, 11, 0)) return null;
+  const ck = +asOf; if(saPreCache[ck]) return saPreCache[ck];
+  const DAY = 86400000, byName = {}, days = [];
+  const k0 = saKey(asOf), hr = asOf.getHours() + asOf.getMinutes() / 60;
+  const fut = []; for(let d = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate()); saKey(d) <= 20261102; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) fut.push(new Date(d));
+  fut.forEach(d => days.push({ t:new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 0), d:0, r:0, n:0 }));
+  const t0v = new Date(+asOf - 3 * DAY), t0e = new Date(Math.max(+t0v, +new Date(2026, 9, 19)));
+  const vec = (r, c) => r ? [num(r['DEM ' + c]), num(r['REP ' + c]), num(r['NPA ' + c]) + num(r['OTHER ' + c])] : [0, 0, 0];
+  const at = (l, t) => { let r = null; for(let i = 0; i < l.length; i++){ if(l[i]._t <= t) r = l[i]; else break; } return r; };
+  COUNTIES.forEach(c => {
+    const l = by[c.code]; if(!l || !l.length || !EV_DATA[c.county]) return;
+    const m = EV_DATA[c.county][1].split('/').map(Number), endKey = 20260000 + m[0] * 100 + m[1];
+    const pace = (col, t0) => { const b = at(l, t0) || l[0], cur = at(l, asOf); if(!cur || !b) return [0, 0, 0]; const el = (+cur._t - +b._t) / DAY; if(el < 0.5) return [0, 0, 0]; const a = vec(cur, col), z = vec(b, col); return a.map((x, i) => Math.max(0, x - z[i]) / el); };
+    const pe = pace('EV', t0e), pm = pace('VBM', t0v), tot = [0, 0, 0];
+    fut.forEach((d, i) => {
+      const k = saKey(d), evF = k > endKey ? 0 : (i === 0 ? Math.max(0, Math.min(1, (19 - hr) / 10)) : 1), mF = i === 0 ? Math.max(0, (24 - hr) / 24) : 1;
+      for(let j = 0; j < 3; j++){ const v = pe[j] * evF + pm[j] * mF; tot[j] += v; days[i][['d', 'r', 'n'][j]] += v; }
+    });
+    byName[c.county] = tot;
+  });
+  return (saPreCache[ck] = { byName, days });
+}
 let saFcCache = null;
-function saFcSums(E, actual, dem, rep){
-  const ed = { d:0, r:0, n:0 }, bk = { d:0, r:0, n:0 };
+function saFcSums(E, actual, dem, rep, pre){
+  const ed = { d:0, r:0, n:0 }, bk = { d:0, r:0, n:0 }, fin0 = { d:0, r:0, n:0 };
   SIM_COUNTY_NAMES.forEach(n => {
     const reg = SIM_REG[n][0], rs = SIM_REG[n][1] / 100, ds = SIM_REG[n][2] / 100, ns = Math.max(0, 1 - rs - ds);
     const aD = dem[n] || 0, aR = rep[n] || 0, aT = actual[n] || 0, aN = Math.max(0, aT - aD - aR), rem = Math.max(0, (E[n] || 0) - aT);
     const pool = { d:Math.max(0, reg * ds - aD), r:Math.max(0, reg * rs - aR), n:Math.max(0, reg * ns - aN) }, pt = pool.d + pool.r + pool.n;
     const mix = pt > 0 ? { d:pool.d / pt, r:pool.r / pt, n:pool.n / pt } : { d:ds, r:rs, n:ns };
-    ed.d += rem * mix.d; ed.r += rem * mix.r; ed.n += rem * mix.n; bk.d += aD; bk.r += aR; bk.n += aN;
+    const all = { d:rem * mix.d, r:rem * mix.r, n:rem * mix.n }, pc = pre && pre.byName[n], pT = pc ? pc[0] + pc[1] + pc[2] : 0, sc = pT > 0 ? Math.min(1, 0.85 * rem / pT) : 0;
+    ed.d += pc ? Math.max(0, all.d - pc[0] * sc) : all.d; ed.r += pc ? Math.max(0, all.r - pc[1] * sc) : all.r; ed.n += pc ? Math.max(0, all.n - pc[2] * sc) : all.n;   // Election Day = what is left once early voting and mail have had their say
+    fin0.d += all.d; fin0.r += all.r; fin0.n += all.n; bk.d += aD; bk.r += aR; bk.n += aN;
   });
-  const fin = { d:bk.d + ed.d, r:bk.r + ed.r, n:bk.n + ed.n };
+  const fin = { d:bk.d + fin0.d, r:bk.r + fin0.r, n:bk.n + fin0.n };
   ed.t = ed.d + ed.r + ed.n; fin.t = fin.d + fin.r + fin.n;
   return { ed, fin };
 }
 function saFcBuild(pts, M){
-  if(!saFcCache || saFcCache.src !== pts) saFcCache = { src:pts, list:pts.map(p => { const { E } = anProjectTurnout(p.actual); return Object.assign({ t:p.t, T:p.T }, saFcSums(E, p.actual, p.dem, p.rep)); }) };
+  if(!saFcCache || saFcCache.src !== pts) saFcCache = { src:pts, list:pts.map(p => { const { E } = anProjectTurnout(p.actual); return Object.assign({ t:p.t, T:p.T }, saFcSums(E, p.actual, p.dem, p.rep, saPreEd(p.t))); }) };
   const list = saFcCache.list.slice(), act = {}, dem = {}, rep = {}; let T = 0;
   COUNTIES.forEach(c => { act[c.county] = c.total || 0; dem[c.county] = c.dem || 0; rep[c.county] = c.rep || 0; T += c.total || 0; });
-  const live = Object.assign({ t:new Date(), T }, saFcSums(M.E, act, dem, rep)), l = list[list.length - 1];
+  const lt = saLatestType(), live = Object.assign({ t:new Date(), T }, saFcSums(M.E, act, dem, rep, saPreEd(lt))), l = list[list.length - 1];
   if(l && Math.abs(l.T - T) <= 1){ live.t = l.t; list[list.length - 1] = live; } else list.push(live);
   return list;
 }
@@ -12808,7 +12847,7 @@ async function saFcRender(animate){
   if(gran === 'day'){ const last = {}; list0.forEach(p => { last[saKey(p.t)] = p; }); list = Object.keys(last).sort().map(k => last[k]); }
   list = list.filter(p => saKey(p.t) >= SA_EV_START);   // charts start on Oct 19
   const cfg = [
-    ['ed', 'saEdFc', 'ballots still to come on Election Day', 'STILL TO COME', 'Margin of the Election Day vote only, from the Projected Final Turnout model (2018, 2022 and 2024 turnout plus this year\'s pace) and the registered voters who have not voted yet.'],
+    ['ed', 'saEdFc', 'ballots still to come on Election Day', 'STILL TO COME', 'Margin of the Election Day vote only: the projected final turnout (2018, 2022 and 2024 plus this year\'s pace), minus what early voting and mail still bring in first. Early voting ends Oct 31 in 51 counties and Nov 1 in 16, and Nov 2 is mail only, so the rest is Election Day.'],
     ['fin', 'saFinFc', 'ballots in the final count', 'PROJECTED BALLOTS', 'Margin of the whole race once the ballots already counted and the Election Day vote are combined.']
   ];
   for(const [k, id, noun, tot, desc] of cfg){
@@ -12841,8 +12880,7 @@ async function saFcRender(animate){
     if(PP){
       const fin = PP.fin, remOf = q => ({ d:Math.max(0, fin.d - q.d), r:Math.max(0, fin.r - q.r), n:Math.max(0, fin.n - q.n) });
       const seq = [{ t:PP.cur.t, o:{ d:PP.cur.d, r:PP.cur.r, n:PP.cur.n } }].concat(PP.proj.map(q => ({ t:q.t, o:{ d:q.d, r:q.r, n:q.n } })));
-      const vals = seq.map(q => ({ t:q.t, o:k === 'ed' ? remOf(q.o) : fin }));   // Final: the projected final total, so the line continues from the solid forecast
-      if(k === 'ed' && vals.length > 1) vals[vals.length - 1].o = vals[vals.length - 2].o;   // Election Day: the whole vote still to come
+      const vals = seq.map(q => ({ t:q.t, o:k === 'ed' ? cur.o : fin }));   // Election Day only: the forecast holds steady, since nothing else is left once early voting and mail finish   // Final: the projected final total, so the line continues from the solid forecast
       vals.forEach((q, i) => {
         const o = q.o, mm = saFcMargin(o); if(mm === null) return;
         const isLast = i === vals.length - 1, tt = o.d + o.r + o.n;
@@ -12864,8 +12902,8 @@ async function saFcRender(animate){
   }
 }
 // ---- Election Day map: projected outcome of the ballots still to come, county by county ----
-function saCountyED(M){
-  const byName = {}; COUNTIES.forEach(c => { byName[c.county] = c; });
+function saCountyED(M, whole){
+  const PRE = whole ? null : saPreEd(saLatestType()), byName = {}; COUNTIES.forEach(c => { byName[c.county] = c; });
   const out = {};
   SIM_COUNTY_NAMES.forEach(n => {
     const c = byName[n], reg = SIM_REG[n][0], rs = SIM_REG[n][1] / 100, ds = SIM_REG[n][2] / 100, ns = Math.max(0, 1 - rs - ds);
@@ -12873,7 +12911,10 @@ function saCountyED(M){
     const rem = Math.max(0, M.E[n] - aT);
     const pool = { d:Math.max(0, reg * ds - aD), r:Math.max(0, reg * rs - aR), n:Math.max(0, reg * ns - aN) }, pt = pool.d + pool.r + pool.n;
     const mix = pt > 0 ? { d:pool.d / pt, r:pool.r / pt, n:pool.n / pt } : { d:ds, r:rs, n:ns };
-    out[n] = { d:rem * mix.d, r:rem * mix.r, n:rem * mix.n, t:rem };
+    const pc = PRE && PRE.byName[n], pT = pc ? pc[0] + pc[1] + pc[2] : 0, sc = pT > 0 ? Math.min(1, 0.85 * rem / pT) : 0;
+    const e = { d:rem * mix.d, r:rem * mix.r, n:rem * mix.n };
+    out[n] = pc ? { d:Math.max(0, e.d - pc[0] * sc), r:Math.max(0, e.r - pc[1] * sc), n:Math.max(0, e.n - pc[2] * sc) } : e;
+    out[n].t = out[n].d + out[n].r + out[n].n; out[n].all = e;
   });
   return out;
 }
@@ -12883,7 +12924,7 @@ function saRatingOf(m){   // m in points; the regular tiers, with Tilt D / Tilt 
   return r === 'Toss Up' ? (m > 0 ? 'Tilt D' : 'Tilt R') : (r === 'Tie' ? 'Tilt D' : r);
 }
 function saCountyFinal(M){
-  const ed = saCountyED(M), byName = {}; COUNTIES.forEach(c => { byName[c.county] = c; });
+  const ed = saCountyED(M, true), byName = {}; COUNTIES.forEach(c => { byName[c.county] = c; });   // the final count adds everything still to come
   const out = {};
   SIM_COUNTY_NAMES.forEach(n => {
     const c = byName[n], aD = c ? (c.dem || 0) : 0, aR = c ? (c.rep || 0) : 0, aN = c ? Math.max(0, (c.total || 0) - (c.dem || 0) - (c.rep || 0)) : 0, e = ed[n];
@@ -13049,8 +13090,11 @@ function saTurnPathData(M, pts){
   const edT = new Date(2026, 10, 3, 23, 0);
   const proj = [];   // {t, d, r, n, inc:{...}, kind}
   const run = { d:cur.d, r:cur.r, n:cur.n };
-  const inc = {}; KS.forEach(k => { const want = pace[k] * fut.length, cap = rem[k] * 0.85; inc[k] = want > cap && want > 0 ? pace[k] * cap / want : pace[k]; });
-  fut.forEach(t => { const o = { t, inc:{}, kind:'Projected' }; KS.forEach(k => { const g = Math.min(inc[k], Math.max(0, fin[k] - run[k])); run[k] += g; o[k] = run[k]; o.inc[k] = g; }); proj.push(o); });
+  // Each day adds what early voting (only in counties still open that day) and mail should bring at their recent pace; nothing but mail after Nov 1.
+  const PE = saPreEd(saLatestType());
+  const sched = PE && PE.days.length ? PE.days : fut.map(t => ({ t, d:pace.d, r:pace.r, n:pace.n }));
+  const inc = {}; KS.forEach(k => { const want = sched.reduce((a, q) => a + q[k], 0), cap = rem[k] * 0.85; inc[k] = want > cap && want > 0 ? cap / want : 1; });
+  sched.forEach(q => { const o = { t:q.t, inc:{}, kind:'Projected' }; KS.forEach(k => { const g = Math.min(q[k] * inc[k], Math.max(0, fin[k] - run[k])); run[k] += g; o[k] = run[k]; o.inc[k] = g; }); proj.push(o); });
   const fo = { t:edT, inc:{}, kind:'Election Day (final)' }; KS.forEach(k => { fo.inc[k] = Math.max(0, fin[k] - run[k]); fo[k] = fin[k]; }); proj.push(fo);
   return { KS, NM, act, cur, fin, n7, proj, edT };
 }

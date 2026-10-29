@@ -5363,6 +5363,18 @@ let tweetCards = [];
 let tweetCardIndex = 0;
 let tweetCarouselTimer = null;
 
+// Copying by hand-selecting a card: hand the clipboard the card's exact text, so no browser adds extra blank lines between rows.
+document.addEventListener('copy', e => {
+  try{
+    const sel = window.getSelection(); if(!sel || sel.isCollapsed || !sel.anchorNode) return;
+    const node = sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement;
+    const card = node && node.closest && node.closest('.tweet-card'); if(!card) return;
+    const fn = sel.focusNode && (sel.focusNode.nodeType === 1 ? sel.focusNode : sel.focusNode.parentElement);
+    if(!fn || !fn.closest || fn.closest('.tweet-card') !== card) return;
+    e.clipboardData.setData('text/plain', sel.toString().replace(/\r/g, '').replace(/\n{3,}/g, '\n\n'));
+    e.preventDefault();
+  }catch(err){}
+});
 function showTweetCard(index){
   if(!tweetCards.length) return;
   tweetCardIndex = ((index % tweetCards.length) + tweetCards.length) % tweetCards.length;

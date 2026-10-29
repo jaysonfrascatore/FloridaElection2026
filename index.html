@@ -12838,22 +12838,21 @@ async function saDownloadPaceMap(btn){
     const title = { g:'Turnout by Party Diff', d:'County Turnout: Democrats', r:'County Turnout: Republicans', n:'County Turnout: NPA/Other', t:'County Turnout: All Voters' }[P];
     const sub = { g:'Democratic turnout rate minus Republican turnout rate, in points (each as a share of its own registered voters)', d:'Share of registered Democrats in each county who have voted', r:'Share of registered Republicans in each county who have voted', n:'Share of registered NPA/other voters in each county who have voted', t:'Share of all registered voters in each county who have voted' }[P];
     const img = new Image(); img.src = await Plotly.toImage(el, { format:'png', width:mapW, height:mapH, scale }); await new Promise((ok, no) => { img.onload = ok; img.onerror = () => no(new Error('could not draw the map')); });
-    // legend layout: wrap the items into rows
-    const S = v => v * scale, scratch = document.createElement('canvas').getContext('2d'); scratch.font = `${S(12.5)}px ${sans}`;
-    const items = L.cats.map((c, i) => ({ c, w:S(14 + 8) + scratch.measureText(c.key + '  ' + L.cnt[i]).width / 1 + S(20) })), rows = [[]]; let rw = 0;
-    items.forEach(it => { if(rw + it.w > S(W - pad * 2) && rows[rows.length - 1].length){ rows.push([]); rw = 0; } rows[rows.length - 1].push(it); rw += it.w; });
-    const headerH = 132, subTop = headerH + 6, mapTop = subTop + 22, legTop = mapTop + mapH + 14, legRowH = 26, noteH = L.selIdx !== null ? 26 : 0, totalH = legTop + rows.length * legRowH + noteH + 44;
+    // legend: one vertical stack on the left, in the empty space beside the state
+    const S = v => v * scale, rowH = 24, boxPad = 12, boxW = 150, boxH = L.cats.length * rowH + boxPad * 2 - 4;
+    const headerH = 132, subTop = headerH + 6, mapTop = subTop + 22, noteH = L.selIdx !== null ? 30 : 0, totalH = mapTop + mapH + noteH + 44;
     const cv = document.createElement('canvas'); cv.width = W * scale; cv.height = totalH * scale;
     const x = cv.getContext('2d'); x.fillStyle = '#0a0e17'; x.fillRect(0, 0, cv.width, cv.height); x.textBaseline = 'alphabetic';
     drawStatewideHeader(x, summary, scale, 'Florida Vote Tracker 2026 — ' + title);
     x.fillStyle = '#7c879c'; x.font = `${S(13)}px ${sans}`; x.fillText(sub, S(pad), S(subTop + 12));
-    x.drawImage(img, S((W - mapW) / 2), S(mapTop), S(mapW), S(mapH));
-    rows.forEach((row, ri) => { const tw = row.reduce((a, it) => a + it.w, 0); let cx = (cv.width - tw) / 2;
-      row.forEach(it => { const cy = S(legTop + ri * legRowH + 14);
-        x.fillStyle = it.c.color; x.beginPath(); x.roundRect(cx, cy - S(11), S(13), S(13), S(3)); x.fill(); x.strokeStyle = 'rgba(255,255,255,.18)'; x.lineWidth = 1; x.stroke();
-        const i = L.cats.indexOf(it.c); x.fillStyle = '#9aa4b8'; x.font = `${S(12.5)}px ${sans}`; x.fillText(it.c.key, cx + S(21), cy);
-        const kw = x.measureText(it.c.key + ' ').width; x.fillStyle = '#e9edf5'; x.font = `600 ${S(12.5)}px ${sans}`; x.fillText(String(L.cnt[i]), cx + S(21) + kw, cy); cx += it.w; }); });
-    if(L.selIdx !== null){ x.fillStyle = '#ffd60a'; x.font = `600 ${S(12.5)}px ${sans}`; const t = 'Outlined in yellow: ' + L.cnt[L.selIdx] + (L.cnt[L.selIdx] === 1 ? ' county' : ' counties') + ' in ' + L.cats[L.selIdx].key; x.fillText(t, (cv.width - x.measureText(t).width) / 2, S(legTop + rows.length * legRowH + 18)); }
+    x.drawImage(img, S((W - mapW) / 2 + 40), S(mapTop), S(mapW), S(mapH));
+    const bx = pad, by = mapTop + (mapH - boxH) / 2;
+    x.fillStyle = 'rgba(19,26,40,.92)'; x.beginPath(); x.roundRect(S(bx), S(by), S(boxW), S(boxH), S(10)); x.fill(); x.strokeStyle = '#212a3b'; x.lineWidth = S(1); x.stroke();
+    L.cats.forEach((c, i) => { const cy = S(by + boxPad + i * rowH + 15);
+      x.fillStyle = c.color; x.beginPath(); x.roundRect(S(bx + boxPad), cy - S(11), S(13), S(13), S(3)); x.fill(); x.strokeStyle = 'rgba(255,255,255,.18)'; x.lineWidth = 1; x.stroke();
+      x.fillStyle = '#9aa4b8'; x.font = `${S(12.5)}px ${sans}`; x.fillText(c.key, S(bx + boxPad + 21), cy);
+      x.fillStyle = '#e9edf5'; x.font = `600 ${S(12.5)}px ${sans}`; const cw = x.measureText(String(L.cnt[i])).width; x.fillText(String(L.cnt[i]), S(bx + boxW - boxPad) - cw, cy); });
+    if(L.selIdx !== null){ x.fillStyle = '#ffd60a'; x.font = `600 ${S(12.5)}px ${sans}`; const t = 'Outlined in yellow: ' + L.cnt[L.selIdx] + (L.cnt[L.selIdx] === 1 ? ' county' : ' counties') + ' in ' + L.cats[L.selIdx].key; x.fillText(t, (cv.width - x.measureText(t).width) / 2, S(mapTop + mapH + 20)); }
     x.fillStyle = '#7c879c'; x.font = `${S(11)}px ${mono}`; x.fillText('jaysonfrascatore.github.io/FloridaElection2026  ·  Created by Jayson Frascatore', S(pad), S(totalH - 18));
     const a = document.createElement('a'); a.href = cv.toDataURL('image/png'); a.download = 'florida-county-turnout-' + ({ g:'diff', d:'dem', r:'rep', n:'npa', t:'all' }[P]) + '-' + filenameSafeTimestamp(summary.asOfText) + '.png';
     document.body.appendChild(a); a.click(); document.body.removeChild(a);

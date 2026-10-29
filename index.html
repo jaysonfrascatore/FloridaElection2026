@@ -12531,8 +12531,8 @@ function saPaceHTML(pts){
     ${cell('All voters', '#80ed99', a.T, b.T, reg.t, 'all registered voters')}</div>
     <div class="sa-note" style="margin-top:10px">${n < 7 ? 'Only ' + n + ' day' + (n === 1 ? '' : 's') + ' tracked so far, so this is the average so far' : '7-day average'}, ${saDayLabel(a.t)} to ${saDayLabel(b.t)}.</div>
     <div class="sa-key" id="saPaceKey" style="margin-top:20px"></div>
-    <div class="segmented sa-seg" id="saPaceParty" style="margin:8px 0 0;display:inline-flex">
-      ${[['g', 'Diff'], ['d', 'DEM'], ['r', 'REP'], ['n', 'NPA/Other'], ['t', 'Live Turnout']].map(([k, nm]) => `<button data-p="${k}" class="${saState.paceParty === k ? 'active' : ''}">${nm}</button>`).join('')}</div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 0"><div class="segmented sa-seg" id="saPaceParty" style="margin:0;display:inline-flex">
+      ${[['g', 'Diff'], ['d', 'DEM'], ['r', 'REP'], ['n', 'NPA/Other'], ['t', 'Live Turnout']].map(([k, nm]) => `<button data-p="${k}" class="${saState.paceParty === k ? 'active' : ''}">${nm}</button>`).join('')}</div><button class="sim-btn" id="saPaceMapPng" title="Download this map as an image">Download PNG</button></div>
     <div id="saPaceWrap" style="position:relative;display:flex;flex-direction:column">
     <div id="saPaceMap" style="height:460px;"></div>
     <div class="sa-legend-row" id="saPaceLeg" style="justify-content:center"></div></div>
@@ -12812,6 +12812,7 @@ async function saDrawPaceMap(pts){
   await saPlot(el, traces, { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:4, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });  saAttachHtmlTip(el);
   const kEl = document.getElementById('saPaceKey'); if(kEl) kEl.innerHTML = '<b style="color:var(--text)">County by county</b> \u00b7 ' + (P === 'g' ? "Democratic turnout minus Republican turnout, in percentage points: each party's share of its own registered voters who have voted" : P === 't' ? "turnout so far: the share of each county's registered voters who have voted" : 'turnout so far: the share of registered ' + nm + ' in each county who have voted');
   const lg = document.getElementById('saPaceLeg'); if(lg) lg.classList.toggle('sa-leg-stack', P === 'g'); if(lg) lg.innerHTML = cats.map((c, i) => `<span data-i="${i}" class="${selIdx !== null && selIdx !== i ? 'dim' : ''}${selIdx === i ? ' on' : ''}" title="Click to outline these counties on the map"><i style="background:${c.color}"></i>${c.key} <b>${cnt[i]}</b></span>`).join('');
+  saState.paceLast = { P, cats, cnt, selIdx, names:names.filter((c, i) => selIdx !== null && bins[i] === selIdx) };
   const sEl = document.getElementById('saPaceSel');
   if(sEl) sEl.innerHTML = selIdx === null ? '<span style="color:#6b7690">Click a range in the legend to outline those counties in yellow.</span>' : `<b style="color:#ffd60a">${cnt[selIdx]} ${cnt[selIdx] === 1 ? 'county' : 'counties'}</b> in ${cats[selIdx].key}${cnt[selIdx] ? ': ' + names.filter((c, i) => bins[i] === selIdx).join(', ') : ''} <a href="#" data-clear="1" style="color:#9aa4b8;margin-left:6px">clear</a>`;
   // Top 5 counties for each party: the highest share of that party's registered voters who have voted
@@ -12829,8 +12830,39 @@ async function saDrawPaceMap(pts){
       <div class="sa-pace-grid" style="grid-template-columns:repeat(3,minmax(0,1fr))">${card('d', 'DEM', SA_COL.d)}${card('r', 'REP', SA_COL.r)}${card('n', 'NPA/Other', SA_COL.n)}</div>`;
   }
 }
+async function saDownloadPaceMap(btn){
+  const label = btn.textContent; btn.textContent = 'Rendering…'; btn.disabled = true;
+  try{
+    const L = saState.paceLast, el = document.getElementById('saPaceMap'); if(!L || !el) throw new Error('the map is not ready yet');
+    const P = L.P, summary = liveResultsSummary(), scale = 2, W = 900, pad = 24, mapW = 640, mapH = 520, sans = 'Inter, Arial, sans-serif', mono = 'IBM Plex Mono, monospace';
+    const title = { g:'Turnout by Party Diff', d:'County Turnout: Democrats', r:'County Turnout: Republicans', n:'County Turnout: NPA/Other', t:'County Turnout: All Voters' }[P];
+    const sub = { g:'Democratic turnout rate minus Republican turnout rate, in points (each as a share of its own registered voters)', d:'Share of registered Democrats in each county who have voted', r:'Share of registered Republicans in each county who have voted', n:'Share of registered NPA/other voters in each county who have voted', t:'Share of all registered voters in each county who have voted' }[P];
+    const img = new Image(); img.src = await Plotly.toImage(el, { format:'png', width:mapW, height:mapH, scale }); await new Promise((ok, no) => { img.onload = ok; img.onerror = () => no(new Error('could not draw the map')); });
+    // legend layout: wrap the items into rows
+    const S = v => v * scale, scratch = document.createElement('canvas').getContext('2d'); scratch.font = `${S(12.5)}px ${sans}`;
+    const items = L.cats.map((c, i) => ({ c, w:S(14 + 8) + scratch.measureText(c.key + '  ' + L.cnt[i]).width / 1 + S(20) })), rows = [[]]; let rw = 0;
+    items.forEach(it => { if(rw + it.w > S(W - pad * 2) && rows[rows.length - 1].length){ rows.push([]); rw = 0; } rows[rows.length - 1].push(it); rw += it.w; });
+    const headerH = 132, subTop = headerH + 6, mapTop = subTop + 22, legTop = mapTop + mapH + 14, legRowH = 26, noteH = L.selIdx !== null ? 26 : 0, totalH = legTop + rows.length * legRowH + noteH + 44;
+    const cv = document.createElement('canvas'); cv.width = W * scale; cv.height = totalH * scale;
+    const x = cv.getContext('2d'); x.fillStyle = '#0a0e17'; x.fillRect(0, 0, cv.width, cv.height); x.textBaseline = 'alphabetic';
+    drawStatewideHeader(x, summary, scale, 'Florida Vote Tracker 2026 — ' + title);
+    x.fillStyle = '#7c879c'; x.font = `${S(13)}px ${sans}`; x.fillText(sub, S(pad), S(subTop + 12));
+    x.drawImage(img, S((W - mapW) / 2), S(mapTop), S(mapW), S(mapH));
+    rows.forEach((row, ri) => { const tw = row.reduce((a, it) => a + it.w, 0); let cx = (cv.width - tw) / 2;
+      row.forEach(it => { const cy = S(legTop + ri * legRowH + 14);
+        x.fillStyle = it.c.color; x.beginPath(); x.roundRect(cx, cy - S(11), S(13), S(13), S(3)); x.fill(); x.strokeStyle = 'rgba(255,255,255,.18)'; x.lineWidth = 1; x.stroke();
+        const i = L.cats.indexOf(it.c); x.fillStyle = '#9aa4b8'; x.font = `${S(12.5)}px ${sans}`; x.fillText(it.c.key, cx + S(21), cy);
+        const kw = x.measureText(it.c.key + ' ').width; x.fillStyle = '#e9edf5'; x.font = `600 ${S(12.5)}px ${sans}`; x.fillText(String(L.cnt[i]), cx + S(21) + kw, cy); cx += it.w; }); });
+    if(L.selIdx !== null){ x.fillStyle = '#ffd60a'; x.font = `600 ${S(12.5)}px ${sans}`; const t = 'Outlined in yellow: ' + L.cnt[L.selIdx] + (L.cnt[L.selIdx] === 1 ? ' county' : ' counties') + ' in ' + L.cats[L.selIdx].key; x.fillText(t, (cv.width - x.measureText(t).width) / 2, S(legTop + rows.length * legRowH + 18)); }
+    x.fillStyle = '#7c879c'; x.font = `${S(11)}px ${mono}`; x.fillText('jaysonfrascatore.github.io/FloridaElection2026  ·  Created by Jayson Frascatore', S(pad), S(totalH - 18));
+    const a = document.createElement('a'); a.href = cv.toDataURL('image/png'); a.download = 'florida-county-turnout-' + ({ g:'diff', d:'dem', r:'rep', n:'npa', t:'all' }[P]) + '-' + filenameSafeTimestamp(summary.asOfText) + '.png';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }catch(err){ alert('Could not make the map image: ' + err.message); }
+  finally{ btn.textContent = label; btn.disabled = false; }
+}
 document.getElementById('splitAvgView').addEventListener('click', e => {
   const pb = e.target.closest('#saPartyPng'); if(pb){ downloadPartyTurnoutPng(pb); return; }
+  const pngB = e.target.closest('#saPaceMapPng'); if(pngB){ saDownloadPaceMap(pngB); return; }
   const lgi = e.target.closest('#saPaceLeg span[data-i]'), clr = e.target.closest('#saPaceSel a[data-clear]');
   if(lgi || clr){ e.preventDefault(); const i = lgi ? +lgi.dataset.i : null; saState.paceSel = (i === null || saState.paceSel === i) ? null : i; if(saReplayCache) saDrawPaceMap(saReplayCache); return; }
   const b = e.target.closest('#saPaceParty button'); if(!b) return;

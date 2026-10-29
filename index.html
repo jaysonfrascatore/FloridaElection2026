@@ -5367,6 +5367,14 @@ function escapeHtmlForCard(str){
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+// The time of the newest logged update, so the live point on a chart sits where updates sit (e.g. 7:00 PM) and not at the clock time the page was opened.
+function anLiveUpdateTime(){
+  try{
+    const raw = latestTimestampString(COUNTIES.map(c => c.lastUpdated)) || latestTimestampString(COUNTIES.map(c => c.runTimestamp));
+    const d = raw ? parseHistoryTimestamp(raw) : null; if(d && !isNaN(+d)) return d;
+  }catch(e){}
+  return new Date();
+}
 let tweetCards = [];
 let tweetCardIndex = 0;
 let tweetCarouselTimer = null;
@@ -10149,7 +10157,7 @@ const AN_INTERNAL_WEIGHT = 0.35;                  // internal polls (released or
 function anSponsorMult(p){ return p.internal ? AN_INTERNAL_WEIGHT : (p.sponsor ? AN_SPONSOR_WEIGHT : 1); }
 // Fixed model settings (there are no dials on the page).
 const AN_TURNOUT_W = { y18:1, y22:1, y24:0.25 };   // weight of each past race in the turnout blend (2024 was a presidential year, so it counts for less in a midterm)
-// Share of all ballots that were in before Election Day (early voting + mail): about 65% in 2022, 76.4% in 2024 (5.36M early + 3.02M mail of 10.99M).
+// Share of all ballots that were in before Election Day (early voting + mail): about 65% in 2022 (Florida Division of Elections: 2.29M early + 2.77M mail of about 7.8M), 76.4% in 2024 (5.36M early + 3.02M mail of 10.99M).
 // Dividing what is counted by these gives a low and a high estimate of final turnout that corrects itself as ballots arrive.
 const AN_TURNOUT_W_ORIG = { y18:1, y22:1, y24:1 };  // the original blend, kept for updates logged before the change so the earlier projection stays as it was
 const AN_METHOD_CUTOVER = new Date(2026, 9, 19, 11, 0);   // from here on the projection counts ballots already cast
@@ -11371,7 +11379,7 @@ async function anRenderTurnDetail(M){
   // the live numbers are the last point, so the readout always matches the table and the map
   const nowV = (name ? M.E[name] : M.Esum) / reg * 100, nowS = M.Esum / M.regTot * 100;
   const series = pts.map(p => ({ t:new Date(p.t), v:(name ? p.E[name] : p.Esum) / reg * 100, s:p.Esum / M.regTot * 100 }));
-  if(!series.length || Math.abs(series[series.length - 1].v - nowV) > 0.005) series.push({ t:new Date(), v:nowV, s:nowS });
+  if(!series.length || Math.abs(series[series.length - 1].v - nowV) > 0.005) series.push({ t:anLiveUpdateTime(), v:nowV, s:nowS });
   await anRenderTracker({ name, series, decimals:1, headEl:document.getElementById('anTurnHead'), noteEl:document.getElementById('anTurnNote'), chartEl:document.getElementById('anTurnChart'),
     onReset:() => { anState.turnCounty = null; anQueueRender(); },
     noteText:'Each point is one logged update. Before Oct 19 the line is the original projection (past elections only). From Oct 19 it also counts the ballots already cast and the early voting still expected, which is why it steps down.' });
@@ -11410,7 +11418,7 @@ async function renderLiveTurnoutTrack(countyName, rows){
   if(live && series.length){
     const nowV = countyTurnoutPctFor(countyName, live.total), nowS = Math.round(Math.min(0.95, liveTotal / regTot) * 10000) / 100;
     const l = series[series.length - 1];
-    if(Math.abs(l.v - nowV) > 0.004 || Math.abs(l.s - nowS) > 0.004) series.push({ t:new Date(), v:nowV, s:nowS });
+    if(Math.abs(l.v - nowV) > 0.004 || Math.abs(l.s - nowS) > 0.004) series.push({ t:anLiveUpdateTime(), v:nowV, s:nowS });
   }
   if(!series.length){ wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
@@ -12870,7 +12878,7 @@ function saPreIndex(){
   saPreSrc = btTypeRows; saPreIdx = by; Object.keys(saPreCache).forEach(k => delete saPreCache[k]); return by;
 }
 function saLatestType(){ let m = 0; (typeof btTypeRows !== 'undefined' && btTypeRows || []).forEach(r => { if(r._t && +r._t > m) m = +r._t; }); return m ? new Date(m) : new Date(); }
-// Per county and per day: ballots expected from early voting (only on days that county is still open) and from mail (through Nov 2), at each county's own last-3-day pace.
+// Per county and per day: ballots expected from early voting (only on days that county is still open) and from mail (through Nov 2), at each county's own average of its last-3-day and last-6-day pace.
 function saPreEd(asOf){
   const by = saPreIndex(); if(!by || !asOf || asOf < new Date(2026, 9, 19, 11, 0)) return null;
   const ck = +asOf; if(saPreCache[ck]) return saPreCache[ck];
@@ -12878,14 +12886,16 @@ function saPreEd(asOf){
   const k0 = saKey(asOf), hr = asOf.getHours() + asOf.getMinutes() / 60;
   const fut = []; for(let d = new Date(asOf.getFullYear(), asOf.getMonth(), asOf.getDate()); saKey(d) <= 20261102; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) fut.push(new Date(d));
   fut.forEach(d => days.push({ t:new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 0), d:0, r:0, n:0 }));
-  const t0v = new Date(+asOf - 3 * DAY), t0e = new Date(Math.max(+t0v, +new Date(2026, 9, 19)));
+  // Pace = the average of the last 3 days and the last 6 days, so one slow or fast day does not swing the projection.
+  const t0v = new Date(+asOf - 3 * DAY), t0e = new Date(Math.max(+t0v, +new Date(2026, 9, 19))), t0v2 = new Date(+asOf - 6 * DAY), t0e2 = new Date(Math.max(+t0v2, +new Date(2026, 9, 19)));
   const vec = (r, c) => r ? [num(r['DEM ' + c]), num(r['REP ' + c]), num(r['NPA ' + c]) + num(r['OTHER ' + c])] : [0, 0, 0];
   const at = (l, t) => { let r = null; for(let i = 0; i < l.length; i++){ if(l[i]._t <= t) r = l[i]; else break; } return r; };
   COUNTIES.forEach(c => {
     const l = by[c.code]; if(!l || !l.length || !EV_DATA[c.county]) return;
     const m = EV_DATA[c.county][1].split('/').map(Number), endKey = 20260000 + m[0] * 100 + m[1];
     const pace = (col, t0) => { const b = at(l, t0) || l[0], cur = at(l, asOf); if(!cur || !b) return [0, 0, 0]; const el = (+cur._t - +b._t) / DAY; if(el < 0.5) return [0, 0, 0]; const a = vec(cur, col), z = vec(b, col); return a.map((x, i) => Math.max(0, x - z[i]) / el); };
-    const pe = pace('EV', t0e), pm = pace('VBM', t0v), tot = [0, 0, 0];
+    const avg = (x, y) => x.map((v, i) => (v + y[i]) / 2);
+    const pe = avg(pace('EV', t0e), pace('EV', t0e2)), pm = avg(pace('VBM', t0v), pace('VBM', t0v2)), tot = [0, 0, 0];
     fut.forEach((d, i) => {
       const k = saKey(d), evF = k > endKey ? 0 : (i === 0 ? Math.max(0, Math.min(1, (19 - hr) / 10)) : 1), mF = i === 0 ? Math.max(0, (24 - hr) / 24) : 1;
       for(let j = 0; j < 3; j++){ const v = pe[j] * evF + pm[j] * mF; tot[j] += v; days[i][['d', 'r', 'n'][j]] += v; }
@@ -12934,7 +12944,7 @@ function saFcBuild(pts, M){
   if(!saFcCache || saFcCache.src !== pts) saFcCache = { src:pts, list:pts.map(p => { const { E } = anProjectTurnout(p.actual, p.t); return Object.assign({ t:p.t, T:p.T }, saFcSums(E, p.actual, p.dem, p.rep, saPreEd(p.t))); }) };
   const list = saFcCache.list.slice(), act = {}, dem = {}, rep = {}; let T = 0;
   COUNTIES.forEach(c => { act[c.county] = c.total || 0; dem[c.county] = c.dem || 0; rep[c.county] = c.rep || 0; T += c.total || 0; });
-  const lt = saLatestType(), live = Object.assign({ t:new Date(), T }, saFcSums(M.E, act, dem, rep, saPreEd(lt))), l = list[list.length - 1];
+  const lt = saLatestType(), live = Object.assign({ t:anLiveUpdateTime(), T }, saFcSums(M.E, act, dem, rep, saPreEd(lt))), l = list[list.length - 1];
   try{ saState.fcBand = saFcBand(M.E, act, dem, rep, saPreEd(lt)); }catch(e){ saState.fcBand = null; }
   if(l && Math.abs(l.T - T) <= 1){ live.t = l.t; list[list.length - 1] = live; } else list.push(live);
   return list;
@@ -13188,7 +13198,7 @@ async function saRenderTurnParty(M){
   if(!saTpCache || saTpCache.src !== pts){
     saTpCache = { src:pts, list:pts.map(p => { const { E } = anProjectTurnout(p.actual, p.t), q = saPartyProject(E, p.actual, p.dem, p.rep); return { t:p.t, d:q.d, r:q.r, n:q.n }; }) };
   }
-  const series = saTpCache.list.slice(), now = { t:new Date(), d:M.party.d, r:M.party.r, n:M.party.n }, l = series[series.length - 1];
+  const series = saTpCache.list.slice(), now = { t:anLiveUpdateTime(), d:M.party.d, r:M.party.r, n:M.party.n }, l = series[series.length - 1];
   if(!l || Math.abs(l.d - now.d) > 1 || Math.abs(l.r - now.r) > 1) series.push(now);
   const pct = saState.tpMode === 'pct', val = (p, k) => pct ? p[k] / reg[k] * 100 : p[k], fmtV = v => pct ? v.toFixed(1) + '%' : fmt(Math.round(v));
   const cur = series[series.length - 1], prev = series.length > 1 ? series[series.length - 2] : null;
@@ -13212,7 +13222,7 @@ function saTurnPathData(M, pts){
   const last = {}; pts.forEach(p => { last[saKey(p.t)] = { t:p.t, d:p.D, r:p.R, n:p.N }; });
   let act = Object.keys(last).sort().map(k => last[k]);
   let bD = 0, bR = 0, bN = 0; COUNTIES.forEach(c => { bD += c.dem || 0; bR += c.rep || 0; bN += Math.max(0, (c.total || 0) - (c.dem || 0) - (c.rep || 0)); });
-  const now = new Date(), live = { t:act.length && saKey(act[act.length - 1].t) === saKey(now) ? act[act.length - 1].t : now, d:bD, r:bR, n:bN };
+  const now = anLiveUpdateTime(), live = { t:act.length && saKey(act[act.length - 1].t) === saKey(now) ? act[act.length - 1].t : now, d:bD, r:bR, n:bN };
   const lp = act[act.length - 1];
   if(lp && Math.abs((lp.d + lp.r + lp.n) - (bD + bR + bN)) <= 1) live.t = lp.t;   // nothing new since the last logged update, so keep that update's time
   if(act.length && saKey(act[act.length - 1].t) === saKey(live.t)) act[act.length - 1] = live; else act.push(live);

@@ -1476,6 +1476,7 @@
       <div class="tweet-carousel">
         <div class="tweet-carousel-header">
           <h2 style="margin-bottom:0;">Latest Update Summary</h2>
+          <button id="tweetCopyCardBtn" class="sim-btn" title="Copy only the card on screen, as plain text with no extra spacing">Copy card</button>
           <button id="tweetCopyBtn" class="sim-btn" title="Copy the full summary as one paste-ready block">Copy</button>
         </div>
         <div class="tweet-card-viewport" id="tweetCardViewport"></div>
@@ -5470,6 +5471,17 @@ function render(){
 
 document.getElementById('refreshBtn').addEventListener('click', () => loadLatestCSV(true));
 
+document.getElementById('tweetCopyCardBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('tweetCopyCardBtn'); if(!tweetCards.length) return;
+  const text = String(tweetCards[tweetCardIndex] || '').replace(/\r/g, '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n');
+  const old = btn.textContent;
+  try{
+    await navigator.clipboard.writeText(text); btn.textContent = 'Copied!';
+  }catch(e){
+    try{ const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); btn.textContent = 'Copied!'; }catch(e2){ btn.textContent = 'Copy failed'; }
+  }
+  setTimeout(() => { btn.textContent = old; }, 1500);
+});
 document.getElementById('tweetCopyBtn').addEventListener('click', async () => {
   const btn = document.getElementById('tweetCopyBtn');
   if(!tweetCards.length) return;

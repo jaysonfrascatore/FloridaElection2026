@@ -10160,11 +10160,13 @@ const AN_NPA_MAX_GAP = 0.25;
 // How independents (NPA) say they will vote, from the polls that published the subgroup.
 const AN_NPA_POLLS = {
   governor: [
+    { pollster:'NYTimes / Siena', end:'2026-10-27', dem:52, rep:35 },
     { pollster:'St. Pete Polls', end:'2026-10-07', dem:49, rep:33 },
     { pollster:'Mason-Dixon (NBC6)', end:'2026-10-01', dem:47, rep:28 },
     { pollster:'Hart Research', end:'2026-08-15', dem:48, rep:37, sponsor:'D', approx:true }
   ],
   senate: [
+    { pollster:'NYTimes / Siena', end:'2026-10-27', dem:52, rep:38 },
     { pollster:'St. Pete Polls', end:'2026-10-07', dem:49, rep:36 },
     { pollster:'Mason-Dixon (NBC6)', end:'2026-10-01', dem:41, rep:35 }
   ]
@@ -10175,11 +10177,15 @@ const AN_NPA_POLLS = {
 // Sources: cbs12 (St. Pete Polls, Mason-Dixon), NBC6 Miami (Mason-Dixon), UNF PORL spring 2026 release.
 const AN_LOYAL_POLLS = {
   governor: [
+    { pollster:'NYTimes / Siena', end:'2026-10-27', nd:224, nr:327, dd:93, dr:4, rr:91, rd:6 },
+    { pollster:'UNF PORL (fall)', end:'2026-10-19', nd:462, nr:623, dd:91, dr:5, rr:86, rd:11 },
     { pollster:'St. Pete Polls', end:'2026-10-07', nd:290, nr:290, dd:80, dr:9, rr:80, rd:15, approx:true },
     { pollster:'Mason-Dixon (NBC6)', end:'2026-10-01', nr:277, rr:87, rd:4 },
     { pollster:'UNF PORL', end:'2026-03-02', nd:300, nr:310, dd:77, dr:5, rr:79, rd:8 }
   ],
   senate: [
+    { pollster:'NYTimes / Siena', end:'2026-10-27', nd:224, nr:327, dd:96, dr:3, rr:93, rd:4 },
+    { pollster:'UNF PORL (fall)', end:'2026-10-19', nd:475, nr:630, dd:89, dr:8, rr:86, rd:10 },
     { pollster:'Mason-Dixon (NBC6)', end:'2026-10-01', nd:214, nr:277, dd:87, dr:5, rr:91, rd:3 },
     { pollster:'UNF PORL', end:'2026-03-02', nd:295, nr:309, dd:79, dr:6, rr:83, rd:6 }
   ]
@@ -11167,7 +11173,7 @@ function anBuildBlurb(M){
     ? `Polls that break out independents have NPA voters going ${(m.npa.nu * 100).toFixed(0)}% to ${info.dem} (two-party), ${m.npaGap >= 0 ? 'better' : 'worse'} for ${info.dem} than the 2018, 2022 and 2024 exit polls imply (about ${(M.nuHist * 100).toFixed(0)}%), so the fundamentals are adjusted to ${anMarginLabel(m.fundAdj)}.`
     : '';
   const loyLine = m.loy
-    ? ` Polls that report party loyalty have ${(m.loy.d * 100).toFixed(0)}% of Democrats and ${(m.loy.r * 100).toFixed(0)}% of Republicans backing their nominee (exit polls: ${(AN_LOYAL_EXIT.d * 100).toFixed(0)}% and ${(AN_LOYAL_EXIT.r * 100).toFixed(0)}%), which moves the fundamentals ${Math.abs(m.loyAdj * 100) < 0.05 ? 'by almost nothing' : (Math.abs(m.loyAdj * 100).toFixed(1) + ' points toward ' + (m.loyAdj > 0 ? info.dem : info.rep))}.`
+    ? ` Polls that report party loyalty (like the crosstabs) show Democrats and Republicans backing their nominee at different rates than past exit polls, which moves the fundamentals ${Math.abs(m.loyAdj * 100) < 0.05 ? 'by almost nothing' : (Math.abs(m.loyAdj * 100).toFixed(1) + ' points toward ' + (m.loyAdj > 0 ? info.dem : info.rep))}.`
     : '';
   const p3 = `Registered Republicans outnumber registered Democrats ${regR.toFixed(1)}% to ${regD.toFixed(1)}%, and the county average of the last three statewide results is ${anMarginLabel(M.fundamentals)} on a two-party basis (2018 governor ${anMarginLabel(past(SIM_2018))}, 2022 governor ${anMarginLabel(past(SIM_2022))}, 2024 president ${anMarginLabel(past(SIM_2024))}). ${npaLine}${loyLine}`;
   const dir = v => `${Math.abs(v * 100).toFixed(1)} points ${v >= 0 ? 'more Democratic' : 'more Republican'}`;

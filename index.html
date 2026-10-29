@@ -12156,7 +12156,14 @@ async function saLoadTypes(){
   rows.forEach(r => { (by[r.Code] = by[r.Code] || []).push(r); times.add(+r._t); });
   Object.values(by).forEach(l => l.sort((a, b) => a._t - b._t));
   const M = [['vbm', 'VBM'], ['ev', 'EV'], ['ed', 'ED']], idx = {};
-  const pts = [...times].sort((a, b) => a - b).map(t => {
+  // Before Oct 19, 11 AM mail was the only method, and the by-method file only holds Broward then. So for that stretch Vote by Mail is the
+  // whole-state total from the all-ballots history (minus the few Broward early ballots), with every update on the chart, not a Broward-only number.
+  const CUT = +new Date(2026, 9, 19, 11, 0), FLOOR = +new Date(2026, 8, 21);
+  let hist = []; try{ hist = await saReplay(); }catch(e){}
+  hist = hist.filter(h => +h.t >= FLOOR && +h.t < CUT);
+  hist.forEach(h => times.add(+h.t));
+  let hi = -1;
+  const pts = [...times].filter(t => t >= FLOOR).sort((a, b) => a - b).map(t => {
     const o = { t:new Date(t), vbm:[0, 0, 0], ev:[0, 0, 0], ed:[0, 0, 0] };
     Object.keys(by).forEach(code => {
       const list = by[code]; let i = idx[code] === undefined ? -1 : idx[code];
@@ -12165,6 +12172,11 @@ async function saLoadTypes(){
       const r = list[i];
       M.forEach(([k, c]) => { o[k][0] += num(r['DEM ' + c]); o[k][1] += num(r['REP ' + c]); o[k][2] += num(r['NPA ' + c]) + num(r['OTHER ' + c]); });
     });
+    if(t < CUT){
+      while(hi + 1 < hist.length && +hist[hi + 1].t <= t) hi++;
+      const h = hi >= 0 ? hist[hi] : null;
+      o.vbm = h ? [Math.max(0, h.D - o.ev[0] - o.ed[0]), Math.max(0, h.R - o.ev[1] - o.ed[1]), Math.max(0, h.N - o.ev[2] - o.ed[2])] : [0, 0, 0];
+    }
     return o;
   });
   saTypesRows = rows; saTypesCache = pts;

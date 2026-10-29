@@ -3311,7 +3311,14 @@ async function btDayRefresh(rerender){
 }
 (function(){
   const sel = document.getElementById('dayViewSelect'); if(!sel) return;
-  sel.addEventListener('change', () => { btDaySel = sel.value; btBuildDay(); if(zoomedCounty){ refreshZoomedCountyView(); btRender(); } else { renderMap(); renderTable(); } });
+  sel.addEventListener('change', () => {
+    btDaySel = sel.value;
+    if(btDaySel !== 'full' && historicalSliderIndex !== null){   // a single day and a past-update replay can't both be on: back to Live Results
+      historicalSliderIndex = null;
+      const sl = document.getElementById('historySlider'), sv = document.getElementById('historySliderValue');
+      if(sl) sl.value = sl.max; if(sv) sv.textContent = 'Live Results';
+    }
+    btBuildDay(); if(zoomedCounty){ refreshZoomedCountyView(); btRender(); } else { renderMap(); renderTable(); } });
 })();
 
 
@@ -3565,7 +3572,7 @@ function btLoad(rows){
 // Mail / Early Vote / Election Day use when that split's statewide total last changed (data/split_previous.json).
 // Empty when there is no time to show yet (the first run after this was added, for a split that has not changed since).
 function btLastUpdatedText(){
-  if(!btHas || currentMetric !== 'demrepnpa' || btDayActive()) return '';
+  if(!btHas || currentMetric !== 'demrepnpa' || btDayActive() || btSliderTick()) return '';
   let raw;
   if(zoomedCounty){
     // Inside a county: when THAT county's selected split last changed (Total Vote = any split).
@@ -3600,7 +3607,7 @@ function btRender(){
     const cells = p(a[0], a[1], a[2], ld) + p(b[0], b[1], b[2]) + p('NPA/Other', r.n, PU);
     return `<div class="bt-card${btView===r.key?' cur':''}" data-k="${r.key}" tabindex="0" role="button" aria-pressed="${btView===r.key}"><div class="bt-ch"><b>${btView===r.key?'<span class="bt-dot"></span>':''}${r.label}</b><span><b>${f(t)}</b> <span style="color:${m.color}"><b>${m.text}</b></span></span></div><div class="bt-cg${lead ? ' has-lead' : ''}">${cells}</div></div>`; }).join('');
   const reporting = COUNTIES.filter(c => c.total > 0).length;
-  const note = (btCovered < reporting && !btDayActive()) ? `<div style="margin-top:6px;font-size:11px;color:var(--muted)">Type split covers ${btCovered} of ${reporting} reporting counties so far; the rest fill in once they have it.</div>` : '';
+  const note = (btCovered < reporting && !btDayActive() && !btSliderTick()) ? `<div style="margin-top:6px;font-size:11px;color:var(--muted)">Type split covers ${btCovered} of ${reporting} reporting counties so far; the rest fill in once they have it.</div>` : '';
   const lu = zoomedCounty ? '' : btLastUpdatedText();   // inside a county the line sits under the county data instead
   document.getElementById('btSummary').innerHTML = `<table class="bt-t bt-desk"><thead><tr><th>Statewide</th><th>DEM</th><th>REP</th><th>NPA/Other</th><th>Total</th><th>Margin</th></tr></thead><tbody>${desk}</tbody></table><div class="bt-mob">${mob}</div>${note}${lu ? `<div class="bt-upd">${lu}</div>` : ''}`;
   const pick = el => { const k = el.dataset.k; if(!k || k === btView) return; btView = k; if(zoomedCounty){ refreshZoomedCountyView(); btRender(); } else { renderMap(); renderTable(); } };   // btRender redraws the highlight; renderMap does it itself when not zoomed
@@ -5681,6 +5688,8 @@ historySliderEl.addEventListener('input', e => {
   }else{
     historicalSliderIndex = val;
     valueEl.textContent = formatSortedHoverDate(historicalTicks[val]);
+    const dvs = document.getElementById('dayViewSelect');   // replaying a past update leaves single-day view
+    if(btDaySel !== 'full'){ btDaySel = 'full'; if(dvs) dvs.value = 'full'; btBuildDay(); }
   }
   // Everything that reads activeCountiesFor() -- map, table, stats,
   // tooltip, a zoomed county -- picks up the historical snapshot
@@ -5688,6 +5697,7 @@ historySliderEl.addEventListener('input', e => {
   if(currentMetric === 'demrepnpa'){
     renderStats();
     if(zoomedCounty){ refreshZoomedCountyView(); } else { renderMap(); renderTable(); }
+    try{ btRender(); }catch(e){}
   }
 });
 
@@ -6933,11 +6943,24 @@ function drawKeyOnCanvas(ctx, x, bottomY, scale, title, subtitle, rows){
 
 // General Election screenshot footer when ballot-type data exists: Total Vote plus Mail / Early / Election Day,
 // each with DEM, REP, NPA/Other, the total and the margin (D+ / R+). Replaces the "top 3 counties" list.
+// Statewide mail / early / Election Day totals as of one past update (the History slider), from data/county_history_types.csv.
+// Early vote reads 0 before October 19: anything earlier is the Broward-only exception, not real early voting.
+function btStatAtTick(tick){
+  if(!btTypeRows || !tick) return null;
+  const last = {};
+  btTypeRows.forEach(r => { if(r._t && r._t <= tick){ const p = last[r.Code]; if(!p || r._t >= p._t) last[r.Code] = r; } });
+  const st = { vbm:[0,0,0], ev:[0,0,0], ed:[0,0,0] }, K = { vbm:'VBM', ev:'EV', ed:'ED' };
+  Object.keys(last).forEach(c => Object.keys(K).forEach(k => { const r = last[c], t = K[k]; st[k][0] += num(r['DEM ' + t]); st[k][1] += num(r['REP ' + t]); st[k][2] += num(r['NPA ' + t]) + num(r['OTHER ' + t]); }));
+  if(tick.getFullYear() * 10000 + (tick.getMonth() + 1) * 100 + tick.getDate() < 20261019) st.ev = [0,0,0];
+  return st;
+}
+function btSliderTick(){ return (currentMetric === 'demrepnpa' && !btDayActive() && historicalSliderIndex !== null && historicalTicks[historicalSliderIndex]) ? historicalTicks[historicalSliderIndex] : null; }
 function btTableRows(){
   const sum = list => list.reduce((a, c) => { a.d += c.dem; a.r += c.rep; a.n += c.ind + c.npa + c.other; return a; }, { d:0, r:0, n:0 });
-  const all = btDayActive() ? { d:btDayStat.all[0], r:btDayStat.all[1], n:btDayStat.all[2] } : sum(COUNTIES);
+  const tickStat = btSliderTick() ? btStatAtTick(btSliderTick()) : null;
+  const all = btDayActive() ? { d:btDayStat.all[0], r:btDayStat.all[1], n:btDayStat.all[2] } : (tickStat && historicalSnapshots[historicalSliderIndex] ? sum(historicalSnapshots[historicalSliderIndex]) : sum(COUNTIES));
   const mk = (label, x, key) => ({ label, key, d:x.d, r:x.r, n:x.n });
-  const BS = btDayActive() ? btDayStat : btStat;
+  const BS = btDayActive() ? btDayStat : (tickStat || btStat);
   return [
     mk('Total Vote', all, 'all'),
     mk('Vote by Mail', { d:BS.vbm[0], r:BS.vbm[1], n:BS.vbm[2] }, 'vbm'),

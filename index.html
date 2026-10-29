@@ -12495,8 +12495,9 @@ function saMethodHTML(key, title, noun, types){
     <div class="sa-split"><span style="color:${SA_COL.d}">DEM ${sh.d.toFixed(1)}%</span><span style="color:${SA_COL.r}">REP ${sh.r.toFixed(1)}%</span><span style="color:${SA_COL.n}">NPA ${sh.n.toFixed(1)}%</span></div>
     <div class="sa-chart-wrap"><div class="sa-key"><i style="border-color:${SA_COL.d}"></i>${Noun} margin of the ballots added in each ${gran}, blue when Democrats lead and red when Republicans do <i class="dot"></i>7-day rolling average</div>
     <div id="saCh_${key}" style="height:270px;"></div></div>
-    <div class="sa-key" style="margin-top:22px"><b style="color:var(--text)">County by county</b> · ${nDays < 7 ? 'average so far' : '7-day rolling average'} of ${noun} ballots, blue where Democrats lead and red where Republicans do</div>
-    <div id="saMap_${key}" style="height:460px;"></div>`;
+    <div class="sa-key" style="margin-top:22px"><b style="color:var(--text)">County by county</b> · ${nDays < 7 ? 'average so far' : '7-day rolling average'} of ${noun} ballots, rated Safe, Likely, Lean or Tilt for each party</div>
+    <div id="saMap_${key}" style="height:460px;"></div>
+    <div class="sa-legend-row" id="saLeg_${key}"></div>`;
   const draw = async () => {
     saDrawMap(key, noun, nDays).catch(() => {});
     const incs = base.map((p, i) => ({ p, m:saMargin(p.v), rv:saRoll(base, i, 7), sh:saShares(p.v) })).filter(o => o.m !== null);
@@ -12556,8 +12557,9 @@ function saDailyHTML(key, title, noun, types){
     <div class="sa-split"><span style="color:${SA_COL.d}">DEM ${cur.sh.d.toFixed(1)}%</span><span style="color:${SA_COL.r}">REP ${cur.sh.r.toFixed(1)}%</span><span style="color:${SA_COL.n}">NPA ${cur.sh.n.toFixed(1)}%</span></div>
     <div class="sa-chart-wrap"><div class="sa-key"><i style="border-color:${SA_COL.d}"></i>${Noun} margin of each day's ballots after every update, one continuous line, restarting from that day's own ballots each morning, blue when Democrats lead and red when Republicans do <i class="dot"></i>7-day rolling average</div>
     <div id="saCh_${key}" style="height:270px;"></div></div>
-    <div class="sa-key" style="margin-top:22px"><b style="color:var(--text)">County by county</b> · ${nDays < 7 ? 'average so far' : '7-day rolling average'} of ${noun} ballots, blue where Democrats lead and red where Republicans do</div>
-    <div id="saMap_${key}" style="height:460px;"></div>`;
+    <div class="sa-key" style="margin-top:22px"><b style="color:var(--text)">County by county</b> · ${nDays < 7 ? 'average so far' : '7-day rolling average'} of ${noun} ballots, rated Safe, Likely, Lean or Tilt for each party</div>
+    <div id="saMap_${key}" style="height:460px;"></div>
+    <div class="sa-legend-row" id="saLeg_${key}"></div>`;
   const draw = async () => {
     saDrawMap(key, noun, nDays).catch(() => {});
     const traces = [], allRows = [];
@@ -12604,8 +12606,9 @@ function saRunHTML(key, title, noun, types){
     <div class="sa-split"><span style="color:${SA_COL.d}">DEM ${cur.sh.d.toFixed(1)}%</span><span style="color:${SA_COL.r}">REP ${cur.sh.r.toFixed(1)}%</span><span style="color:${SA_COL.n}">NPA ${cur.sh.n.toFixed(1)}%</span></div>
     <div class="sa-chart-wrap"><div class="sa-key"><i style="border-color:${SA_COL.d}"></i>Running ${noun} margin after each update, blue when Democrats lead and red when Republicans do <i class="dot"></i>7-day rolling average</div>
     <div id="saCh_${key}" style="height:270px;"></div></div>
-    <div class="sa-key" style="margin-top:22px"><b style="color:var(--text)">County by county</b> · ${nDays < 7 ? 'average so far' : '7-day rolling average'} of ${noun} ballots, blue where Democrats lead and red where Republicans do</div>
-    <div id="saMap_${key}" style="height:460px;"></div>`;
+    <div class="sa-key" style="margin-top:22px"><b style="color:var(--text)">County by county</b> · ${nDays < 7 ? 'average so far' : '7-day rolling average'} of ${noun} ballots, rated Safe, Likely, Lean or Tilt for each party</div>
+    <div id="saMap_${key}" style="height:460px;"></div>
+    <div class="sa-legend-row" id="saLeg_${key}"></div>`;
   const draw = async () => {
     saDrawMap(key, noun, nDays).catch(() => {});
     const xs = rows.map(o => o.p.t), ys = rows.map(o => o.m);
@@ -12656,14 +12659,18 @@ async function saDrawMap(key, noun, nDays){
   await ensureGeojson();
   const res = saCountyAvg(key); if(!res) return;
   const names = SIM_COUNTY_NAMES.filter(c => FL_FIPS[c]);
-  const vals = names.map(c => res.out[c] ? res.out[c].m : null);
-  const mx = Math.max(10, Math.ceil(Math.max(...vals.filter(v => v !== null).map(Math.abs), 0) / 5) * 5);
-  const hover = names.map(c => { const o = res.out[c]; return `<div class="sorted-hover-date">${c} County</div>` + (o ? saRow(saMarginColor(o.m), `${noun[0].toUpperCase() + noun.slice(1)} average`, saPts(o.m)) + saRow(SA_COL.d, 'DEM', o.d.toFixed(1) + '%') + saRow(SA_COL.r, 'REP', o.r.toFixed(1) + '%') + saRow(SA_COL.n, 'NPA/Other', o.nn.toFixed(1) + '%') + `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>BALLOTS</b>&nbsp;${fmt(Math.round(o.t))}</div>` : `<div class="sorted-hover-row"><span class="sorted-hover-gap">No ${noun} ballots in this window</span></div>`); });
+  const rate = c => res.out[c] ? saRatingOf(res.out[c].m) : null;   // Safe / Likely / Lean / Tilt, the same tiers as the rest of the site
+  const z = names.map(c => { const r = rate(c); return r ? SA_ED_CATS.findIndex(k => k.key === r) + 0.5 : null; });
+  const Noun = noun[0].toUpperCase() + noun.slice(1);
+  const hover = names.map(c => { const o = res.out[c]; const col = o ? SA_ED_CATS.find(k => k.key === rate(c)).color : '#9aa4b8';
+    return `<div class="sorted-hover-date">${c} County</div>` + (o ? saRow(col, `${Noun} average`, rate(c), saPts(o.m)) + saRow(SA_COL.d, 'DEM', o.d.toFixed(1) + '%') + saRow(SA_COL.r, 'REP', o.r.toFixed(1) + '%') + saRow(SA_COL.n, 'NPA/Other', o.nn.toFixed(1) + '%') + `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>BALLOTS</b>&nbsp;${fmt(Math.round(o.t))}</div>` : `<div class="sorted-hover-row"><span class="sorted-hover-gap">No ${noun} ballots in this window</span></div>`); });
   const base = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z:names.map(() => 0), featureidkey:'id', zmin:0, zmax:1, colorscale:[[0, '#222b3d'], [1, '#222b3d']], showscale:false, marker:{ line:{ color:'#0a0e17', width:1 } }, hoverinfo:'skip' };
-  const tr = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z:vals, featureidkey:'id', zmin:-mx, zmax:mx, zmid:0,
-    colorscale:[[0, '#b5382f'], [0.3, '#d98a82'], [0.5, '#e4e7ee'], [0.7, '#8fb8e3'], [1, '#2f6fb5']], customdata:hover, hoverinfo:'none',
-    marker:{ line:{ color:'#0a0e17', width:1 } }, colorbar:{ orientation:'h', thickness:10, len:0.55, y:-0.02, x:0.5, ticksuffix:' pts', tickfont:{ size:10, color:'#9aa4b8' }, outlinewidth:0, tickvals:[-mx, 0, mx], ticktext:['R+' + mx, 'Even', 'D+' + mx] } };
-  await saPlot(el, [base, tr], { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:34, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });  saAttachHtmlTip(el);
+  const tr = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z, featureidkey:'id', zmin:0, zmax:SA_ED_CATS.length, colorscale:stepColorscale(SA_ED_CATS),
+    customdata:hover, hoverinfo:'none', marker:{ line:{ color:'#0a0e17', width:1 } }, showscale:false };
+  await saPlot(el, [base, tr], { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:6, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });
+  saAttachHtmlTip(el);
+  const lg = document.getElementById('saLeg_' + key);
+  if(lg) lg.innerHTML = SA_ED_CATS.slice().reverse().map(k => `<span><i style="background:${k.color}"></i>${k.key}</span>`).join('');
 }
 
 // ---- county map: average daily turnout gain for one party ----

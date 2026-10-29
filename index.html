@@ -12827,11 +12827,28 @@ function saFcSums(E, actual, dem, rep, pre){
   ed.t = ed.d + ed.r + ed.n; fin.t = fin.d + fin.r + fin.n;
   return { ed, fin };
 }
+// Margin-of-error range: the forecast re-run with final turnout 5% lower and higher, NPA/other splitting 10 points either way, and each party's loyalty 2 points either way.
+function saFcBand(E, actual, dem, rep, pre){
+  const tot = SIM_COUNTY_NAMES.reduce((a, n) => a + (E[n] || 0), 0), rem = SIM_COUNTY_NAMES.reduce((a, n) => a + Math.max(0, (E[n] || 0) - (actual[n] || 0)), 0);
+  const out = { ed:[Infinity, -Infinity], fin:[Infinity, -Infinity] }; if(!rem) return null;
+  const s0 = npaSplitToDem / 100;
+  [-1, 0, 1].forEach(fs => {
+    const f = Math.max(0, 1 + fs * 0.05 * tot / rem), E2 = {}; SIM_COUNTY_NAMES.forEach(n => { const a = actual[n] || 0; E2[n] = a + Math.max(0, (E[n] || 0) - a) * f; });
+    const sm = saFcSums(E2, actual, dem, rep, pre);
+    [-0.1, 0, 0.1].forEach(ds => [-0.02, 0, 0.02].forEach(dd => [-0.02, 0, 0.02].forEach(dr => {
+      const dl = Math.min(1, Math.max(0.5, demLoyalty / 100 + dd)), rl = Math.min(1, Math.max(0.5, repLoyalty / 100 + dr)), s = Math.min(1, Math.max(0, s0 + ds));
+      ['ed', 'fin'].forEach(k => { const o = sm[k], t = o.d + o.r + o.n; if(!t) return;
+        const m = ((o.d * dl + o.r * (1 - rl) + o.n * s) - (o.r * rl + o.d * (1 - dl) + o.n * (1 - s))) / t * 100; out[k][0] = Math.min(out[k][0], m); out[k][1] = Math.max(out[k][1], m); });
+    })));
+  });
+  return isFinite(out.ed[0]) ? out : null;
+}
 function saFcBuild(pts, M){
   if(!saFcCache || saFcCache.src !== pts) saFcCache = { src:pts, list:pts.map(p => { const { E } = anProjectTurnout(p.actual); return Object.assign({ t:p.t, T:p.T }, saFcSums(E, p.actual, p.dem, p.rep, saPreEd(p.t))); }) };
   const list = saFcCache.list.slice(), act = {}, dem = {}, rep = {}; let T = 0;
   COUNTIES.forEach(c => { act[c.county] = c.total || 0; dem[c.county] = c.dem || 0; rep[c.county] = c.rep || 0; T += c.total || 0; });
   const lt = saLatestType(), live = Object.assign({ t:new Date(), T }, saFcSums(M.E, act, dem, rep, saPreEd(lt))), l = list[list.length - 1];
+  try{ saState.fcBand = saFcBand(M.E, act, dem, rep, saPreEd(lt)); }catch(e){ saState.fcBand = null; }
   if(l && Math.abs(l.T - T) <= 1){ live.t = l.t; list[list.length - 1] = live; } else list.push(live);
   return list;
 }
@@ -12850,8 +12867,12 @@ async function saFcRender(animate){
     ['ed', 'saEdFc', 'ballots still to come on Election Day', 'STILL TO COME', 'Margin of the Election Day vote only: the projected final turnout (2018, 2022 and 2024 plus this year\'s pace), minus what early voting and mail still bring in first. Early voting ends Oct 31 in 51 counties and Nov 1 in 16, and Nov 2 is mail only, so the rest is Election Day.'],
     ['fin', 'saFinFc', 'ballots in the final count', 'PROJECTED BALLOTS', 'Margin of the whole race once the ballots already counted and the Election Day vote are combined.']
   ];
+  // Election Day itself: the Election Day ballots as they are counted (running margin of that vote), against the forecast the model had going in.
+  const edAct = (saState.types || []).filter(q => q.ed && q.ed[0] + q.ed[1] + q.ed[2] > 0).map(q => ({ t:q.t, v:q.ed, m:saMargin(q.ed) })).filter(o => o.m !== null);
+  const frozen = list0.filter(p => saKey(p.t) < 20261103).pop(), fm = frozen ? saFcMargin(frozen.ed) : null;
   for(const [k, id, noun, tot, desc] of cfg){
     const box = document.getElementById(id); if(!box) continue;
+    const showAct = k === 'ed' && edAct.length && fm !== null;
     const rows = list.map(p => ({ p, o:p[k], m:saFcMargin(p[k]) })).filter(r => r.m !== null);
     const head = `<div class="sa-sec-head"><div class="sa-eyebrow">Forecasted margin</div>${saGranBtns()}</div>`;
     if(!rows.length){ box.innerHTML = head + '<div class="sa-empty">No ballots projected yet.</div>'; continue; }
@@ -12860,8 +12881,10 @@ async function saFcRender(animate){
     const bigTxt = (cur.m >= 0 ? 'D+' : 'R+') + Math.abs(cur.m).toFixed(2);
     box.innerHTML = head + `<div class="sa-big">${animate ? saCountEl(0, Math.abs(cur.m), 2, cur.m >= 0 ? 'D+' : 'R+', '', saMarginColor(cur.m)) : `<span style="color:${saMarginColor(cur.m)}">${bigTxt}</span>`}</div>
       <div class="sa-sub"><b>${k === 'ed' ? 'Election Day Only Forecast' : 'Final Forecast'}</b> · about ${fmt(Math.round(cur.o.t))} ${noun}. ${desc} <b>Based on party registration only</b>, since how people actually vote has to be assumed: ${demLoyalty.toFixed(1).replace(/\.0$/,'')}% of Democrats and ${repLoyalty.toFixed(1).replace(/\.0$/,'')}% of Republicans vote their party, and <span style="color:#c77dff">NPA/other</span> voters split <b style="color:#5b9bd9">${npaSplitToDem.toFixed(1)}% D</b> / <b style="color:#d4675a">${(100 - npaSplitToDem).toFixed(1)}% R</b>.</div>
-      <div class="sa-shift"><div><span class="lbl">Forecast vs ${when}</span> ${saShift(dm)}${pv ? ` <span class="was">(${saPts(pv.m)} → ${saPts(cur.m)})</span>` : ''}</div></div>
-      <div class="sa-chart-wrap"><div class="sa-key">Forecasted margin after each ${gran} (solid), blue when Democrats are projected ahead and red when Republicans are. <span style="color:#ff6fae">Dotted pink</span>: ${k === 'ed' ? 'the margin of the Election Day vote still to come, as the count fills in through Nov 3' : 'the latest forecast held steady through Nov 3, since it only moves when the count or your sliders do'}</div>
+      <div class="sa-shift"><div><span class="lbl">Forecast vs ${when}</span> ${saShift(dm)}${pv ? ` <span class="was">(${saPts(pv.m)} → ${saPts(cur.m)})</span>` : ''}</div>
+      ${saState.fcBand && saState.fcBand[k] ? `<div><span class="lbl">Margin of error</span> <b style="color:var(--text)">${saPts(saState.fcBand[k][0])} to ${saPts(saState.fcBand[k][1])}</b> <span class="was">(final turnout 5% lower or higher, NPA/other splitting 40–60% either way from the slider, loyalty 2 points either way)</span></div>` : ''}
+      ${showAct ? `<div><span class="lbl">Actual Election Day so far</span> <b style="color:${saMarginColor(edAct[edAct.length - 1].m)}">${saPts(edAct[edAct.length - 1].m)}</b> <span class="was">(${fmt(Math.round(edAct[edAct.length - 1].v[0] + edAct[edAct.length - 1].v[1] + edAct[edAct.length - 1].v[2]))} ballots counted vs a forecast of ${saPts(fm)})</span> ${saShift(edAct[edAct.length - 1].m - fm)}</div>` : ''}</div>
+      <div class="sa-chart-wrap"><div class="sa-key">Forecasted margin after each ${gran} (solid), blue when Democrats are projected ahead and red when Republicans are. <span style="color:#d9695d">Shaded red</span>: the margin-of-error range for where the final result could land. ${showAct ? '<span style="color:#80ed99">Green</span>: the actual Election Day vote as it is counted. ' : ''}<span style="color:#ff6fae">Dotted pink</span>: ${k === 'ed' ? 'the margin of the Election Day vote still to come, as the count fills in through Nov 3' : 'the latest forecast held steady through Nov 3, since it only moves when the count or your sliders do'}</div>
       <div id="${id}Ch" style="height:250px;"></div></div>`;
     const xs = rows.map(r => r.p.t), ys = rows.map(r => r.m);
     const traces = saSignedSegs(xs, ys).map(sg => ({ x:sg.x, y:sg.y, type:'scatter', mode:'lines', line:{ color:sg.c, width:3.5 }, hoverinfo:'skip', showlegend:false }));
@@ -12880,7 +12903,7 @@ async function saFcRender(animate){
     if(PP){
       const fin = PP.fin, remOf = q => ({ d:Math.max(0, fin.d - q.d), r:Math.max(0, fin.r - q.r), n:Math.max(0, fin.n - q.n) });
       const seq = [{ t:PP.cur.t, o:{ d:PP.cur.d, r:PP.cur.r, n:PP.cur.n } }].concat(PP.proj.map(q => ({ t:q.t, o:{ d:q.d, r:q.r, n:q.n } })));
-      const vals = seq.map(q => ({ t:q.t, o:k === 'ed' ? cur.o : fin }));   // Election Day only: the forecast holds steady, since nothing else is left once early voting and mail finish   // Final: the projected final total, so the line continues from the solid forecast
+      const vals = seq.map(q => ({ t:q.t, o:k === 'ed' ? (showAct ? frozen.ed : cur.o) : fin }));   // Election Day only: the forecast holds steady, since nothing else is left once early voting and mail finish   // Final: the projected final total, so the line continues from the solid forecast
       vals.forEach((q, i) => {
         const o = q.o, mm = saFcMargin(o); if(mm === null) return;
         const isLast = i === vals.length - 1, tt = o.d + o.r + o.n;
@@ -12892,7 +12915,22 @@ async function saFcRender(animate){
       traces.push({ x:pxs, y:pys, type:'scatter', mode:'lines', line:{ color:'#ff6fae', width:3, dash:'dot' }, hoverinfo:'skip', showlegend:false });
       traces.push({ x:pxs, y:pys, type:'scatter', mode:'markers', showlegend:false, marker:{ size:14, opacity:0 }, customdata:ptip, hoverinfo:'none' });
     }
-    const lo = Math.min(...ys, ...pys, 0), hi = Math.max(...ys, ...pys, 0), pad = Math.max((hi - lo) * 0.18, 1.5);
+    if(showAct){
+      const ax = edAct.map(o => o.t), ay = edAct.map(o => o.m);
+      traces.push({ x:ax, y:ay, type:'scatter', mode:'lines', line:{ color:'#80ed99', width:3.5 }, hoverinfo:'skip', showlegend:false });
+      traces.push({ x:ax, y:ay, type:'scatter', mode:'markers', showlegend:false, marker:{ size:14, opacity:0 }, hoverinfo:'none',
+        customdata:edAct.map(o => { const t = o.v[0] + o.v[1] + o.v[2], d = o.m - fm;
+          return `<div class="sorted-hover-date">${formatSortedHoverDate(o.t)} · Actual Election Day vote</div>` + saRow(saMarginColor(o.m), 'Actual margin so far', saPts(o.m)) + saRow('#ff6fae', 'Forecast going in', saPts(fm)) +
+            saRow(SA_COL.d, 'DEM', (o.v[0] / t * 100).toFixed(1) + '%') + saRow(SA_COL.r, 'REP', (o.v[1] / t * 100).toFixed(1) + '%') + saRow(SA_COL.n, 'NPA/Other', (o.v[2] / t * 100).toFixed(1) + '%') +
+            `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>ELECTION DAY BALLOTS</b>&nbsp;${fmt(Math.round(t))}</div><div class="sorted-hover-gain-header">Vs forecast:</div><div class="sorted-hover-row">${saShift(d)}</div>`; }) });
+      pys = pys.concat(ay);
+    }
+    const BD = saState.fcBand && saState.fcBand[k], bandOn = BD && pxs.length > 1;
+    if(bandOn){
+      const bx = pxs.slice(), lowY = bx.map(() => BD[0]), highY = bx.map(() => BD[1]);
+      traces.unshift({ x:bx, y:highY, type:'scatter', mode:'lines', line:{ width:0 }, hoverinfo:'skip', showlegend:false }, { x:bx, y:lowY, type:'scatter', mode:'lines', line:{ width:0 }, fill:'tonexty', fillcolor:'rgba(217,105,93,0.22)', hoverinfo:'skip', showlegend:false });
+    }
+    const lo = Math.min(...ys, ...pys, 0, ...(bandOn ? [BD[0]] : [])), hi = Math.max(...ys, ...pys, 0, ...(bandOn ? [BD[1]] : [])), pad = Math.max((hi - lo) * 0.18, 1.5);
     const el = document.getElementById(id + 'Ch');
     await saPlot(el, traces, { margin:{ t:8, r:14, b:36, l:56 }, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', showlegend:false, hovermode:'x unified', hoverdistance:-1, hoverlabel:saBlank,
       font:{ family:'Inter, sans-serif', color:'#9aa4b8', size:11 },
@@ -12992,6 +13030,7 @@ async function saRender(){
   let pts = [], types = null;
   try{ pts = await saReplay(); }catch(e){}
   try{ types = await saLoadTypes(); }catch(e){}
+  saState.types = types;
   if(seq !== saRender.seq || !saState.shown) return;
   const M = anCompute();
   const sec = (id, html) => { const el = document.getElementById(id); el.innerHTML = html; if(el.classList.contains('sa-in')) el.querySelectorAll('.sa-count').forEach(c => { c.textContent = c.dataset.pre + parseFloat(c.dataset.v).toFixed(parseInt(c.dataset.dp, 10)) + (c.dataset.suf || ''); }); };

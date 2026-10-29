@@ -12527,10 +12527,12 @@ function saPaceHTML(pts){
     ${cell('NPA/Other', SA_COL.n, a.N, b.N, reg.n, 'registered NPA/other voters')}
     ${cell('All voters', '#80ed99', a.T, b.T, reg.t, 'all registered voters')}</div>
     <div class="sa-note" style="margin-top:10px">${n < 7 ? 'Only ' + n + ' day' + (n === 1 ? '' : 's') + ' tracked so far, so this is the average so far' : '7-day average'}, ${saDayLabel(a.t)} to ${saDayLabel(b.t)}.</div>
-    <div class="sa-key" style="margin-top:20px"><b style="color:var(--text)">County by county</b> · 7-day average daily gain in turnout, in percentage points per day (share of that county's registered voters who have voted)</div>
+    <div class="sa-key" style="margin-top:20px"><b style="color:var(--text)">County by county</b> · turnout so far: the share of each county's registered voters who have voted</div>
     <div class="segmented sa-seg" id="saPaceParty" style="margin:8px 0 0;display:inline-flex">
       ${[['d', 'DEM'], ['r', 'REP'], ['n', 'NPA/Other'], ['t', 'All voters']].map(([k, nm]) => `<button data-p="${k}" class="${saState.paceParty === k ? 'active' : ''}">${nm}</button>`).join('')}</div>
-    <div id="saPaceMap" style="height:460px;"></div>`;
+    <div id="saPaceMap" style="height:460px;"></div>
+    <div class="sa-legend-row" id="saPaceLeg" style="justify-content:center"></div>
+    <div id="saPaceTop"></div>`;
 }
 
 // ---- section: one voting method (big 7-day average + color-changing margin line) ----
@@ -12745,7 +12747,17 @@ async function saDrawMap(key, noun, nDays){
   if(lg) lg.innerHTML = SA_ED_CATS.slice().reverse().map(k => `<span><i style="background:${k.color}"></i>${k.key}</span>`).join('');
 }
 
-// ---- county map: average daily turnout gain for one party ----
+// ---- county map: turnout so far for one party, in fixed color ranges (same idea as the Live Turnout map) ----
+const SA_PACE_EDGES = [0, 5, 10, 20, 30, 45, 60, 75, Infinity];
+const SA_PACE_RAMPS = {
+  d:['#ffffff', '#caf0f8', '#ade8f4', '#48cae4', '#0096c7', '#0077b6', '#023e8a', '#03045e'],
+  r:['#fae0e4', '#f9bec7', '#ff99ac', '#ff5c8a', '#e01e37', '#c2193c', '#a61a28', '#85182a'],
+  n:['#ffffff', '#ffd6ff', '#e0aaff', '#c77dff', '#9d4edd', '#8a2bb0', '#5a189a', '#3c096c']
+};
+function saPaceCats(P){
+  if(P === 't') return TURNOUT_BINS.map(b => ({ key:b.key, min:b.min, max:b.max, color:b.color }));
+  return SA_PACE_RAMPS[P].map((c, i) => ({ key:i === SA_PACE_EDGES.length - 2 ? SA_PACE_EDGES[i] + '%+' : SA_PACE_EDGES[i] + '\u2013' + SA_PACE_EDGES[i + 1] + '%', min:SA_PACE_EDGES[i], max:SA_PACE_EDGES[i + 1], color:c }));
+}
 async function saDrawPaceMap(pts){
   const el = document.getElementById('saPaceMap'); if(!el || !pts || pts.length < 2) return;
   await ensureGeojson();
@@ -12760,15 +12772,29 @@ async function saDrawPaceMap(pts){
     if(!rg[P]) return;
     out[c] = { per:(v1 - v0) / rg[P] * 100 / n, now:v1 / rg[P] * 100 };
   });
-  const vals = names.map(c => out[c] ? out[c].per : null), nm = { d:'Democrats', r:'Republicans', n:'NPA/other voters', t:'all voters' }[P];
-  const sv = vals.filter(v => v !== null).sort((x, y) => x - y), mx = Math.max(0.5, (sv[Math.floor(sv.length * 0.95)] || 0.5) * 1.1);
-  const hi = { d:'#2f6fb5', r:'#b5382f', n:'#8a3fd1', t:'#2e9e62' }[P];
+  const vals = names.map(c => out[c] ? out[c].now : null), nm = { d:'Democrats', r:'Republicans', n:'NPA/other voters', t:'all voters' }[P];
+  const cats = saPaceCats(P), binOf = v => v === null ? null : Math.max(0, cats.findIndex(c => v >= c.min && v < c.max));
   const pc = { d:SA_COL.d, r:SA_COL.r, n:SA_COL.n, t:'#80ed99' }[P];
-  const hover = names.map(c => `<div class="sorted-hover-date">${c} County</div>` + (out[c] ? saRow(pc, 'Avg daily gain', `+${out[c].per.toFixed(2)} pts/day`) + saRow(pc, 'Now at', out[c].now.toFixed(1) + '%', 'of registered ' + nm) : `<div class="sorted-hover-row"><span class="sorted-hover-gap">No data</span></div>`));
+  const hover = names.map(c => `<div class="sorted-hover-date">${c} County</div>` + (out[c] ? saRow(pc, 'Turnout', out[c].now.toFixed(1) + '%', 'of registered ' + nm) + saRow(pc, '7-day average gain', `+${out[c].per.toFixed(2)} pts/day`) : `<div class="sorted-hover-row"><span class="sorted-hover-gap">No data</span></div>`));
   const base = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z:names.map(() => 0), featureidkey:'id', zmin:0, zmax:1, colorscale:[[0, '#222b3d'], [1, '#222b3d']], showscale:false, marker:{ line:{ color:'#0a0e17', width:1 } }, hoverinfo:'skip' };
-  const tr = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z:vals, featureidkey:'id', zmin:0, zmax:mx, colorscale:[[0, '#e8ecf3'], [1, hi]], customdata:hover, hoverinfo:'none',
-    marker:{ line:{ color:'#0a0e17', width:1 } }, colorbar:{ orientation:'h', thickness:10, len:0.55, y:-0.02, x:0.5, tickfont:{ size:10, color:'#9aa4b8' }, outlinewidth:0, tickformat:'.1f' } };
-  await saPlot(el, [base, tr], { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:34, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });  saAttachHtmlTip(el);
+  const tr = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z:vals.map(binOf), featureidkey:'id', zmin:0, zmax:cats.length, colorscale:stepColorscale(cats), customdata:hover, hoverinfo:'none', showscale:false,
+    marker:{ line:{ color:'#0a0e17', width:1 } } };
+  await saPlot(el, [base, tr], { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:4, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });  saAttachHtmlTip(el);
+  const lg = document.getElementById('saPaceLeg'); if(lg) lg.innerHTML = cats.map(c => `<span><i style="background:${c.color}"></i>${c.key}</span>`).join('');
+  // Top 5 counties for each party: the highest share of that party's registered voters who have voted
+  const topEl = document.getElementById('saPaceTop');
+  if(topEl){
+    const top = k => names.map(c => {
+      const [reg, rs, ds] = SIM_REG[c], rg = { d:reg * ds / 100, r:reg * rs / 100 }; rg.n = Math.max(1, reg - rg.d - rg.r);
+      const v = { d:b.dem[c] || 0, r:b.rep[c] || 0, n:Math.max(0, (b.actual[c] || 0) - (b.dem[c] || 0) - (b.rep[c] || 0)) }[k];
+      return { c, pct:v / rg[k] * 100 };
+    }).sort((x, y) => y.pct - x.pct).slice(0, 5);
+    const card = (k, ttl, col) => `<div class="sa-pace-cell"><div class="nm" style="color:${col}">${ttl}</div>` +
+      top(k).map((o, i) => `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:6px 0;${i ? 'border-top:1px solid #212a3b;' : ''}"><span style="color:#9aa4b8;font-size:13px"><span style="display:inline-block;width:18px;color:${col};font-weight:700">${i + 1}</span>${o.c}</span><b style="color:${col};font-size:15px">${o.pct.toFixed(1)}%</b></div>`).join('') + `</div>`;
+    topEl.innerHTML = `<div class="sa-pace-title" style="margin-top:22px">Top 5 counties by turnout, per party</div>
+      <div class="sa-note">The share of each party's registered voters in that county who have voted so far.</div>
+      <div class="sa-pace-grid" style="grid-template-columns:repeat(3,minmax(0,1fr))">${card('d', 'DEM', SA_COL.d)}${card('r', 'REP', SA_COL.r)}${card('n', 'NPA/Other', SA_COL.n)}</div>`;
+  }
 }
 document.getElementById('splitAvgView').addEventListener('click', e => {
   const pb = e.target.closest('#saPartyPng'); if(pb){ downloadPartyTurnoutPng(pb); return; }

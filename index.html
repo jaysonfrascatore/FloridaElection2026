@@ -1849,7 +1849,7 @@
   </details>
   <details class="panel an-method" id="anMethod" open>
     <summary><h3>Methodology: how this forecast is built</h3></summary>
-    <p>Each update (the 7 p.m. ET run) the model rebuilds the forecast in a fixed order. It starts with the live count by registered party, which sets each county's expected final turnout (its 2018, 2022 and 2024 average, nudged 15% by this year's early-vote pace) and the party mix of the voters still to come. The history side is each county's average two-party result in those three elections, weighted by projected turnout, then adjusted for how independents and each party's own voters are polling against their exit-poll baselines (about 49% Democratic among independents, 95% Democratic and 94% Republican loyalty). The polling side averages every poll: a poll's weight halves every 14 days, grows with sample size, and counts 60% if the pollster or sponsor is party-aligned and 35% if it is an internal poll released or paid for by a candidate or campaign, the same for Democratic and Republican polls, while nonpartisan pollsters count in full. The statewide target blends the two, with polls at about 84% of the weight today and rising toward 90% on Election Day, and a small campaign-money term (the same rule as the House, at most 1.5 points, from FEC filings for the Senate and press-reported state filings for Governor) is added to the fundamentals only, since polls already reflect spending, and one statewide shift then sets each county's result. For the House, each district starts from its 2024 presidential result on the new map, gets the same statewide swing (lopsided districts move less), and then a small campaign-money adjustment of at most 1.5 points from FEC filings (mostly through July 29), with money a candidate put in counted at half weight; only FL-08 and FL-09 have district polls, which carry a quarter of the weight. The weights are judgment calls that have not been tested against past elections, the forecast is a single number with no error range, and the exit-poll baselines come from the NBC (2018) and Edison/CNN (2022) exit polls and a 2024 table that does not name its pollster.</p>
+    <p>Each update (the 7 p.m. ET run) the model rebuilds the forecast in a fixed order. It starts with the live count by registered party, which sets each county's expected final turnout (early on, its 2018, 2022 and 2024 average with 2024 counting for a quarter, then increasingly the ballots already counted divided by the share of the vote that came in before Election Day in 2022 and 2024, nudged 15% by this year's early-vote pace) and the party mix of the voters still to come. The history side is each county's average two-party result in those three elections, weighted by projected turnout, then adjusted for how independents and each party's own voters are polling against their exit-poll baselines (about 49% Democratic among independents, 95% Democratic and 94% Republican loyalty). The polling side averages every poll: a poll's weight halves every 14 days, grows with sample size, and counts 60% if the pollster or sponsor is party-aligned and 35% if it is an internal poll released or paid for by a candidate or campaign, the same for Democratic and Republican polls, while nonpartisan pollsters count in full. The statewide target blends the two, with polls at about 84% of the weight today and rising toward 90% on Election Day, and a small campaign-money term (the same rule as the House, at most 1.5 points, from FEC filings for the Senate and press-reported state filings for Governor) is added to the fundamentals only, since polls already reflect spending, and one statewide shift then sets each county's result. For the House, each district starts from its 2024 presidential result on the new map, gets the same statewide swing (lopsided districts move less), and then a small campaign-money adjustment of at most 1.5 points from FEC filings (mostly through July 29), with money a candidate put in counted at half weight; only FL-08 and FL-09 have district polls, which carry a quarter of the weight. The weights are judgment calls that have not been tested against past elections, the forecast is a single number with no error range, and the exit-poll baselines come from the NBC (2018) and Edison/CNN (2022) exit polls and a 2024 table that does not name its pollster.</p>
   </details>
 </div>
 
@@ -10148,7 +10148,13 @@ const AN_INTERNAL_WEIGHT = 0.35;                  // internal polls (released or
 // weight multiplier for a poll: 1 = nonpartisan, AN_SPONSOR_WEIGHT = party-aligned (sponsor 'D' or 'R'), AN_INTERNAL_WEIGHT = internal ("internal": true)
 function anSponsorMult(p){ return p.internal ? AN_INTERNAL_WEIGHT : (p.sponsor ? AN_SPONSOR_WEIGHT : 1); }
 // Fixed model settings (there are no dials on the page).
-const AN_TURNOUT_W = { y18:1, y22:1, y24:1 };      // weight of each past race in the turnout blend
+const AN_TURNOUT_W = { y18:1, y22:1, y24:0.25 };   // weight of each past race in the turnout blend (2024 was a presidential year, so it counts for less in a midterm)
+// Share of all ballots that were in before Election Day (early voting + mail): about 65% in 2022, 76.4% in 2024 (5.36M early + 3.02M mail of 10.99M).
+// Dividing what is counted by these gives a low and a high estimate of final turnout that corrects itself as ballots arrive.
+const AN_TURNOUT_W_ORIG = { y18:1, y22:1, y24:1 };  // the original blend, kept for updates logged before the change so the earlier projection stays as it was
+const AN_METHOD_CUTOVER = new Date(2026, 9, 19, 11, 0);   // from here on the projection counts ballots already cast
+const AN_PRE_ED_SHARE = { lo:0.65, hi:0.764 };
+const AN_PACE_RAMP_DAYS = 12;                      // days into early voting (from Oct 19) before the counted-ballots estimate fully replaces the history average
 const AN_PACE_WEIGHT = 0.15;                       // how much a county's 2026 early pace vs. the rest of the state moves its turnout
 // How independents actually voted, from the Edison Research / CNN exit polls: 2022 governor 45% Crist, 53% DeSantis;
 // 2024 president 45% Harris, 53% Trump; 2018 governor 54% Gillum, 44% DeSantis. Each turned into a two-party Democratic share.
@@ -10959,16 +10965,32 @@ function anPollWeight(daysLeft){ return 0.55 + 0.35 * (1 - Math.min(daysLeft, 12
 // ---- the forecast engine ----
 // Expected final ballots per county, given how many ballots each county has counted so far (counted = {county: n}).
 // Pure, so the same rule can be replayed on any past update to draw a county's projection over time.
-function anProjectTurnout(actual){
+function anProjectTurnout(actual, asOf){
   const names = SIM_COUNTY_NAMES;
   const rate = (yr, n) => ((yr[n][0] + yr[n][1]) / AN_PAST_TWO_PARTY_SHARE) / SIM_REG[n][0];
-  const wSum = AN_TURNOUT_W.y18 + AN_TURNOUT_W.y22 + AN_TURNOUT_W.y24;
+  const W = asOf && new Date(asOf) < AN_METHOD_CUTOVER ? AN_TURNOUT_W_ORIG : AN_TURNOUT_W;
+  const wSum = W.y18 + W.y22 + W.y24;
   const hist = {};
   names.forEach(n => {
-    const r = (AN_TURNOUT_W.y18 * rate(SIM_2018, n) + AN_TURNOUT_W.y22 * rate(SIM_2022, n) + AN_TURNOUT_W.y24 * rate(SIM_2024, n)) / wSum;
+    const r = (W.y18 * rate(SIM_2018, n) + W.y22 * rate(SIM_2022, n) + W.y24 * rate(SIM_2024, n)) / wSum;
     hist[n] = anClamp(r, 0, 0.95) * SIM_REG[n][0];
   });
   const histSum = names.reduce((s, n) => s + hist[n], 0);
+  // Target statewide turnout: the history average early on, moving to the counted-ballots estimate as early voting fills in.
+  let target = histSum, range = null;
+  try{
+    if(asOf && typeof saPreEd === 'function'){
+      const asD = new Date(asOf), P = saPreEd(asD);
+      if(P){
+        let aT = 0, rem = 0; names.forEach(n => { aT += actual[n] || 0; });
+        Object.values(P.byName).forEach(v => { rem += v[0] + v[1] + v[2]; });
+        const pre = aT + rem, lo = pre / AN_PRE_ED_SHARE.hi, hi = pre / AN_PRE_ED_SHARE.lo;
+        const ramp = anClamp((+asD - +new Date(2026, 9, 19)) / (AN_PACE_RAMP_DAYS * 86400000), 0, 1);
+        target = histSum * (1 - ramp) + (lo + hi) / 2 * ramp;
+        range = { lo:histSum * (1 - ramp) + lo * ramp, hi:histSum * (1 - ramp) + hi * ramp, pre, ramp };
+      }
+    }
+  }catch(e){ target = histSum; range = null; }
   let aSum = 0, hWith = 0;
   names.forEach(n => { if(actual[n] > 0){ aSum += actual[n]; hWith += hist[n]; } });
   const rho = hWith > 0 ? aSum / hWith : 0;
@@ -10982,10 +11004,16 @@ function anProjectTurnout(actual){
   const pacedSum = names.reduce((s, n) => s + paced[n], 0);
   const E = {};
   names.forEach(n => {
-    const e = paced[n] * (pacedSum ? histSum / pacedSum : 1);
+    const e = paced[n] * (pacedSum ? target / pacedSum : 1);
     E[n] = Math.max(Math.min(e, 0.95 * SIM_REG[n][0]), actual[n] || 0);
   });
-  return { E, hist, rho };
+  // counties held at their cap or floor leave the total short or long: spread the difference over the rest
+  for(let pass = 0; pass < 4; pass++){
+    const diff = target - names.reduce((s, n) => s + E[n], 0); if(Math.abs(diff) < 1) break;
+    const free = names.filter(n => E[n] < 0.95 * SIM_REG[n][0] - 1 && E[n] > (actual[n] || 0) + 1), fs = free.reduce((s, n) => s + E[n], 0); if(!fs) break;
+    free.forEach(n => { E[n] = Math.max(actual[n] || 0, Math.min(0.95 * SIM_REG[n][0], E[n] * (1 + diff / fs))); });
+  }
+  return { E, hist, rho, target, range };
 }
 
 function anCompute(){
@@ -10997,11 +11025,12 @@ function anCompute(){
   // 1. expected ballots: blend of 2018 / 2022 / 2024 turnout, a small say for the 2026 early pace
   const actual = {};
   names.forEach(n => { const c = byName[n]; actual[n] = c ? (c.total || 0) : 0; });
-  const { E, hist, rho } = anProjectTurnout(actual);
+  let asOfT = null; try{ asOfT = typeof saLatestType === 'function' ? saLatestType() : null; }catch(e){}
+  const { E, hist, rho, range:turnRange } = anProjectTurnout(actual, asOfT);
   const Esum = names.reduce((s, n) => s + E[n], 0);
   const actualSum = names.reduce((s, n) => s + actual[n], 0);
 
-  // 2. ballots by party registration (banked + remaining, remaining looks like banked)
+  // 2. ballots by party registration (counted + remaining, remaining looks like counted)
   const swReg = { d:0, r:0, n:0 }, swAct = { d:0, r:0, n:0 };
   names.forEach(n => {
     const reg = SIM_REG[n][0], rs = SIM_REG[n][1] / 100, ds = SIM_REG[n][2] / 100, ns = Math.max(0, 1 - rs - ds);
@@ -11115,7 +11144,7 @@ function anCompute(){
   });
 
   const house = anHouseCompute(models, past, today);
-  return { house, names, E, Esum, actualSum, regTot, party:sum, partyShare:{ d:sd, r:sr, n:sn }, nuHist, fundamentals, daysLeft, today, past, rho, models };
+  return { house, names, E, Esum, turnRange, actualSum, regTot, party:sum, partyShare:{ d:sd, r:sr, n:sn }, nuHist, fundamentals, daysLeft, today, past, rho, models };
 }
 
 // ---- U.S. House: district forecasts ----
@@ -11247,8 +11276,8 @@ function anBuildTurnoutBlurb(M){
   const today = new Date().toLocaleDateString('en-US', { timeZone:'America/New_York', weekday:'long', month:'long', day:'numeric' });
   const pct = M.Esum ? M.actualSum / M.Esum * 100 : 0, tp = M.Esum / M.regTot * 100;
   const p = M.party, pt = (p.d + p.r + p.n) || 1;
-  const p1 = `Florida is projected to finish with <span class="hl-green">roughly ${fmt(Math.round(M.Esum))} ballots</span>, a turnout of ${tp.toFixed(1)}% of registered voters, against ${(M.past.y2024.turnout * 100).toFixed(1)}% in 2024 and ${(M.past.y2022.turnout * 100).toFixed(1)}% in 2022 on today's voter rolls.`;
-  const p2 = `About ${pct.toFixed(1)}% of that is already in (<span class="hl-gold">${fmt(M.actualSum)} counted</span>), with ${Math.round(M.daysLeft)} days until Election Day. Counties running ahead of the rest of the state are nudged up and counties running behind are nudged down, and no county is projected below the votes already counted.`;
+  const p1 = `Florida is projected to finish with <span class="hl-green">roughly ${fmt(Math.round(M.Esum))} ballots</span>, a turnout of ${tp.toFixed(1)}% of registered voters${M.turnRange ? ` (range ${fmt(Math.round(M.turnRange.lo))} to ${fmt(Math.round(M.turnRange.hi))})` : ''}, against ${(M.past.y2024.turnout * 100).toFixed(1)}% in 2024 and ${(M.past.y2022.turnout * 100).toFixed(1)}% in 2022 on today's voter rolls.`;
+  const p2 = `About ${pct.toFixed(1)}% of that is already in (<span class="hl-gold">${fmt(M.actualSum)} counted</span>), with ${Math.round(M.daysLeft)} days until Election Day. The total comes from the ballots already counted and still expected from early voting and mail, divided by the share of the vote that was in before Election Day in 2022 (about 65%) and 2024 (about 76%), and it takes over from the past-turnout average as early voting fills in. Counties running ahead of the rest of the state are nudged up and counties running behind are nudged down, and no county is projected below the votes already counted.`;
   const p3 = `By registered party, that is about <span class="hl-d">${fmt(Math.round(p.d))} Democratic</span> (${(p.d / pt * 100).toFixed(1)}%), <span class="hl-r">${fmt(Math.round(p.r))} Republican</span> (${(p.r / pt * 100).toFixed(1)}%) and ${fmt(Math.round(p.n))} NPA or other (${(p.n / pt * 100).toFixed(1)}%). Counties with ballots counted are assumed to keep their party mix for the rest of their vote; counties with none yet use their registration.`;
   return `<div class="an-date">${today}</div><h2>Today's read · Projected Final Turnout</h2><p>${p1}</p><p>${p2}</p><p>${p3}</p>`;
 }
@@ -11277,7 +11306,7 @@ async function anTurnHistory(){
       idx[n] = i;
       actual[n] = list && i >= 0 ? list[i][1] : 0;
     });
-    const { E } = anProjectTurnout(actual);
+    const { E } = anProjectTurnout(actual, t);
     return { t, E, Esum:names.reduce((s, n) => s + E[n], 0) };
   });
   anTurnHistRows = rows; anTurnHistCache = points;
@@ -11345,7 +11374,7 @@ async function anRenderTurnDetail(M){
   if(!series.length || Math.abs(series[series.length - 1].v - nowV) > 0.005) series.push({ t:new Date(), v:nowV, s:nowS });
   await anRenderTracker({ name, series, decimals:1, headEl:document.getElementById('anTurnHead'), noteEl:document.getElementById('anTurnNote'), chartEl:document.getElementById('anTurnChart'),
     onReset:() => { anState.turnCounty = null; anQueueRender(); },
-    noteText:'Each point is one logged update; the projection is replayed with today\'s method on the ballots counted at that time.' });
+    noteText:'Each point is one logged update. Before Oct 19 the line is the original projection (past elections only). From Oct 19 it also counts the ballots already cast and the early voting still expected, which is why it steps down.' });
 }
 
 // Live Results tab: a zoomed county's ballots counted so far as a share of its registered voters, after each logged update.
@@ -12229,7 +12258,7 @@ async function saLoadTypes(){
   saTypesRows = rows; saTypesCache = pts;
   return pts;
 }
-// Same party projection the Analysis model uses: banked ballots + the rest from each county's unvoted registered voters.
+// Same party projection the Analysis model uses: counted ballots + the rest from each county's unvoted registered voters.
 function saPartyProject(E, actual, dem, rep){
   const sum = { d:0, r:0, n:0 };
   SIM_COUNTY_NAMES.forEach(n => {
@@ -12902,7 +12931,7 @@ function saFcBand(E, actual, dem, rep, pre){
   return out.ed ? out : null;
 }
 function saFcBuild(pts, M){
-  if(!saFcCache || saFcCache.src !== pts) saFcCache = { src:pts, list:pts.map(p => { const { E } = anProjectTurnout(p.actual); return Object.assign({ t:p.t, T:p.T }, saFcSums(E, p.actual, p.dem, p.rep, saPreEd(p.t))); }) };
+  if(!saFcCache || saFcCache.src !== pts) saFcCache = { src:pts, list:pts.map(p => { const { E } = anProjectTurnout(p.actual, p.t); return Object.assign({ t:p.t, T:p.T }, saFcSums(E, p.actual, p.dem, p.rep, saPreEd(p.t))); }) };
   const list = saFcCache.list.slice(), act = {}, dem = {}, rep = {}; let T = 0;
   COUNTIES.forEach(c => { act[c.county] = c.total || 0; dem[c.county] = c.dem || 0; rep[c.county] = c.rep || 0; T += c.total || 0; });
   const lt = saLatestType(), live = Object.assign({ t:new Date(), T }, saFcSums(M.E, act, dem, rep, saPreEd(lt))), l = list[list.length - 1];
@@ -13157,7 +13186,7 @@ async function saRenderTurnParty(M){
   try{ pts = await saReplay(); }catch(e){ pts = []; }
   if(seq !== saTpSeq) return;
   if(!saTpCache || saTpCache.src !== pts){
-    saTpCache = { src:pts, list:pts.map(p => { const { E } = anProjectTurnout(p.actual), q = saPartyProject(E, p.actual, p.dem, p.rep); return { t:p.t, d:q.d, r:q.r, n:q.n }; }) };
+    saTpCache = { src:pts, list:pts.map(p => { const { E } = anProjectTurnout(p.actual, p.t), q = saPartyProject(E, p.actual, p.dem, p.rep); return { t:p.t, d:q.d, r:q.r, n:q.n }; }) };
   }
   const series = saTpCache.list.slice(), now = { t:new Date(), d:M.party.d, r:M.party.r, n:M.party.n }, l = series[series.length - 1];
   if(!l || Math.abs(l.d - now.d) > 1 || Math.abs(l.r - now.r) > 1) series.push(now);

@@ -953,6 +953,8 @@
     padding:7px 10px; border-radius:8px; cursor:pointer; font-family:var(--mono); font-size:11px;
   }
   #dayViewSelect:hover{ border-color:var(--gold); }
+  #btView #dayViewSelect{ display:block; width:100%; margin:0 0 10px; }
+  #btView #dayViewSelect[style*="display: none"]{ display:none; }
   #countyZoomPngBtn.visible{ display:inline-flex; }
   #anTurnPartyPanel{ margin-top:14px; }
   .sa-head{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
@@ -1313,7 +1315,6 @@
       <div class="map-header-row">
         <div class="map-title-wrap"><h2 id="mapTitle">Rating by county</h2><div id="mapSubtitle"></div></div>
         <div class="map-controls">
-          <select id="dayViewSelect" title="Map the whole state, or the votes counted on a single day" style="display:none;"><option value="full">Full Statewide</option><option value="today">Today only</option></select>
           <button id="countyZoomResetBtn" title="Return to the statewide map">
             <span>&#8635;</span> <span id="countyZoomResetLabel">Reset Zoom</span>
           </button>
@@ -1332,6 +1333,7 @@
         <div class="npa-slider-ends"><span id="turnoutHistoryStartLabel">Earliest</span><span>Live</span></div>
       </div>
       <div id="btView" style="display:none;margin:4px 0 12px">
+        <select id="dayViewSelect" title="Map the whole state, or the votes counted on a single day" style="display:none;"><option value="full">Full Statewide</option><option value="today">Today only</option></select>
         <div class="bt-head"><span>Splits</span><span class="bt-hint">Click a split to view the data and each map</span></div>
         <div id="btSummary" style="margin-top:8px;font-size:12px"></div>
       </div>

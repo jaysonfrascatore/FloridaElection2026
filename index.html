@@ -690,6 +690,19 @@
   #demLoyaltySlider, #saDemL{ background:linear-gradient(90deg, var(--dem-dim), var(--dem)); }
   #repLoyaltySlider, #saRepL{ background:linear-gradient(90deg, var(--rep-dim), var(--rep)); }
   #historySlider{ background:linear-gradient(90deg, #4a3f1f, var(--gold)); }
+  /* The replay box sits right under the splits, above the map: slimmer than the other slider boxes. */
+  .npa-slider-wrap.hist-box{ padding:9px 12px 10px; margin:0 0 10px; }
+  .hist-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; font-family:var(--mono); font-size:10.5px; color:var(--muted); }
+  .hist-row .hist-t{ letter-spacing:.04em; text-transform:uppercase; font-weight:600; font-size:10px; }
+  .hist-row .val{ color:var(--npa-text); font-weight:600; font-size:12px; margin-right:auto; }
+  .hist-row .hist-t .sm{ display:none; }
+  @media (max-width:640px){ .hist-row{ flex-wrap:nowrap; gap:6px; } .hist-row .hist-t .lg{ display:none; } .hist-row .hist-t .sm{ display:inline; } .hist-row .val{ font-size:11px; white-space:nowrap; } .hist-live{ white-space:nowrap; } }
+  @media (min-width:921px){ .grid.has-splits{ align-items:stretch; } .grid.has-splits > #tablePanel{ grid-column:1 / -1; } }
+  .hist-live{ font:600 10px var(--mono); color:#0a0e17; background:var(--gold); border:0; border-radius:999px; padding:4px 10px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .hist-box .npa-slider-ends{ margin-top:4px; }
+  .hist-box .shift-details{ margin-top:9px; padding:0 10px; }
+  .hist-box .shift-details > summary{ padding:8px 0; }
+  .hist-box .shift-details[open]{ padding-bottom:12px; }
   /* National environment: left = Republican shift, right = Democratic. */
   .sim-env-wrap{
     margin:2px 0 14px; padding:12px 14px; background:var(--panel-2);
@@ -712,8 +725,9 @@
   .tweet-carousel{ margin-top:16px; padding-top:14px; border-top:1px solid var(--border); }
   .tweet-carousel-header{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
   .tweet-card-viewport{
-    position:relative; min-height:230px; background:#000000; border:1px solid #2a2a2a;
-    border-radius:12px; padding:22px 24px; overflow:hidden;
+    position:relative; height:var(--tweet-h, 300px); background:#000000; border:1px solid #2a2a2a;
+    border-radius:12px; padding:22px 24px; overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain;
+    scrollbar-width:thin; scrollbar-color:#3a4254 transparent;
     box-shadow:0 4px 18px rgba(0,0,0,0.45);
   }
   .tweet-card{
@@ -854,7 +868,7 @@
     .legend .swatch{ font-size:9px; padding:3px 7px; }
 
     .tweet-carousel{ margin-top:12px; padding-top:12px; }
-    .tweet-card-viewport{ min-height:250px; padding:16px 16px; }
+    .tweet-card-viewport{ height:var(--tweet-h, 320px); padding:16px 16px; }
     .tweet-card{ font-size:12.5px; line-height:1.65; }
 
     .npa-slider-wrap{ padding:12px 14px; margin-bottom:12px; }
@@ -1317,12 +1331,18 @@
         <input type="range" id="turnoutHistorySlider" class="adj-slider" min="0" max="1" step="1" value="1">
         <div class="npa-slider-ends"><span id="turnoutHistoryStartLabel">Earliest</span><span>Live</span></div>
       </div>
-      <div class="npa-slider-wrap" id="npaSliderWrap" style="display:none;">
-        <div class="npa-slider-label">
-          <span>Historical trend &mdash; drag to replay any past update on the map</span>
+      <div id="btView" style="display:none;margin:4px 0 12px">
+        <div class="bt-head"><span>Splits</span><span class="bt-hint">Click a split to view the data and each map</span></div>
+        <div id="btSummary" style="margin-top:8px;font-size:12px"></div>
+      </div>
+
+      <div class="npa-slider-wrap hist-box" id="npaSliderWrap" style="display:none;">
+        <div class="hist-row">
+          <span class="hist-t"><span class="lg">Historical Trend Slider</span><span class="sm">Historical Trend</span></span>
           <span class="val" id="historySliderValue">Live Results</span>
+          <button type="button" class="hist-live" id="historyLiveBtn" style="display:none;" title="Back to the latest results">Back to Live</button>
         </div>
-        <input type="range" id="historySlider" class="adj-slider" min="0" max="1" step="1" value="1">
+        <input type="range" id="historySlider" class="adj-slider" min="0" max="1" step="1" value="1" aria-label="Historical Trend Slider: replay a past update on the map">
         <div class="npa-slider-ends"><span id="historySliderStartLabel">Earliest</span><span>Live</span></div>
 
         <details class="shift-details" id="shiftDetails">
@@ -1357,11 +1377,6 @@
           <span class="val" id="npaStatewideMargin">&mdash;</span>
         </div>
         </details>
-      </div>
-
-      <div id="btView" style="display:none;margin:4px 0 12px">
-        <div class="bt-head"><span>Splits</span><span class="bt-hint">Click a split to view the data and each map</span></div>
-        <div id="btSummary" style="margin-top:8px;font-size:12px"></div>
       </div>
 
       <!-- #mapZoomRow: #map itself is untouched (same element/CSS as
@@ -1423,7 +1438,8 @@
         </div>
       </div>
     </div>
-    <div class="panel">
+    <div class="panel" id="splitsPanel" style="display:none;"></div>
+    <div class="panel" id="tablePanel">
       <h2>County table</h2>
       <div class="table-hint" id="tableHint">Not sure where a county is? Click any row to open its General Election results page.</div>
       <div class="table-wrap" id="tableWrap">
@@ -2405,6 +2421,8 @@ function activeCountiesFor(metric){
   if(metric === 'demrepnpa' && btDayActive() && btDayCounties[btView] && !(i !== null && historicalSnapshots[i])) return btDayCounties[btView];
   if(metric === 'demrepnpa' && btView !== 'all' && btCounties[btView] && !(i !== null && historicalSnapshots[i])) return btCounties[btView];
   if(i !== null && historicalSnapshots[i]){
+    // A split (Mail / Early / Election Day) selected while replaying a past update shows that split as of that update.
+    if(metric === 'demrepnpa' && btView !== 'all'){ const sp = btSplitSnapshotAt(i, btView); if(sp) return sp; }
     return historicalSnapshots[i];
   }
   return metric === 'rating' ? STATIC_DVR_COUNTIES : COUNTIES;
@@ -3590,11 +3608,25 @@ function btLastUpdatedText(){
   if(!d) return '';
   return 'Last updated ' + d.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' }) + ', ' + d.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
 }
+// Wide screens: the Splits sit beside the map (the County table drops full width underneath). Phones and narrow windows keep them stacked above the map.
+const splitsWideMQ = window.matchMedia('(min-width: 921px)');
+function placeSplits(){
+  const box = document.getElementById('btView'), sp = document.getElementById('splitsPanel'), hist = document.getElementById('npaSliderWrap'), grid = document.getElementById('liveGrid'); if(!box || !sp || !hist) return;
+  const wide = splitsWideMQ.matches;
+  if(wide){ if(box.parentNode !== sp) sp.appendChild(box); } else if(box.nextElementSibling !== hist || box.parentNode !== hist.parentNode) hist.parentNode.insertBefore(box, hist);
+  const on = box.style.display !== 'none';
+  // The Latest Update Summary rides under the Splits while they sit beside the map; otherwise it stays at the bottom of the County table panel.
+  const car = document.querySelector('.tweet-carousel'), tp = document.getElementById('tablePanel');
+  if(car && tp){ if(wide && on){ if(car.parentNode !== sp) sp.appendChild(car); } else if(car.parentNode !== tp) tp.appendChild(car); }
+  sp.style.display = (wide && on) ? 'block' : 'none';
+  if(grid) grid.classList.toggle('has-splits', wide && on);
+}
+if(splitsWideMQ.addEventListener) splitsWideMQ.addEventListener('change', () => { placeSplits(); window.dispatchEvent(new Event('resize')); });
 function btRender(){
   const box = document.getElementById('btView'); if(!box) return;
   btSyncTrend();
   const on = btHas && currentMetric === 'demrepnpa';
-  box.style.display = on ? 'block' : 'none'; if(!on) return;
+  box.style.display = on ? 'block' : 'none'; placeSplits(); if(!on) return;
   const f = n => n.toLocaleString();
   const rows = btTableRows();                       // Total Vote, Mail, Early, Election Day (same numbers as the screenshot)
   const BL = '#4f8fd0', RD = '#d9695d', PU = '#b86fe0';
@@ -3976,7 +4008,7 @@ async function renderMap(){
   const m = METRICS[currentMetric];
   const activeCounties = activeCountiesFor(currentMetric);
   document.getElementById('mapTitle').textContent = m.title;
-  document.getElementById('mapSubtitle').textContent = (currentMetric === 'demrepnpa' && btDayLabel()) ? btDayLabel() : '';
+  document.getElementById('mapSubtitle').textContent = (currentMetric === 'demrepnpa' && btDayLabel()) ? btDayLabel() : ((currentMetric === 'demrepnpa' && btSliderTick()) ? (btView === 'all' ? 'Total Vote' : BT_LABELS[btView]) + ' \u00b7 as of ' + formatSortedHoverDate(btSliderTick()) : '');
   const dvs = document.getElementById('dayViewSelect');
   if(dvs) dvs.style.display = (currentMetric === 'demrepnpa' && (btDayKeys.length || btDaySel !== 'full')) ? '' : 'none';
   const rcb = document.getElementById('dailyRecapBtn');
@@ -5408,7 +5440,7 @@ function showTweetCard(index){
 // How long each card stays up before the carousel moves on, so there's
 // time to actually read it. Clicking a dot starts a fresh full count, so
 // the card someone just picked also gets the full time.
-const TWEET_CARD_DWELL_MS = 10000;
+const TWEET_CARD_DWELL_MS = 25000;
 
 function restartTweetCarouselTimer(){
   if(tweetCarouselTimer) clearInterval(tweetCarouselTimer);
@@ -5714,6 +5746,7 @@ historySliderEl.addEventListener('input', e => {
     const dvs = document.getElementById('dayViewSelect');   // replaying a past update leaves single-day view
     if(btDaySel !== 'full'){ btDaySel = 'full'; if(dvs) dvs.value = 'full'; btBuildDay(); }
   }
+  const lb = document.getElementById('historyLiveBtn'); if(lb) lb.style.display = historicalSliderIndex === null ? 'none' : '';
   // Everything that reads activeCountiesFor() -- map, table, stats,
   // tooltip, a zoomed county -- picks up the historical snapshot
   // automatically; this just has to trigger those same re-renders.
@@ -5724,6 +5757,7 @@ historySliderEl.addEventListener('input', e => {
   }
 });
 
+document.getElementById('historyLiveBtn').addEventListener('click', () => { historySliderEl.value = historySliderEl.max; historySliderEl.dispatchEvent(new Event('input', { bubbles:true })); });
 document.getElementById('barD').addEventListener('click', () => toggleBarParty('dem'));
 document.getElementById('barR').addEventListener('click', () => toggleBarParty('rep'));
 document.getElementById('barNPA').addEventListener('click', () => toggleBarParty('npa'));
@@ -6968,6 +7002,30 @@ function drawKeyOnCanvas(ctx, x, bottomY, scale, title, subtitle, rows){
 // each with DEM, REP, NPA/Other, the total and the margin (D+ / R+). Replaces the "top 3 counties" list.
 // Statewide mail / early / Election Day totals as of one past update (the History slider), from data/county_history_types.csv.
 // Early vote reads 0 before October 19: anything earlier is the Broward-only exception, not real early voting.
+// One split (Mail / Early / Election Day) by county as of one past update: each county's last by-method row at or before that moment.
+// Before Oct 19, 11 AM the by-method file only has Broward, so those updates keep using the whole-state snapshot (the same rule the splits table follows).
+let btSplitIdx = null, btSplitIdxSrc = null; const btSplitCache = new Map();
+function btSplitIndex(){
+  if(btSplitIdx && btSplitIdxSrc === btTypeRows) return btSplitIdx;
+  const by = {}; (btTypeRows || []).forEach(r => { if(r._t) (by[r.Code] = by[r.Code] || []).push(r); });
+  Object.keys(by).forEach(c => by[c].sort((a, b) => a._t - b._t));
+  btSplitIdx = by; btSplitIdxSrc = btTypeRows; btSplitCache.clear(); return by;
+}
+function btSplitSnapshotAt(i, view){
+  const T = { vbm:'VBM', ev:'EV', ed:'ED' }[view], tick = historicalTicks[i];
+  if(!T || !tick || !btTypeRows || !btTypeRows.length || tick < new Date(2026, 9, 19, 11, 0)) return null;
+  const by = btSplitIndex(), ck = i + '|' + view; if(btSplitCache.has(ck)) return btSplitCache.get(ck);
+  const fake = [];
+  Object.keys(by).forEach(code => {
+    const rows = by[code]; let lo = 0, hi = rows.length - 1, best = -1;
+    while(lo <= hi){ const m = (lo + hi) >> 1; if(rows[m]._t <= tick){ best = m; lo = m + 1; } else hi = m - 1; }
+    if(best < 0) return;
+    const r = rows[best], d = num(r['DEM ' + T]), rp = num(r['REP ' + T]), n = num(r['NPA ' + T]), o = num(r['OTHER ' + T]);
+    if(!(d + rp + n + o)) return;
+    fake.push({ County:r.County, Code:code, Timestamp:r.Timestamp, DEM:d, REP:rp, NPA:n, IND:0, OTHER:o, TOTAL:d + rp + n + o });
+  });
+  const out = fillMissingCountiesAtZero(buildCountyRecords(fake)); btSplitCache.set(ck, out); return out;
+}
 function btStatAtTick(tick){
   if(!btTypeRows || !tick) return null;
   const last = {};

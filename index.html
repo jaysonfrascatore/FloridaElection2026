@@ -1135,6 +1135,8 @@
     padding:8px 11px; font-family:var(--mono); font-size:11px; color:#e9edf5;
     white-space:nowrap; box-shadow:0 4px 14px rgba(0,0,0,0.3);
   }
+  .sorted-hover-tooltip.map-tip{ padding:5px 8px; font-size:10px; border-radius:7px; }
+  .map-tip .sorted-hover-date{ margin-bottom:3px; }
   .sorted-hover-date{ font-weight:600; margin-bottom:6px; color:#e9edf5; }
   .sorted-hover-row{ display:flex; align-items:center; gap:7px; padding:2px 0; }
   .sorted-hover-total{
@@ -3356,6 +3358,15 @@ function btCountyRows(countyName){
     return { _time:p.time, DEM:p.d, REP:p.r, NPA:p.n, OTHER:0, IND:0, 'DEM %':t ? p.d / t : 0, 'REP %':t ? p.r / t : 0, 'NPA/Other %':t ? p.n / t : 0, Note:'' }; });
 }
 function btTrendActive(){ return (btView !== 'all' || btDaySel !== 'full') && !!btTypeRows && btTypeRows.length > 0 && currentMetric === 'demrepnpa'; }
+// The share and margin charts start on October 19, when real early voting began: before that the by-method file only has Broward, which skews them.
+// A single-day view is left alone (it is already one day).
+const SHARE_CHART_FLOOR = new Date(2026, 9, 19, 0, 0, 0);
+function shareChartIdx(times){
+  const all = times.map((t, i) => i);
+  if(typeof btSelKey === 'function' && btSelKey() !== null) return all;
+  const ix = all.filter(i => times[i] >= SHARE_CHART_FLOOR);
+  return ix.length ? ix : all;
+}
 function btStatewideSeries(code){
   const T = btView === 'all' ? ['VBM','EV','ED'] : [{ vbm:'VBM', ev:'EV', ed:'ED' }[btView]];
   const rows = btTypeRows.filter(r => !code || r.Code === code).sort((a, b) => a._t - b._t);
@@ -3402,19 +3413,20 @@ async function renderTypeTrend(){
   const pc = (v, i) => tot[i] ? v / tot[i] * 100 : 0;
   const demPct = dem.map(pc), repPct = rep.map(pc), npaPct = npaOther.map(pc);
   const margin = pts.map((p, i) => pc(p.d - p.r, i));
+  const cIx = shareChartIdx(times), cp = a => cIx.map(i => a[i]);
   lastStatewideCumulativeData = { times, dem, rep, npaOther };
   await renderCumulativeChartWindowed('statewideCumulativeChart', 'statewideWindowNote', lastStatewideCumulativeData, statewideShowAllCumulative);
   if(call !== btTrendCall) return;
   const lineBase = { mode:'lines+markers', marker:{ size:6 }, line:{ width:2.5 } };
   Plotly.newPlot(shareEl, [
-    { ...lineBase, x:times, y:demPct, name:'DEM %', line:{ color:'#5b9bd9', width:2.5 } },
-    { ...lineBase, x:times, y:repPct, name:'REP %', line:{ color:'#d4675a', width:2.5 } },
-    { ...lineBase, x:times, y:npaPct, name:'NPA/Other %', line:{ color:'#c77dff', width:2.5 } }
-  ], { ...COUNTY_DETAIL_CHART_LAYOUT_BASE, yaxis:{ ...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{ text:'%', font:{ size:10 } }, range:pctChartRange([demPct, repPct, npaPct]), autorange:false, ticksuffix:'%' } }, { displayModeBar:false, responsive:true });
+    { ...lineBase, x:cp(times), y:cp(demPct), name:'DEM %', line:{ color:'#5b9bd9', width:2.5 } },
+    { ...lineBase, x:cp(times), y:cp(repPct), name:'REP %', line:{ color:'#d4675a', width:2.5 } },
+    { ...lineBase, x:cp(times), y:cp(npaPct), name:'NPA/Other %', line:{ color:'#c77dff', width:2.5 } }
+  ], { ...COUNTY_DETAIL_CHART_LAYOUT_BASE, yaxis:{ ...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{ text:'%', font:{ size:10 } }, range:pctChartRange([cp(demPct), cp(repPct), cp(npaPct)]), autorange:false, ticksuffix:'%' } }, { displayModeBar:false, responsive:true });
   attachSortedHoverTooltip(shareEl, fmtShareHoverValue);
   const mTxt = margin.map(m => (m >= 0 ? 'D+' : 'R+') + Math.abs(m).toFixed(2));
   Plotly.newPlot(marEl, [
-    { ...lineBase, x:times, y:margin, name:'Margin (D−R)', line:{ color:'#80ed99', width:2.5 }, text:mTxt, hovertemplate:'%{text}<extra></extra>' }
+    { ...lineBase, x:cp(times), y:cp(margin), name:'Margin (D−R)', line:{ color:'#80ed99', width:2.5 }, text:cp(mTxt), hovertemplate:'%{text}<extra></extra>' }
   ], { ...COUNTY_DETAIL_CHART_LAYOUT_BASE, showlegend:false, yaxis:{ ...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{ text:'' }, tickformat:'.2f', ticksuffix:'%', zeroline:true, zerolinecolor:'#7c879c' } }, { displayModeBar:false, responsive:true });
 }
 // Called whenever the General Election map redraws: switches the trend panel between the type/day charts and the normal ones.
@@ -3696,11 +3708,11 @@ function partyEmoji(label){
   if(label === 'NPA/Other' || label === 'NPA') return '\u{1F7E3}';
   return '';
 }
-function partyLeadLines(parties){
+function partyLeadLines(parties, dp){
   return parties
     .slice()
     .sort((a, b) => b.count - a.count)
-    .map(p => `${partyEmoji(p.label)} ${p.label} ${fmt(p.count)} (${pct(p.pct)})`)
+    .map(p => `${partyEmoji(p.label)} ${p.label} ${fmt(p.count)} (${(p.pct * 100).toFixed(dp === undefined ? 1 : dp)}%)`)
     .join('<br>');
 }
 
@@ -3783,12 +3795,13 @@ function tooltipText(list){
           { label:'DEM', count:c.dem, pct:c.demShare },
           { label:'REP', count:c.rep, pct:c.repShare },
           { label:'NPA/Other', count:combinedNpaOther, pct:combinedShare }
-        ]);
+        ], 2);
         return `<b>${c.county}</b><br>` +
           `Rating: ${categoryForDayView(c)}<br>` +
           `${lines}<br>` +
           `\u{1F7E2} Total ${fmt(c.total)}<br>` +
-          `Margin ${(c.marginNpaAdj>=0?'+':'')}${pct(c.marginNpaAdj)}`;
+          `\u{1F7E1} Diff ${fmt(c.diff)}<br>` +
+          `Margin ${formatMarginLabel(c.marginNpaAdj * 100)}`;
       }
       const demToD = c.dem * (demLoyalty/100), demToR = c.dem - demToD;
       const repToR = c.rep * (repLoyalty/100), repToD = c.rep - repToR;
@@ -3800,6 +3813,7 @@ function tooltipText(list){
         `\u{1F534} REP ${fmt(c.rep)} \u2192 \u{1F534}${fmt(Math.round(repToR))} R / \u{1F535}${fmt(Math.round(repToD))} D<br>` +
         `\u{1F7E3} NPA ${fmt(c.npa)} \u2192 \u{1F535}${fmt(Math.round(npaDem))} D / \u{1F534}${fmt(Math.round(npaRep))} R<br>` +
         `\u{1F7E2} Total ${fmt(c.total)}<br>` +
+        `\u{1F7E1} Diff ${fmt(c.diff)}<br>` +
         `Adjusted margin: ${marginLabel(margin)}`;
     });
   }
@@ -3939,6 +3953,15 @@ function applyTieStripes(svg, activeCounties, metric){
 // for a given metric + county list. Shared between the on-screen
 // renderMap() and the PNG export's renderMetricMapCanvas(), so both
 // always agree pixel-for-pixel on what a county's color should be.
+// The General Election map's tooltip: the exact look of the trend charts' tooltip (same translucent box), drawn from each county's tooltip text.
+function attachMapHtmlTip(el){
+  if(!el || !el.on) return;
+  const tip = ensureSortedHoverTooltipEl();
+  if(el.__mapTipHover){ try{ el.removeListener('plotly_hover', el.__mapTipHover); el.removeListener('plotly_unhover', el.__mapTipOut); }catch(e){} }
+  el.__mapTipHover = d => { const p = (d.points || []).find(q => typeof q.customdata === 'string'); if(!p) return; tip.classList.add('map-tip'); tip.innerHTML = p.customdata; tip.style.display = 'block'; positionSortedHoverTooltip(tip, d.event); };
+  el.__mapTipOut = () => { tip.style.display = 'none'; tip.classList.remove('map-tip'); };
+  el.on('plotly_hover', el.__mapTipHover); el.on('plotly_unhover', el.__mapTipOut);
+}
 function buildMapTrace(metric, activeCounties){
   const m = METRICS[metric];
   const locations = activeCounties.map(c=>c.fips);
@@ -3955,6 +3978,8 @@ function buildMapTrace(metric, activeCounties){
       text, hoverinfo:'text', hoverlabel:{bgcolor:'#151b28', bordercolor:'#212a3b', font:{family:'IBM Plex Mono, monospace', size:11, color:'#e9edf5'}},
       showscale:false
     };
+    // General Election: the tooltip is the same translucent HTML tooltip the Vote Share Over Time chart uses (see attachMapHtmlTip).
+    if(metric === 'demrepnpa'){ trace.hoverinfo = 'none'; delete trace.hoverlabel; trace.customdata = text.map(t => '<div style="max-width:300px;white-space:normal;line-height:1.4">' + String(t).replace(/^<b>(.*?)<\/b><br>/, '<div class="sorted-hover-date">$1</div>') + '</div>'); }
     legendVisible = true;
     legendHtml = cats.map(cat => {
       const count = activeCounties.filter(c=>m.catFn(c)===cat.key).length;
@@ -4055,6 +4080,7 @@ async function renderMap(){
     margin:{t:10,b:10,l:10,r:10}, font:{family:'Inter, sans-serif'}
   };
   Plotly.newPlot('map', [trace], layout, {displayModeBar:false, responsive:true, scrollZoom:true}).then(() => {
+    if(currentMetric === 'demrepnpa') attachMapHtmlTip(document.getElementById('map'));
     if((currentMetric === 'demrepnpa' && !shiftSliderActive) || currentMetric === 'dropwinner' || currentMetric === 'earlyvote'){
       applyTieStripes(document.querySelector('#map svg'), activeCounties, currentMetric);
     }
@@ -8704,6 +8730,7 @@ async function renderZoomedCountyMap(c){
     margin:{t:10,b:10,l:10,r:10}, font:{family:'Inter, sans-serif'}
   };
   await Plotly.newPlot('map', [trace], layout, {displayModeBar:false, responsive:true, scrollZoom:true});
+  if(currentMetric === 'demrepnpa') attachMapHtmlTip(document.getElementById('map'));
   if((currentMetric === 'demrepnpa' && !shiftSliderActive) || currentMetric === 'dropwinner'){
     applyTieStripes(document.querySelector('#map svg'), [c]);
   }
@@ -9852,24 +9879,25 @@ async function renderCountyDetailCharts(countyRows, typeMode){
 
   const ratingLookup = buildRatingLookup(dem, rep, npaOnly, npaOther);
   const lineBase = { mode:'lines+markers', marker:{size:6}, line:{width:2.5} };
+  const cIx = shareChartIdx(times), cp = a => cIx.map(i => a[i]), cTimes = cp(times);
   const shareTraces = [
-    { ...lineBase, x:times, y:demPct, name:'DEM %', line:{color:'#5b9bd9', width:2.5} },
-    { ...lineBase, x:times, y:repPct, name:'REP %', line:{color:'#d4675a', width:2.5} },
-    { ...lineBase, x:times, y:npaOtherPct, name:'NPA/Other %', line:{color:'#c77dff', width:2.5} }
+    { ...lineBase, x:cTimes, y:cp(demPct), name:'DEM %', line:{color:'#5b9bd9', width:2.5} },
+    { ...lineBase, x:cTimes, y:cp(repPct), name:'REP %', line:{color:'#d4675a', width:2.5} },
+    { ...lineBase, x:cTimes, y:cp(npaOtherPct), name:'NPA/Other %', line:{color:'#c77dff', width:2.5} }
   ];
 
-  const evl2 = evStartLine(zoomedCounty, times);
+  const evl2 = evStartLine(zoomedCounty, cTimes);
   await Plotly.newPlot(shareEl, shareTraces, {
     ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
     shapes:evl2.shapes, annotations:evl2.annotations,
-    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:pctChartRange([demPct, repPct, npaOtherPct]), autorange:false, ticksuffix:'%'}
+    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:pctChartRange([cp(demPct), cp(repPct), cp(npaOtherPct)]), autorange:false, ticksuffix:'%'}
   }, {displayModeBar:false, responsive:true});
   attachSortedHoverTooltip(shareEl, fmtShareHoverValue, ratingLookup);
   if(typeMode){
     const margin = countyRows.map(r => (num(r.DEM) - num(r.REP)) / Math.max(1, num(r.DEM) + num(r.REP) + num(r.NPA)) * 100);
     const mTxt = margin.map(m => (m >= 0 ? 'D+' : 'R+') + Math.abs(m).toFixed(2));
     await Plotly.newPlot('countyDetailMarginChart', [
-      { ...lineBase, x:times, y:margin, name:'Margin (D\u2212R)', line:{ color:'#80ed99', width:2.5 }, text:mTxt, hovertemplate:'%{text}<extra></extra>' }
+      { ...lineBase, x:cTimes, y:cp(margin), name:'Margin (D\u2212R)', line:{ color:'#80ed99', width:2.5 }, text:cp(mTxt), hovertemplate:'%{text}<extra></extra>' }
     ], { ...COUNTY_DETAIL_CHART_LAYOUT_BASE, showlegend:false, shapes:evl2.shapes, annotations:evl2.annotations,
       yaxis:{ ...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{ text:'' }, tickformat:'.2f', ticksuffix:'%', zeroline:true, zerolinecolor:'#7c879c' } }, { displayModeBar:false, responsive:true });
   }
@@ -10167,15 +10195,16 @@ async function renderStatewideHistoryCharts(force){
   lastStatewideCumulativeData = { times, dem, rep, npaOther };
   await renderCumulativeChartWindowed('statewideCumulativeChart', 'statewideWindowNote', lastStatewideCumulativeData, statewideShowAllCumulative);
 
+  const sIx = shareChartIdx(times), sp = a => sIx.map(i => a[i]);
   const shareTraces = [
-    { ...lineBase, x:times, y:demPct, name:'DEM %', line:{color:'#5b9bd9', width:2.5} },
-    { ...lineBase, x:times, y:repPct, name:'REP %', line:{color:'#d4675a', width:2.5} },
-    { ...lineBase, x:times, y:npaOtherPct, name:'NPA/Other %', line:{color:'#c77dff', width:2.5} }
+    { ...lineBase, x:sp(times), y:sp(demPct), name:'DEM %', line:{color:'#5b9bd9', width:2.5} },
+    { ...lineBase, x:sp(times), y:sp(repPct), name:'REP %', line:{color:'#d4675a', width:2.5} },
+    { ...lineBase, x:sp(times), y:sp(npaOtherPct), name:'NPA/Other %', line:{color:'#c77dff', width:2.5} }
   ];
 
   Plotly.newPlot(shareEl, shareTraces, {
     ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
-    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:pctChartRange([demPct, repPct, npaOtherPct]), autorange:false, ticksuffix:'%'}
+    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:pctChartRange([sp(demPct), sp(repPct), sp(npaOtherPct)]), autorange:false, ticksuffix:'%'}
   }, {displayModeBar:false, responsive:true});
   attachSortedHoverTooltip(shareEl, fmtShareHoverValue);
 }

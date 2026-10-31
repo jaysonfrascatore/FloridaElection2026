@@ -3435,7 +3435,7 @@ async function renderTypeTrend(){
     { ...lineBase, x:cp(times), y:cp(demPct), name:'DEM %', line:{ color:'#5b9bd9', width:2.5 } },
     { ...lineBase, x:cp(times), y:cp(repPct), name:'REP %', line:{ color:'#d4675a', width:2.5 } },
     { ...lineBase, x:cp(times), y:cp(npaPct), name:'NPA/Other %', line:{ color:'#c77dff', width:2.5 } }
-  ], { ...COUNTY_DETAIL_CHART_LAYOUT_BASE, yaxis:{ ...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{ text:'%', font:{ size:10 } }, range:pctChartRange([cp(demPct), cp(repPct), cp(npaPct)]), autorange:false, ticksuffix:'%' } }, { displayModeBar:false, responsive:true });
+  ], { ...COUNTY_DETAIL_CHART_LAYOUT_BASE, yaxis:{ ...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{ text:'%', font:{ size:10 } }, range:shareChartRange([cp(demPct), cp(repPct), cp(npaPct)]), autorange:false, ...SHARE_Y } }, { displayModeBar:false, responsive:true });
   attachSortedHoverTooltip(shareEl, fmtShareHoverValue);
   const mTxt = margin.map(m => (m >= 0 ? 'D+' : 'R+') + Math.abs(m).toFixed(2));
   Plotly.newPlot(marEl, [
@@ -9508,6 +9508,15 @@ document.getElementById('marginLineShowAllToggle').addEventListener('change', e 
 // Y-range for the vote-share charts: fitted to the lowest and highest
 // percentage actually plotted (with a little breathing room), clamped to
 // 0-100. Set explicitly so a double-click reset returns to this fit.
+// Vote Share Over Time charts: about 10 points of room below the lowest line and above the highest, on whole 5s, with the same
+// 10-point gridlines on every share chart (county, statewide, by vote type) so they read the same way.
+function shareChartRange(seriesList){
+  let lo = Infinity, hi = -Infinity;
+  seriesList.forEach(a => (a || []).forEach(v => { if(isFinite(v)){ if(v < lo) lo = v; if(v > hi) hi = v; } }));
+  if(!isFinite(lo)) return [0, 100];
+  return [Math.max(0, Math.floor((lo - 10) / 5) * 5), Math.min(100, Math.ceil((hi + 10) / 5) * 5)];
+}
+const SHARE_Y = { dtick:10, tickformat:'.0f', ticksuffix:'%' };
 function pctChartRange(seriesList){
   let lo = Infinity, hi = -Infinity;
   seriesList.forEach(a => (a || []).forEach(v => { if(isFinite(v)){ if(v < lo) lo = v; if(v > hi) hi = v; } }));
@@ -9938,7 +9947,7 @@ async function renderCountyDetailCharts(countyRows, typeMode){
   await Plotly.newPlot(shareEl, shareTraces, {
     ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
     shapes:evl2.shapes, annotations:evl2.annotations,
-    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:pctChartRange([cp(demPct), cp(repPct), cp(npaOtherPct)]), autorange:false, ticksuffix:'%'}
+    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:shareChartRange([cp(demPct), cp(repPct), cp(npaOtherPct)]), autorange:false, ...SHARE_Y}
   }, {displayModeBar:false, responsive:true});
   attachSortedHoverTooltip(shareEl, fmtShareHoverValue, ratingLookup);
   if(typeMode){
@@ -10252,7 +10261,7 @@ async function renderStatewideHistoryCharts(force){
 
   Plotly.newPlot(shareEl, shareTraces, {
     ...COUNTY_DETAIL_CHART_LAYOUT_BASE,
-    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:pctChartRange([sp(demPct), sp(repPct), sp(npaOtherPct)]), autorange:false, ticksuffix:'%'}
+    yaxis:{...COUNTY_DETAIL_CHART_LAYOUT_BASE.yaxis, title:{text:'%', font:{size:10}}, range:shareChartRange([sp(demPct), sp(repPct), sp(npaOtherPct)]), autorange:false, ...SHARE_Y}
   }, {displayModeBar:false, responsive:true});
   attachSortedHoverTooltip(shareEl, fmtShareHoverValue);
 }

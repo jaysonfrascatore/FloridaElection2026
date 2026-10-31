@@ -1,0 +1,118 @@
+
+=================================
+FLORIDA TURNOUT UPDATE
+=================================
+
+Election ID:
+FL-2026-General
+
+Run Time:
+Updated at October 31st, 2026 at 11:00am Eastern Time
+
+Counties Loaded:
+67 / 67
+
+Updated Counties:
+66
+
+Unchanged Counties:
+False
+
+Rejected County Updates:
+0
+
+STATEWIDE TOTALS
+=================================
+
+DEM:
+1,835,824
+
+REP:
+1,962,491
+
+OTHER:
+1,037,358
+
+TOTAL:
+4,835,673
+
+STATEWIDE SUMMARY
+=================================
+
+🔴 Republicans lead by 126,667 votes statewide.
+
+Margin Change:
+-0.10% toward Republicans
+
+TOTAL NEW VOTES
+=================================
+
+🔵 DEM: +35,907
+🔴 REP: +46,336
+🟣 OTHER: +26,526
+🟢 TOTAL: +108,769
+
+REJECTED COUNTY UPDATES
+=================================
+
+
+No county updates were rejected.
+
+
+
+RATING / FORECAST CHANGES
+=================================
+
+
+No rating changes detected.
+
+
+
+TWEET DRAFT
+=================================
+
+
+🗳️11 AM Florida EV & VBM Update
+
+New votes have been cast in 66 counties over the last hour, with the largest update coming from Hillsborough County.
+
+🔵 DEM: +35,907
+🔴 REP: +46,336
+🟣 OTHER: +26,526
+🟢 TOTAL: +108,769
+
+🔴 Republicans lead by 126,667 votes statewide.
+
+🔴 Margin Change: -0.10% toward Republicans
+
+Largest County Updates
+
+
+🥇Hillsborough County
+
+🔵 DEM: +4,076
+🔴 REP: +3,827
+🟣 OTHER: +2,852
+🟢 TOTAL: +10,755
+
+
+
+🥈Miami-Dade County
+
+🔵 DEM: +3,183
+🔴 REP: +3,687
+🟣 OTHER: +2,733
+🟢 TOTAL: +9,603
+
+
+
+🥉Broward County
+
+🔵 DEM: +4,294
+🔴 REP: +2,039
+🟣 OTHER: +2,616
+🟢 TOTAL: +8,949
+
+
+
+#Florida #EarlyVoting #VoteByMail

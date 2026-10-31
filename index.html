@@ -975,14 +975,34 @@
   .sa-pace-cell .nm{ font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; }
   .sa-med{ font-size:clamp(26px,4.4vw,38px); font-weight:700; line-height:1.1; margin:6px 0 4px; letter-spacing:-.01em; }
   .sa-pace-cell .mini{ font-size:11.5px; color:var(--muted); line-height:1.4; }
+  #saScenSlider{ background:#2a3347; }
+  .sa-scen-take{ margin-top:12px; padding:12px 14px; background:var(--panel-2); border:1px solid var(--border); border-left:3px solid #ffd23f; border-radius:10px; font-size:13px; line-height:1.6; display:grid; gap:4px; }
+  .sa-scen-take b{ color:var(--text); }
+  .sa-scen-leg{ margin-top:10px; } .sa-scen-leg i{ width:12px !important; height:12px !important; border-radius:2px; border-top:0 !important; } .sa-scen-leg em{ font-style:normal; color:var(--text); font-weight:600; }
+  .sa-scen-leg2{ margin-top:6px; }
+  .sa-scen-top{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; margin:14px 0 4px; }
+  .sa-scen-val{ font:700 16px var(--mono); } .sa-scen-sub{ font-size:12px; color:var(--muted); }
+  .sa-scen-reset{ margin-left:auto; }
+  .sa-scen-strip{ height:8px; border-radius:6px; margin:2px 0 6px; opacity:.9; }
+  .sa-scen-ends{ display:flex; justify-content:space-between; gap:8px; font-size:11.5px; color:var(--muted); line-height:1.4; }
+  .sa-scen-ends b{ color:var(--text); font-weight:600; } .sa-scen-ends > div:nth-child(2){ text-align:center; } .sa-scen-ends > div:last-child{ text-align:right; }
+  .sa-scen-big .net{ font:700 14px var(--mono); margin-top:4px; }
+  .sa-scen-tally{ margin-top:10px; font-size:13px; line-height:1.6; } .sa-scen-tally b{ font-family:var(--mono); }
+  .sa-scen-sum{ margin-top:14px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+  .sa-scen-sum > div{ background:var(--panel-2); border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
+  .sa-scen-sum .n{ font:700 26px var(--mono); line-height:1.1; } .sa-scen-sum .t{ font-size:11.5px; color:var(--muted); margin-top:2px; line-height:1.4; }
+  .sa-scen-chips{ margin-top:10px; display:flex; flex-wrap:wrap; gap:6px; }
+  .sa-scen-chips span{ font:600 11px var(--mono); padding:4px 8px; border-radius:999px; background:rgba(255,210,63,.1); border:1px solid rgba(255,210,63,.45); color:#ffd23f; }
+  .sa-scen-chips span em{ font-style:normal; color:var(--muted); font-weight:500; }
+  @media (max-width:760px){ .sa-scen-sum{ grid-template-columns:1fr; } }
   .sa-fin-row{ display:flex; align-items:center; justify-content:center; gap:4px; }
-  .sa-fin-row #saFinMap{ flex:0 1 560px; min-width:0; }
+  .sa-fin-row #saFinMap, .sa-fin-row #saScenMap{ flex:0 1 560px; min-width:0; }
   .sa-fin-big{ flex:0 0 auto; text-align:center; }
   .sa-fin-big .sa-big{ font-size:clamp(44px,5.2vw,72px); margin:6px 0 4px; }
   .sa-fin-big .lbl{ font:600 10px var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
   .sa-fin-big .tot{ font-size:12px; color:var(--muted); margin-top:2px; } .sa-fin-big .tot b{ color:var(--text); }
   .sa-fin-big .net{ font:700 15px var(--mono); margin-top:4px; }
-  @media (max-width:760px){ .sa-fin-row{ flex-direction:column; align-items:stretch; gap:4px; } .sa-fin-row #saFinMap{ width:100%; flex:1 1 auto; } .sa-fin-big .sa-big{ font-size:clamp(52px,16vw,80px); } .sa-fin-big{ margin-top:10px; } }
+  @media (max-width:760px){ .sa-fin-row{ flex-direction:column; align-items:stretch; gap:4px; } .sa-fin-row #saFinMap, .sa-fin-row #saScenMap{ width:100%; flex:1 1 auto; } .sa-fin-big .sa-big{ font-size:clamp(52px,16vw,80px); } .sa-fin-big{ margin-top:10px; } }
   .sa-big{ font-size:clamp(52px,11vw,96px); font-weight:700; line-height:1; letter-spacing:-.03em; margin:8px 0 6px; }
   .sa-sub{ font-size:13px; color:var(--muted); line-height:1.55; }
   .sa-sub b{ color:var(--text); }
@@ -1319,6 +1339,7 @@
       <div id="saShareHead" class="sa-note"></div>
       <div id="saShareChart" style="height:280px;"></div>
     </div>
+    <div class="panel sa-sec sa-reveal" id="saSecScen"></div>
   </div>
 
   <div class="grid" id="liveGrid">
@@ -4632,15 +4653,15 @@ function statewideMarginMath(D, R, O, dD, dR, dO){
   const prevMargin = hasPrior ? (D0 - R0) / T0 * 100 : null;
   const dropMargin = hasDrop ? (dD - dR) / dT * 100 : null;
   const change = (hasCurrent && hasPrior) ? margin - prevMargin : null;   // + = toward Democrats
-  // A move too small to show as 0.01 is "steady", not a move.
+  // A move that is zero to three decimals is "steady"; anything smaller than 0.01 but real is shown to the third decimal (dp).
   let towardParty = null, towardEmoji = null;
-  if(change !== null && Math.abs(change) >= 0.005){
+  if(change !== null && Math.abs(change) >= 0.0005){
     towardParty = change > 0 ? 'Democrats' : 'Republicans';
     towardEmoji = change > 0 ? '\u{1F535}' : '\u{1F534}';
   }
   const leader = (!hasCurrent || D === R) ? null : (D > R ? 'Democrats' : 'Republicans');
   return { D, R, O, T, dD, dR, dO, dT, hasCurrent, hasPrior, hasDrop,
-           margin, prevMargin, dropMargin, change, towardParty, towardEmoji, leader };
+           margin, prevMargin, dropMargin, change, towardParty, towardEmoji, leader, dp:(change === null ? 2 : moveDp(change, margin, prevMargin)) };
 }
 
 // The same math over the live feed (COUNTIES).
@@ -4653,8 +4674,20 @@ function computeStatewideMarginInfo(){
 }
 
 // "D+7.32%" / "R+1.20%" / "Even" for a margin in points.
-function formatMarginLabel(m){
-  const s = Math.abs(m).toFixed(2);
+// A move smaller than 0.01 point is shown to the third decimal, so a rounding step like R+1.79% -> R+1.80% is never
+// labelled "no change" (or shown as a whole 0.01) when it really was a few thousandths. Zero to three decimals = no change.
+// It is also three decimals whenever the move shown would not match the two margins shown beside it once each is rounded to two
+// decimals (e.g. R+1.794 -> R+1.806 is a 0.012 move, but the rounded pair R+1.79 -> R+1.81 reads as 0.02).
+function moveDp(v, now, was){
+  const a = Math.abs(v); if(a < 0.0005) return 2; if(a < 0.01) return 3;
+  if(typeof now === 'number' && typeof was === 'number'){
+    const r2 = x => Math.round(x * 100) / 100;
+    if(Math.abs(Math.abs(r2(now) - r2(was)) - r2(a)) > 0.0051) return 3;
+  }
+  return 2;
+}
+function formatMarginLabel(m, dp){
+  const s = Math.abs(m).toFixed(dp || 2);
   if(parseFloat(s) === 0) return 'Even';
   return (m > 0 ? 'D+' : 'R+') + s + '%';
 }
@@ -4678,7 +4711,7 @@ function marginExplanationRuns(info){
   const adj = party === 'D' ? 'Democratic' : 'Republican';
   const runs = [
     { text: 'Last update: ' },
-    { text: `${Math.abs(info.change).toFixed(2)}% move toward ${info.towardParty}`, bold: true, party },
+    { text: `${Math.abs(info.change).toFixed(info.dp)}% move toward ${info.towardParty}`, bold: true, party },
     { text: '.' }
   ];
   if(info.hasDrop){
@@ -4689,7 +4722,7 @@ function marginExplanationRuns(info){
       { text: ' on their own (counting every ballot in that drop) \u2014 ' },
       { text: `${gap} points more ${adj}`, bold: true, party },
       { text: " than the race's running margin of " },
-      { text: formatMarginLabel(info.prevMargin), bold: true },
+      { text: formatMarginLabel(info.prevMargin, info.dp), bold: true },
       { text: ', which is what pulled the margin ' },
       { text: `toward ${info.towardParty}`, bold: true, party },
       { text: '.' }
@@ -4759,7 +4792,7 @@ function renderMarginTracker(){
     leadEl.innerHTML = 'The statewide vote is tied';
   }else{
     leadEl.className = 'margin-tracker-lead ' + (info.leader === 'Democrats' ? 'd' : 'r');
-    leadEl.innerHTML = `${info.leader} lead by ${absMargin.toFixed(2)}%<span class="votes"> &middot; ${fmt(Math.abs(info.D - info.R))} votes ahead</span>`;
+    leadEl.innerHTML = `${info.leader} lead by ${absMargin.toFixed(info.dp)}%<span class="votes"> &middot; ${fmt(Math.abs(info.D - info.R))} votes ahead</span>`;
   }
 
   explainEl.innerHTML = marginRunsToHtml(marginExplanationRuns(info));
@@ -4878,13 +4911,13 @@ async function renderMarginLineChart(){
 function marginLineHoverText(time, margin, lead, change){
   const side = Math.abs(margin) < 0.005
     ? 'The race is tied'
-    : `${margin > 0 ? 'Democrats' : 'Republicans'} lead by ${Math.abs(margin).toFixed(2)}%`;
+    : `${margin > 0 ? 'Democrats' : 'Republicans'} lead by ${Math.abs(margin).toFixed(change !== null ? moveDp(change, margin, margin - change) : 2)}%`;
   const votes = lead === 0 ? '' : `<br>${fmt(Math.abs(lead))} votes ahead`;
   let move = '';
   if(change !== null){
-    move = Math.abs(change) < 0.005
+    move = Math.abs(change) < 0.0005
       ? '<br>No change from the previous update'
-      : `<br>${Math.abs(change).toFixed(2)}% move toward ${change > 0 ? 'Democrats' : 'Republicans'} from the previous update`;
+      : `<br>${Math.abs(change).toFixed(moveDp(change, margin, margin - change))}% move toward ${change > 0 ? 'Democrats' : 'Republicans'} from the previous update`;
   }
   return `${formatSortedHoverDate(time)}<br>${side}${votes}${move}`;
 }
@@ -5147,15 +5180,15 @@ function partyTurnoutCardText(){
   if(!I.leader) out += 'Democrats and Republicans are tied in voter turnout';
   else{
     const second = I.leader === 'Democrats' ? 'Republicans' : 'Democrats';
-    out += `${I.leader} have ${aOrAnForNumber(parseFloat(Math.abs(I.lead).toFixed(2)))} ${pc(Math.abs(I.lead))} lead over ${second} in voter turnout`;
+    out += `${I.leader} have ${aOrAnForNumber(parseFloat(Math.abs(I.lead).toFixed(2)))} ${Math.abs(I.lead).toFixed(I.hasPrior ? moveDp(I.leadMove, I.lead, I.leadWas) : 2)}% lead over ${second} in voter turnout`;
   }
   if(I.hasPrior){
-    const ch = Math.abs(I.leaderChange).toFixed(2);
-    out += parseFloat(ch) === 0 ? ', unchanged compared to the previous update.' : `, ${I.leaderChange > 0 ? 'an' : 'a'} ${ch}% ${I.leaderChange > 0 ? 'increase' : 'decrease'} compared to the previous update.`;
+    const ch = Math.abs(I.leaderChange).toFixed(moveDp(I.leaderChange, I.lead, I.leadWas));
+    out += parseFloat(ch) === 0 ? ', unchanged compared to the previous update.' : `, ${aOrAnForNumber(parseFloat(ch))} ${ch}% ${I.leaderChange > 0 ? 'increase' : 'decrease'} compared to the previous update.`;
   }else out += '.';
   out += `\n\n\u{1F535} DEM: ${pc(I.now.d)} turnout\n\u{1F534} REP: ${pc(I.now.r)} turnout\n\u{1F7E3} OTHER: ${pc(I.now.n)} turnout`;
   if(I.hasPrior){
-    const sg = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2) + '%';
+    const sg = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(moveDp(v)) + '%';
     out += `\n\nIncrease by party:\n\u{1F535} DEM: ${sg(I.inc.d)}\n\u{1F534} REP: ${sg(I.inc.r)}\n\u{1F7E3} OTHER: ${sg(I.inc.n)}`;
   }
   return out;
@@ -5251,7 +5284,7 @@ function buildTweetSections(){
   // number from the SAME helper, so the two always agree.
   const marginInfo = computeStatewideMarginInfo();
   const marginMoveLine = marginInfo.towardParty
-    ? `${marginInfo.towardEmoji} This is a ${Math.abs(marginInfo.change).toFixed(2)}% move toward ${marginInfo.towardParty}.`
+    ? `${marginInfo.towardEmoji} This is a ${Math.abs(marginInfo.change).toFixed(marginInfo.dp)}% move toward ${marginInfo.towardParty}.`
     : '';
 
   // Same idea as the statewide totals' percentages, but scoped to just
@@ -5343,12 +5376,12 @@ ${leaderLine}${marginMoveLine ? '\n' + marginMoveLine : ''}`;
       marginCard = `${yellow} ${marginOpener} vote is tied between Democrats and Republicans.`;
     }else{
       const leaderSign = marginInfo.leader === 'Democrats' ? 1 : -1;
-      const leadStr = Math.abs(marginInfo.margin).toFixed(2);
+      const leadStr = Math.abs(marginInfo.margin).toFixed(marginInfo.dp);
       marginCard = `${yellow} ${marginOpener} margin is ${aOrAnForNumber(parseFloat(leadStr))} ${leadStr}% lead for ${marginInfo.leader}.`;
 
       if(marginInfo.hasPrior){                                         // not the very first update
         const change = leaderSign * marginInfo.change;                 // + = the leader's lead grew
-        const changeStr = Math.abs(change).toFixed(2);
+        const changeStr = Math.abs(change).toFixed(marginInfo.dp);
         if(parseFloat(changeStr) === 0){
           marginCard += ' This is essentially unchanged from the previous update.';
         }else{
@@ -6110,7 +6143,7 @@ function marginMoveBlockContent(info){
   let move = null;
   if(info.hasPrior){
     move = info.towardParty
-      ? { text: `${Math.abs(info.change).toFixed(2)}% move toward ${info.towardParty}`, color: info.towardParty === 'Democrats' ? BLUE : RED }
+      ? { text: `${Math.abs(info.change).toFixed(info.dp)}% move toward ${info.towardParty}`, color: info.towardParty === 'Democrats' ? BLUE : RED }
       : { text: 'No change in the margin', color: GRAY };
   }
 
@@ -6141,8 +6174,8 @@ function marginMoveBlockContent(info){
   return {
     hasCurrent: true,
     hasPrior: info.hasPrior,
-    prev: info.hasPrior ? { text: formatMarginLabel(info.prevMargin), color: colorFor(info.prevMargin) } : null,
-    now: { text: formatMarginLabel(info.margin), color: colorFor(info.margin) },
+    prev: info.hasPrior ? { text: formatMarginLabel(info.prevMargin, info.dp), color: colorFor(info.prevMargin) } : null,
+    now: { text: formatMarginLabel(info.margin, info.dp), color: colorFor(info.margin) },
     move,
     votes: [
       { label:'DEMOCRATS GAINED',   text: signed(info.dD), color: BLUE },
@@ -12479,6 +12512,7 @@ function saShow(on){
   saState.shown = on;
   const v = document.getElementById('splitAvgView'), g = document.getElementById('liveGrid');
   v.style.display = on ? '' : 'none'; g.style.display = on ? 'none' : '';
+  ['updatesPanel', 'statewideHistoryPanel'].forEach(id => { const el = document.getElementById(id); if(el) el.style.display = on ? 'none' : ''; });
   ['downloadMapPngBtn', 'dailyRecapBtn', 'downloadMapOnlyBtn'].forEach(id => { const el = document.getElementById(id); if(el && on) el.style.display = 'none'; });
   if(!on){ const dl = document.getElementById('downloadMapPngBtn'); if(dl) dl.style.display = ''; if(typeof renderMap === 'function'){ try{ renderMap(); }catch(e){} } return; }
   v.querySelectorAll('.sa-reveal').forEach(e => e.classList.remove('sa-in'));
@@ -12495,16 +12529,16 @@ async function downloadPartyTurnoutPng(btn){
     const summary = liveResultsSummary();
     const scale = 2, W = 900, pad = 24, indent = 18, explPx = 21, sans = 'Inter, Arial, sans-serif', mono = 'IBM Plex Mono, monospace';
     const BLUE = '#5b9bd9', RED = '#d4675a', PURPLE = '#c77dff', GRAY = '#7c879c', GOLD = '#d8b466', WHITE = '#e9edf5', UP = '#4ade80', DOWN = '#ef4444';
-    const pc = v => v.toFixed(2) + '%', ptsOf = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2) + ' pts';
+    const pc = v => v.toFixed(2) + '%', ptsOf = (v, a, w) => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(moveDp(v, a, w)) + ' pts';
     // the explanation sentence, as styled runs (same helpers as the Margin Move image)
     const runs = [];
     if(!I.leader) runs.push({ text:'Democrats and Republicans are tied in voter turnout' });
     else{
       const second = I.leader === 'Democrats' ? 'Republicans' : 'Democrats', party = I.leader === 'Democrats' ? 'D' : 'R';
-      runs.push({ text:I.leader, bold:true, party }, { text:' have ' + aOrAnForNumber(parseFloat(Math.abs(I.lead).toFixed(2))) + ' ' }, { text:pc(Math.abs(I.lead)) + ' lead', bold:true, party }, { text:' over ' + second + ' in voter turnout' });
+      runs.push({ text:I.leader, bold:true, party }, { text:' have ' + aOrAnForNumber(parseFloat(Math.abs(I.lead).toFixed(2))) + ' ' }, { text:Math.abs(I.lead).toFixed(I.hasPrior ? moveDp(I.leadMove, I.lead, I.leadWas) : 2) + '% lead', bold:true, party }, { text:' over ' + second + ' in voter turnout' });
     }
     if(I.hasPrior){
-      const ch = Math.abs(I.leaderChange).toFixed(2);
+      const ch = Math.abs(I.leaderChange).toFixed(moveDp(I.leaderChange, I.lead, I.leadWas));
       runs.push({ text:parseFloat(ch) === 0 ? ', unchanged compared to the previous update.' : ', ' + (I.leaderChange > 0 ? 'an increase' : 'a decrease') + ' compared to the previous update.' });
     }else runs.push({ text:'.' });
     const scratch = document.createElement('canvas').getContext('2d');
@@ -12540,13 +12574,13 @@ async function downloadPartyTurnoutPng(btn){
     x.fillStyle = '#131a28'; x.beginPath(); x.roundRect(S(pad), S(leadTop), S(W - pad * 2), S(leadH), S(14)); x.fill();
     x.fillStyle = GOLD; x.font = `600 ${S(13)}px ${mono}`; x.fillText('DIFFERENCE IN PARTY REGISTRATION TURNOUT', S(pad + 18), S(leadTop + 32));
     const leadCol = !I.leader ? WHITE : (I.leader === 'Democrats' ? BLUE : RED);
-    x.fillStyle = leadCol; x.font = `600 ${S(46)}px ${mono}`; x.fillText(formatMarginLabel(I.lead).replace('%', ''), S(pad + 18), S(leadTop + 92));
-    x.font = `600 ${S(46)}px ${mono}`; const lw = x.measureText(formatMarginLabel(I.lead).replace('%', '')).width / scale;
+    x.fillStyle = leadCol; x.font = `600 ${S(46)}px ${mono}`; x.fillText(formatMarginLabel(I.lead, I.hasPrior ? moveDp(I.leadMove, I.lead, I.leadWas) : 2).replace('%', ''), S(pad + 18), S(leadTop + 92));
+    x.font = `600 ${S(46)}px ${mono}`; const lw = x.measureText(formatMarginLabel(I.lead, I.hasPrior ? moveDp(I.leadMove, I.lead, I.leadWas) : 2).replace('%', '')).width / scale;
     if(I.hasPrior){
-      const up = I.leadMove >= 0, flat = Math.abs(I.leadMove) < 0.005, col = flat ? GRAY : (up ? UP : DOWN), ax = pad + 18 + lw + 26;
+      const up = I.leadMove >= 0, flat = Math.abs(I.leadMove) < 0.0005, col = flat ? GRAY : (up ? UP : DOWN), ax = pad + 18 + lw + 26;
       if(!flat) arrow(S(ax), S(leadTop + 86), up, col, S(20));
-      x.fillStyle = col; x.font = `600 ${S(22)}px ${mono}`; x.fillText(ptsOf(I.leadMove), S(ax + (flat ? 0 : 30)), S(leadTop + 86));
-      x.fillStyle = GRAY; x.font = `${S(13)}px ${sans}`; x.fillText('vs the previous update (was ' + (I.leadWas === 0 ? 'Even' : formatMarginLabel(I.leadWas).replace('%', '')) + ')', S(ax + (flat ? 0 : 30)), S(leadTop + 108));
+      x.fillStyle = col; x.font = `600 ${S(22)}px ${mono}`; x.fillText(ptsOf(I.leadMove, I.lead, I.leadWas), S(ax + (flat ? 0 : 30)), S(leadTop + 86));
+      x.fillStyle = GRAY; x.font = `${S(13)}px ${sans}`; x.fillText('vs the previous update (was ' + (I.leadWas === 0 ? 'Even' : formatMarginLabel(I.leadWas, moveDp(I.leadMove, I.lead, I.leadWas)).replace('%', '')) + ')', S(ax + (flat ? 0 : 30)), S(leadTop + 108));
     }
     x.fillStyle = GRAY; x.font = `${S(12.5)}px ${sans}`; x.fillText('Democratic turnout rate (' + pc(I.now.d) + ') minus Republican turnout rate (' + pc(I.now.r) + '), as a share of each party’s registered voters.', S(pad + 18), S(leadTop + 144));
     x.fillStyle = GRAY; x.font = `${S(11)}px ${mono}`; x.fillText('Parties are by voter registration  ·  jaysonfrascatore.github.io/FloridaElection2026  ·  Created by Jayson Frascatore', S(pad), S(totalH - 20));
@@ -12600,11 +12634,11 @@ function saTurnoutTopHTML(){
   if(!I.hasCurrent) return '';
   const cell = (nm, col, v, inc, who) => `<div class="sa-pace-cell"><div class="nm" style="color:${col}">${nm}</div>
       <div class="sa-med" style="color:${col}">${saCountEl(0, v, 2, '', '%')}</div>
-      <div class="mini">of registered ${who}${I.hasPrior && Math.abs(inc) >= 0.005 ? ` · <span class="${inc > 0 ? 'sa-up' : 'sa-dn'}">${inc > 0 ? '\u25B2' : '\u25BC'} ${Math.abs(inc).toFixed(2)} pts</span> since the last update` : ''}</div></div>`;
+      <div class="mini">of registered ${who}${I.hasPrior && Math.abs(inc) >= 0.0005 ? ` · <span class="${inc > 0 ? 'sa-up' : 'sa-dn'}">${inc > 0 ? '\u25B2' : '\u25BC'} ${Math.abs(inc).toFixed(moveDp(inc))} pts</span> since the last update` : ''}</div></div>`;
   const lc = !I.leader ? 'var(--text)' : (I.leader === 'Democrats' ? SA_COL.d : SA_COL.r);
   const lead = `<div class="sa-pace-cell"><div class="nm" style="color:${lc}">Turnout lead</div>
-      <div class="sa-med" style="color:${lc}">${saPts(I.lead)}</div>
-      <div class="mini">DEM minus REP turnout${I.hasPrior && Math.abs(I.leadMove) >= 0.005 ? ` · <span class="${I.leadMove > 0 ? 'sa-up' : 'sa-dn'}">${I.leadMove > 0 ? '\u25B2' : '\u25BC'} ${Math.abs(I.leadMove).toFixed(2)} pts</span> since the last update` : ''}</div></div>`;
+      <div class="sa-med" style="color:${lc}">${I.hasPrior && moveDp(I.leadMove, I.lead, I.leadWas) === 3 ? formatMarginLabel(I.lead, 3).replace('%', '') : saPts(I.lead)}</div>
+      <div class="mini">DEM minus REP turnout${I.hasPrior && Math.abs(I.leadMove) >= 0.0005 ? ` · <span class="${I.leadMove > 0 ? 'sa-up' : 'sa-dn'}">${I.leadMove > 0 ? '\u25B2' : '\u25BC'} ${Math.abs(I.leadMove).toFixed(moveDp(I.leadMove, I.lead, I.leadWas))} pts</span> since the last update` : ''}</div></div>`;
   return `<div class="sa-sec-head" style="margin-top:4px"><div class="sa-pace-title" style="margin:0">Turnout by party registration</div><button class="sim-btn" id="saPartyPng" title="Download the Turnout by Party Registration image">Download PNG</button></div>
     <div class="sa-note">The share of each party's <b>registered voters who have voted</b> so far, and how much it moved on the latest update. The averages below show how fast it is rising.</div>
     <div class="sa-pace-grid">${cell('DEM', SA_COL.d, I.now.d, I.inc.d, 'Democrats')}${cell('REP', SA_COL.r, I.now.r, I.inc.r, 'Republicans')}${cell('NPA/Other', SA_COL.n, I.now.n, I.inc.n, 'NPA/other voters')}${lead}</div>
@@ -12618,17 +12652,17 @@ function saPaceHTML(pts){
     <div class="sa-note">How many percentage points per day the share of each party's <b>registered voters who have voted</b> has risen (the same numbers as the "Registered voters who have voted" box), averaged over the last 7 days (the same window as the mail and early vote averages below).</div>`;
   if(days.length < 2) return head + '<div class="sa-empty">This fills in once at least two days of updates are logged.</div>';
   const n = Math.min(7, days.length - 1), a = days[days.length - 1 - n], b = days[days.length - 1];
-  const cell = (nm, col, v0, v1, regN, label) => {
+  const cell = (nm, col, v0, v1, regN, label, miniCol) => {
     const r0 = v0 / regN * 100, r1 = v1 / regN * 100, per = (r1 - r0) / n;
     return `<div class="sa-pace-cell"><div class="nm" style="color:${col}">${nm}</div>
       <div class="sa-med" style="color:${col}">${saCountEl(0, per, 2, '+', ' pts')}</div>
-      <div class="mini">per day · now at ${r1.toFixed(1)}% of ${label}</div></div>`;
+      <div class="mini"${miniCol ? ` style="color:${miniCol}"` : ''}>per day · now at ${r1.toFixed(2)}% of ${label}</div></div>`;
   };
   return head + `<div class="sa-pace-grid">
     ${cell('DEM', SA_COL.d, a.D, b.D, reg.d, 'registered Democrats')}
     ${cell('REP', SA_COL.r, a.R, b.R, reg.r, 'registered Republicans')}
     ${cell('NPA/Other', SA_COL.n, a.N, b.N, reg.n, 'registered NPA/other voters')}
-    ${cell('All voters', '#80ed99', a.T, b.T, reg.t, 'all registered voters')}</div>
+    ${cell('All voters', '#80ed99', a.T, b.T, reg.t, 'all registered voters', '#80ed99')}</div>
     <div class="sa-note" style="margin-top:10px">${n < 7 ? 'Only ' + n + ' day' + (n === 1 ? '' : 's') + ' tracked so far, so this is the average so far' : '7-day average'}, ${saDayLabel(a.t)} to ${saDayLabel(b.t)}.</div>
     <div class="sa-key" id="saPaceKey" style="margin-top:20px"></div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 0"><div class="segmented sa-seg" id="saPaceParty" style="margin:0;display:inline-flex">
@@ -13294,6 +13328,158 @@ async function saDrawForecastMap(elId, legId, data, rowLabel, totalLabel, noneMs
   const lg = document.getElementById(legId);
   if(lg) lg.innerHTML = SA_ED_CATS.slice().reverse().map(k => `<span><i style="background:${k.color}"></i>${k.key}</span>`).join('');
 }
+// ---- Election Day: Floor to Ceiling ----
+// Counted ballots stay fixed. A scenario is two things: how many Republicans turn out on Election Day (as a share of the forecast) and the margin the Election Day
+// ballots end up at. Every county's Election Day ballots shift by the same number of points to hit that margin. Party loyalty and the NPA/other split come from
+// your settings. The final result is the counted ballots plus those Election Day ballots, and the dots are colored by who wins statewide.
+let saScenSel = null;                       // { rho, m } of the clicked dot; null = the forecast
+const SA_SC_XS = [], SA_SC_YS = [];
+for(let v = 30; v <= 110; v += 2.5) SA_SC_XS.push(v);
+for(let v = -30; v <= 12; v += 2) SA_SC_YS.push(v);
+const SA_SC_BINS = [
+  { key:'rb', lab:'Republicans win by 5+', c:'#85182a', test:f => f <= -5 },
+  { key:'rm', lab:'Republicans win by 1 to 5', c:'#d4675a', test:f => f > -5 && f <= -1 },
+  { key:'rc', lab:'Republicans win by under 1', c:'#f3b5ab', test:f => f > -1 && f < 0 },
+  { key:'dc', lab:'Democrats win by under 1', c:'#b9d9f7', test:f => f >= 0 && f < 1 },
+  { key:'dm', lab:'Democrats win by 1 to 5', c:'#5b9bd9', test:f => f >= 1 && f < 5 },
+  { key:'db', lab:'Democrats win by 5+', c:'#1f4f8f', test:f => f >= 5 }
+];
+const saScenBin = f => SA_SC_BINS.find(b => b.test(f)) || SA_SC_BINS[0];
+function saScenModel(){
+  const b = saState.ctx; if(!b) return null;
+  const ed = saCountyED(b.M, true), fin = saCountyFinal(b.M);
+  const dl = demLoyalty / 100, rl = repLoyalty / 100, sp = npaSplitToDem / 100;
+  const netOf = o => (o.d * dl + o.r * (1 - rl) + o.n * sp) - (o.r * rl + o.d * (1 - dl) + o.n * (1 - sp));
+  const rows = []; let TC = 0, NC = 0;
+  SIM_COUNTY_NAMES.forEach(n => {
+    if(!FL_FIPS[n]) return; const f = fin[n], e = ed[n]; if(!f || !(f.t > 0)) return;
+    const r = { n, Tc:Math.max(0, f.t - e.t), nc:netOf(f) - netOf(e), e:{ d:e.d, r:e.r, n:e.n } };
+    rows.push(r); TC += r.Tc; NC += r.nc;
+  });
+  if(!rows.length) return null;
+  const edAt = rho => { let E = 0, net = 0; rows.forEach(r => { E += r.e.d + rho * r.e.r + r.e.n; net += netOf({ d:r.e.d, r:rho * r.e.r, n:r.e.n }); }); return { E, net, B:E > 0 ? net / E * 100 : 0 }; };
+  const mod = { rows, TC, NC, netOf, edAt };
+  mod.edM0 = edAt(1).B;
+  // the Election Day margin at which the final statewide margin equals f, for Republican turnout rho
+  mod.thr = (rho, f) => { const E = edAt(rho).E; return E > 0 ? ((f / 100) * (TC + E) - NC) * 100 / E : 0; };
+  mod.ev = (rho, m) => {
+    const k = edAt(rho), x = k.B - m; let T = 0, net = 0; const out = [];
+    rows.forEach(r => { const E = r.e.d + rho * r.e.r + r.e.n, en = netOf({ d:r.e.d, r:rho * r.e.r, n:r.e.n }) - x / 100 * E, tt = r.Tc + E, nn = r.nc + en; out.push({ n:r.n, T:tt, net:nn }); T += tt; net += nn; });
+    return { T, net, margin:T > 0 ? net / T * 100 : 0, rows:out };
+  };
+  // the grid of scenarios
+  const dots = [], maps = new Set(), seenD = {}, seenR = {}; const cnt = {}; SA_SC_BINS.forEach(q => { cnt[q.key] = 0; });
+  SA_SC_XS.forEach(xv => SA_SC_YS.forEach(yv => {
+    const r = mod.ev(xv / 100, yv), q = saScenBin(r.margin); cnt[q.key]++;
+    const key = r.rows.map(o => o.net > 0 ? 'D' : 'R').join(''); maps.add(key);
+    r.rows.forEach(o => { if(o.net > 0) seenD[o.n] = 1; else seenR[o.n] = 1; });
+    dots.push({ x:xv, y:yv, f:r.margin, net:r.net, T:r.T, bin:q });
+  }));
+  mod.dots = dots; mod.cnt = cnt; mod.combos = maps.size;
+  mod.lockR = rows.filter(r => !seenD[r.n]).map(r => r.n); mod.lockD = rows.filter(r => !seenR[r.n]).map(r => r.n);
+  mod.inPlay = rows.filter(r => seenD[r.n] && seenR[r.n]).map(r => r.n);
+  // the curve: where the Election Day margin lands on its own as Republican turnout falls (everything else as forecast)
+  mod.curve = []; for(let v = 30; v <= 110; v += 1) mod.curve.push({ x:v, y:edAt(v / 100).B, t0:mod.thr(v / 100, 0), t1:mod.thr(v / 100, 1) });
+  // Republican turnout at which the curve crosses the tie line / the Democrats-by-1 line (scanning down from the forecast)
+  const cross = key => { for(let k = mod.curve.length - 1; k >= 0; k--){ const c = mod.curve[k]; if(c.x <= 100 && c.y >= c[key]) return c.x; } return null; };
+  mod.crossTie = cross('t0'); mod.crossD1 = cross('t1');
+  return mod;
+}
+const saScenMargTxt = m => Math.abs(m) < 0.005 ? 'Even' : (m > 0 ? 'D+' : 'R+') + Math.abs(m).toFixed(1);
+const saScenTick = m => m === 0 ? 'Even' : (m > 0 ? 'D+' : 'R+') + Math.abs(m);
+function saScenHTML(){
+  const mod = saState.scen = saScenModel();
+  const head = '<div class="sa-eyebrow">Election Day: Floor to Ceiling</div>';
+  if(!mod) return head + '<div class="sa-empty">This fills in once votes are counted.</div>';
+  const t0 = mod.thr(1, 0), t1 = mod.thr(1, 1), gap = t0 - mod.edM0;
+  const lbl = v => v >= 0 ? `D+${v.toFixed(1)}` : `R+${Math.abs(v).toFixed(1)}`;
+  const holdTxt = t0 >= 0 ? `<b>Shut out:</b> at forecast Republican turnout, Democrats lose statewide whenever Election Day is worse than <b>${lbl(t0)}</b> for them. Republicans can even lose Election Day by ${t0.toFixed(1)} points and still carry the state.` : `<b>Shut out:</b> at forecast Republican turnout, Republicans need Election Day to go <b>${lbl(t0)}</b> or better to carry the state.`;
+  const d1Txt = `<b>Within reach:</b> Democrats win statewide from ${lbl(t0)} up, but by less than 1 point until Election Day reaches <b>${lbl(t1)}</b>, which is what they need for a 1-point win.`;
+  const fcTxt = `<b>The forecast:</b> Election Day is ${lbl(mod.edM0)}, which is ${Math.abs(gap).toFixed(1)} points ${gap >= 0 ? 'short of the tie line for Democrats' : 'past the tie line'}.`;
+  const crossTxt = mod.crossTie === null ? `<b>If Republican turnout collapses:</b> even at 30% of forecast, the Election Day margin on its own would not reach the tie line.` : `<b>If Republican turnout collapses:</b> the Election Day margin moves toward Democrats on its own. It reaches the tie line at about <b>${mod.crossTie}%</b> of forecast Republican turnout${mod.crossD1 === null ? '' : ` and Democrats winning by 1 at about <b>${mod.crossD1}%</b>`} (everyone else voting as forecast).`;
+  const leg = SA_SC_BINS.map(q => `<span><i style="background:${q.c}"></i>${q.lab} <em>${mod.cnt[q.key]}</em></span>`).join('');
+  return head + `<div class="sa-note">With the counted ballots locked in, this shows <b>what Election Day has to look like</b>: where Republicans stay in the game, and what Democrats need to get within reach or to win by 1 point. Each dot is one scenario. Left to right is how many Republicans turn out on Election Day compared with the forecast (the floor is on the left, where turnout fails). Bottom to top is the margin the Election Day ballots end up at (the ceiling for Democrats is at the top). The color is who wins statewide. <b>Click a dot</b> to see its map, final margin and which counties are in play.</div>
+    <div class="sa-scen-take"><div>${holdTxt}</div><div>${d1Txt}</div><div>${fcTxt}</div><div>${crossTxt}</div></div>
+    <div id="saScenChart" style="height:460px;margin-top:10px"></div>
+    <div class="sa-leg2 sa-scen-leg">${leg}</div>
+    <div class="sa-leg2 sa-scen-leg2"><span><i class="ln" style="border-top:2px dashed #e9edf5"></i>Tie line: Republicans stay ahead below it</span><span><i class="ln" style="border-top:2px dashed #5b9bd9"></i>Democrats win by 1 above it</span><span><i class="ln" style="border-top:3px solid #ffd23f"></i>Where Election Day lands as Republican turnout falls</span><span><b style="color:#ffd23f">★</b> Forecast</span></div>
+    <div class="sa-scen-top"><div><div class="sa-scen-val" id="saScenVal"></div><div class="sa-scen-sub" id="saScenSub"></div></div><button class="sim-btn sa-scen-reset" id="saScenReset" type="button">Back to forecast</button></div>
+    <div class="sa-key" style="margin-top:12px"><b style="color:var(--text)">County by county</b> · the selected scenario <span style="color:#ffd23f">(yellow outline: counties that can flip somewhere in this range)</span></div>
+    <div class="sa-fin-row"><div class="sa-fin-big sa-scen-big" id="saScenBig"></div><div id="saScenMap" style="height:460px;"></div></div>
+    <div class="sa-legend-row" id="saScenLeg"></div>
+    <div class="sa-scen-sum">
+      <div><div class="n" style="color:${SA_COL.r}">${mod.lockR.length}</div><div class="t">counties Republicans win in every scenario here</div></div>
+      <div><div class="n" style="color:${SA_COL.d}">${mod.lockD.length}</div><div class="t">counties Democrats win in every scenario here</div></div>
+      <div><div class="n" style="color:#ffd23f">${mod.inPlay.length}</div><div class="t">counties that can go either way · <b>${mod.combos}</b> different county maps across these ${mod.dots.length} scenarios</div></div>
+    </div>
+    <div id="saScenFlips"></div>`;
+}
+async function saScenDraw(){
+  const mod = saState.scen, el = document.getElementById('saScenChart'); if(!mod || !el) return;
+  const rowL = (c, nm, v) => saRow(c, nm, v);
+  const hover = mod.dots.map(d => `<div class="sorted-hover-date">${d.x}% of forecast Republican turnout</div>` + rowL('#e9edf5', 'Election Day margin', saScenMargTxt(d.y)) + rowL(saScenBin(d.f).c, 'Final margin', saPts(d.f)) + rowL('#ffd23f', 'Net votes', saNetTxt(d.net)) + `<div class="sorted-hover-row"><span class="sorted-hover-gap">${d.f < 0 ? 'Republicans win statewide' : (d.f === 0 ? 'Tied' : 'Democrats win statewide')} · click for the map</span></div>`);
+  const colSp = Math.max(0, (el.clientWidth || 900) - 76) * 2.5 / 88, msz = Math.max(5, Math.min(14, Math.floor(Math.min(colSp, 17) - 2)));
+  const dots = { type:'scatter', mode:'markers', name:'dots', x:mod.dots.map(d => d.x), y:mod.dots.map(d => d.y), marker:{ symbol:'square', size:msz, color:mod.dots.map(d => d.bin.c), line:{ color:'rgba(10,14,23,.7)', width:msz > 8 ? 1 : 0 } }, customdata:hover, hoverinfo:'none', showlegend:false };
+  const xs = mod.curve.map(c => c.x);
+  const ln = (k, color, dash, w) => ({ type:'scatter', mode:'lines', x:xs, y:mod.curve.map(c => c[k]), line:{ color, width:w, dash }, hoverinfo:'skip', showlegend:false });
+  const sel = saScenSel || { rho:1, m:mod.edM0 };
+  const star = { type:'scatter', mode:'markers', name:'forecast', x:[100], y:[mod.edM0], marker:{ symbol:'star', size:15, color:'#ffd23f', line:{ color:'#0a0e17', width:1.5 } }, hoverinfo:'skip', showlegend:false };
+  const ring = { type:'scatter', mode:'markers', name:'sel', x:[sel.rho * 100], y:[sel.m], marker:{ symbol:'circle-open', size:22, color:'#ffffff', line:{ width:3, color:'#ffffff' } }, hoverinfo:'skip', showlegend:false };
+  const tv = [], tt = []; for(let v = -30; v <= 10; v += 10){ tv.push(v); tt.push(saScenTick(v)); }
+  await saPlot(el, [dots, ln('t0', '#e9edf5', 'dash', 2), ln('t1', '#5b9bd9', 'dash', 2), ln('y', '#ffd23f', 'solid', 3), star, ring], {
+    margin:{ t:10, r:14, b:56, l:62 }, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', showlegend:false, hovermode:'closest',
+    font:{ family:'Inter, sans-serif', color:'#9aa4b8', size:11 },
+    xaxis:{ range:[26, 114], tickvals:[30, 40, 50, 60, 70, 80, 90, 100, 110], ticksuffix:'%', gridcolor:'#212a3b', zeroline:false, title:{ text:'Republican turnout on Election Day, as a share of the forecast', font:{ size:11 } } },
+    yaxis:{ range:[-32, 14], tickvals:tv, ticktext:tt, gridcolor:'#212a3b', zeroline:false, title:{ text:'Election Day margin', font:{ size:11 } } } }, { displayModeBar:false, responsive:true });
+  saAttachHtmlTip(el);
+  el.on('plotly_click', d => { const p = (d.points || []).find(q => q.data && q.data.name === 'dots'); if(!p) return; saScenSel = { rho:p.x / 100, m:p.y }; saScenSelect().catch(() => {}); });
+}
+async function saScenSelect(){
+  const mod = saState.scen; if(!mod) return;
+  await ensureGeojson();
+  const sel = saScenSel || { rho:1, m:mod.edM0 }, rho = sel.rho, m = sel.m;
+  const r = mod.ev(rho, m), base = mod.ev(1, mod.edM0);
+  const chart = document.getElementById('saScenChart');
+  if(chart && chart.data && chart.data.length === 6) Plotly.restyle(chart, { x:[[rho * 100]], y:[[m]] }, [5]);
+  const fm = r.margin, mc = saMarginColor(fm);
+  let dC = 0, rC = 0; r.rows.forEach(o => { if(o.net > 0) dC++; else rC++; });
+  const isF = !saScenSel;
+  document.getElementById('saScenVal').innerHTML = `${isF ? 'The forecast' : 'Selected scenario'}: Republican turnout <span style="color:#e9edf5">${+(rho * 100).toFixed(1)}%</span> of forecast, Election Day <span style="color:${saMarginColor(m)}">${saScenMargTxt(m)}</span>`;
+  const t0 = mod.thr(rho, 0), t1 = mod.thr(rho, 1);
+  document.getElementById('saScenSub').innerHTML = `At this turnout, Republicans stay ahead statewide unless Election Day is ${saScenMargTxt(t0)} or better for Democrats, and Democrats win by 1 point at ${saScenMargTxt(t1)}.`;
+  document.getElementById('saScenBig').innerHTML = `<div class="lbl">Final margin in this scenario</div><div class="sa-big"><span style="color:${mc}">${saPts(fm)}</span></div><div class="tot">about <b>${fmt(Math.round(r.T))}</b> total ballots</div><div class="net" style="color:${mc}">Net ${saNetTxt(r.net)} votes</div>
+    <div class="sa-scen-tally"><b style="color:${SA_COL.r}">${rC}</b> counties Republican<br><b style="color:${SA_COL.d}">${dC}</b> counties Democratic<br><span style="color:var(--muted)">${fm === 0 ? 'Tied statewide' : (fm > 0 ? 'Democrats' : 'Republicans') + ' win statewide'}</span></div>`;
+  // counties that differ from the forecast
+  const bn = {}; base.rows.forEach(o => { bn[o.n] = o.net > 0; });
+  const toD = r.rows.filter(o => o.net > 0 && !bn[o.n]).map(o => o.n), toR = r.rows.filter(o => o.net <= 0 && bn[o.n]).map(o => o.n);
+  document.getElementById('saScenFlips').innerHTML = (toD.length || toR.length)
+    ? `<div class="sa-note" style="margin-top:12px">Compared with the forecast, this scenario flips:</div><div class="sa-scen-chips">${toD.map(n => `<span style="color:${SA_COL.d};border-color:${SA_COL.d}66;background:${SA_COL.d}14">${n} <em>to Democrats</em></span>`).join('')}${toR.map(n => `<span style="color:${SA_COL.r};border-color:${SA_COL.r}66;background:${SA_COL.r}14">${n} <em>to Republicans</em></span>`).join('')}</div>`
+    : `<div class="sa-note" style="margin-top:12px">${isF ? 'This is the forecast.' : 'No county flips compared with the forecast in this scenario.'}</div>`;
+  // the map
+  const names = r.rows.map(o => o.n), res = {};
+  r.rows.forEach(o => { const mm = o.net / o.T * 100; res[o.n] = { m:mm, n:o.net, T:o.T, rating:saRatingOf(mm) }; });
+  const catColor = k => SA_ED_CATS.find(c => c.key === k).color;
+  const hover = names.map(nm => { const o = res[nm]; return `<div class="sorted-hover-date">${nm} County</div>` + saRow(catColor(o.rating), 'This scenario', o.rating, saPts(o.m)) + saRow('#ffd23f', 'Net votes', saNetTxt(o.n)) + `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>PROJECTED BALLOTS</b>&nbsp;${fmt(Math.round(o.T))}</div>`; });
+  const z = names.map(nm => SA_ED_CATS.findIndex(k => k.key === res[nm].rating) + 0.5);
+  const mapEl = document.getElementById('saScenMap');
+  if(mapEl.data && mapEl.data.length === 3){ Plotly.restyle(mapEl, { z:[z], customdata:[hover] }, [1]); return; }
+  const loc = names.map(nm => FL_FIPS[nm]), line = { color:'#0a0e17', width:1 };
+  const baseT = { type:'choropleth', geojson:geojsonFL, locations:loc, z:names.map(() => 0), featureidkey:'id', zmin:0, zmax:1, colorscale:[[0, '#222b3d'], [1, '#222b3d']], showscale:false, marker:{ line }, hoverinfo:'skip' };
+  const tr = { type:'choropleth', geojson:geojsonFL, locations:loc, z, featureidkey:'id', zmin:0, zmax:SA_ED_CATS.length, colorscale:stepColorscale(SA_ED_CATS), customdata:hover, hoverinfo:'none', marker:{ line }, showscale:false };
+  const ol = { type:'choropleth', geojson:geojsonFL, locations:mod.inPlay.map(n => FL_FIPS[n]), z:mod.inPlay.map(() => 0), featureidkey:'id', zmin:0, zmax:1, colorscale:[[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0)']], showscale:false, marker:{ line:{ color:'#ffd23f', width:2.6 } }, hoverinfo:'skip' };
+  await saPlot(mapEl, [baseT, tr, ol], { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:6, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });
+  saAttachHtmlTip(mapEl);
+  const lg = document.getElementById('saScenLeg');
+  if(lg) lg.innerHTML = SA_ED_CATS.slice().reverse().map(k => `<span><i style="background:${k.color}"></i>${k.key}</span>`).join('');
+}
+async function saScenUpdate(){ await saScenDraw(); await saScenSelect(); }
+function saScenRefresh(){
+  const box = document.getElementById('saSecScen'); if(!box || !saState.ctx) return;
+  box.innerHTML = saScenHTML(); saScenUpdate().catch(e => console.error(e));
+}
+document.getElementById('splitAvgView').addEventListener('click', e => {
+  if(e.target.closest('#saScenReset')){ saScenSel = null; saScenSelect().catch(() => {}); }
+});
 async function saDrawEdMap(){
   const b = saState.ctx; if(!b) return;
   await saDrawForecastMap('saEdMap', 'saEdLegend', saCountyED(b.M), 'Forecast', 'STILL TO COME', 'No Election Day ballots projected');
@@ -13305,7 +13491,7 @@ document.getElementById('splitAvgView').addEventListener('input', e => {
     if(isD) demLoyalty = v; else repLoyalty = v;
     const live = document.getElementById(isD ? 'demLoyaltySlider' : 'repLoyaltySlider'); if(live) live.value = v;
     try{ (isD ? updateDemLoyaltyLabel : updateRepLoyaltyLabel)(); }catch(_){}
-    saRenderNeeds(); saDrawEdMap().catch(() => {}); saFcRender(false).catch(() => {});
+    saRenderNeeds(); saDrawEdMap().catch(() => {}); saFcRender(false).catch(() => {}); saScenRefresh();
     return;
   }
   if(e.target.id !== 'saNpa') return;
@@ -13315,6 +13501,7 @@ document.getElementById('splitAvgView').addEventListener('input', e => {
   saRenderNeeds();
   saDrawEdMap().catch(() => {});
   saFcRender(false).catch(() => {});
+  saScenRefresh();
 });
 document.getElementById('splitAvgView').addEventListener('click', e => {
   const mb = e.target.closest('.sa-mview button');
@@ -13353,6 +13540,7 @@ async function saRender(){
   saRenderNeeds();
   saDrawEdMap().catch(() => {});
   try{ saState.fc = saFcBuild(pts, M); saState.fcPath = saTurnPathData(M, pts); saFcRender(true).catch(() => {}); }catch(e){ console.error(e); }
+  saScenRefresh();
   // party share chart
   const per = saIncsCum(pts);
   const shareEl = document.getElementById('saShareChart');

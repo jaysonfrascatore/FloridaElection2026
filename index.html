@@ -1103,9 +1103,6 @@
   #countyChartsView.active{ display:block; }
   #countyChartsView h2{ font-size:15px; margin-bottom:14px; }
   #splitsPanel.zoom-side > #btView, #splitsPanel.zoom-side > .tweet-carousel{ display:none !important; }
-  .cz-split-bar{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin:-4px 0 14px; padding:8px 10px; background:var(--panel-2); border:1px solid var(--border); border-radius:10px; font-size:12.5px; }
-  .cz-split-bar .lbl{ color:var(--muted); } .cz-split-bar .lbl b{ color:#ffd23f; }
-  .cz-split-bar .segmented{ display:inline-flex; margin:0; }
   .county-detail-chart-wrap{ margin-bottom:26px; }
   .county-detail-chart-wrap h3{
     font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted);
@@ -1457,7 +1454,7 @@
     </div>
     <div class="panel" id="splitsPanel" style="display:none;"></div>
     <div class="panel" id="tablePanel">
-      <h2>County table</h2>
+      <h2 id="countyTableTitle">County table</h2>
       <div class="table-hint" id="tableHint">Not sure where a county is? Click any row to open its General Election results page.</div>
       <div class="table-wrap" id="tableWrap">
         <table id="voteTable">
@@ -1483,7 +1480,6 @@
            the map, which controls both at once. -->
       <div id="countyChartsView">
         <h2 id="countyChartsTitle">County Trend</h2>
-        <div id="czSplitBar" class="cz-split-bar" style="display:none"></div>
         <div class="an-turn-detail" id="countyTurnoutTrack" style="display:none">
           <div class="an-td-head" id="ctHead"></div>
           <div id="ctChart" style="height:250px;"></div>
@@ -3649,41 +3645,24 @@ function placeSplits(){
   if(car && tp){ if(wide && on){ if(car.parentNode !== sp) sp.appendChild(car); } else if(car.parentNode !== tp) tp.appendChild(car); }
   sp.style.display = (wide && on) ? 'block' : 'none';
   if(grid) grid.classList.toggle('has-splits', wide && on);
-  // A zoomed county's trend charts sit beside the map again (top of the right-hand column) instead of down in the county table,
-  // and the table panel steps aside until the zoom is reset. The Latest Update Summary waits underneath the splits as usual.
+  // A zoomed county's trend charts sit beside the map (right-hand column); the Splits and Latest Update Summary step aside until Reset Zoom.
   const cv = document.getElementById('countyChartsView');
   if(cv && tp){
     if(!cv.__home) cv.__home = { parent:cv.parentNode, next:cv.nextElementSibling };
     const side = wide && on && cv.classList.contains('active');
-    if(side){ if(cv.parentNode !== sp){ sp.insertBefore(cv, sp.firstChild); saResizeIn(cv); } }
-    else if(cv.parentNode !== cv.__home.parent){ cv.__home.parent.insertBefore(cv, cv.__home.next && cv.__home.next.parentNode === cv.__home.parent ? cv.__home.next : null); saResizeIn(cv); }
+    if(side){ if(cv.parentNode !== sp){ sp.insertBefore(cv, sp.firstChild); czResizeIn(cv); } }
+    else if(cv.parentNode !== cv.__home.parent){ cv.__home.parent.insertBefore(cv, cv.__home.next && cv.__home.next.parentNode === cv.__home.parent ? cv.__home.next : null); czResizeIn(cv); }
     cv.classList.toggle('side', side);
-    czSplitBarUpdate();
-    sp.classList.toggle('zoom-side', side);   // the Splits and Latest Update Summary step aside until Reset Zoom
+    sp.classList.toggle('zoom-side', side);
     tp.style.display = side ? 'none' : '';
   }
 }
-// While the splits are tucked away during a county zoom, this bar says which vote the county is showing and lets you switch.
-function czSplitBarUpdate(){
-  const bar = document.getElementById('czSplitBar'), cv = document.getElementById('countyChartsView'); if(!bar || !cv) return;
-  const on = cv.classList.contains('side') && currentMetric === 'demrepnpa';
-  bar.style.display = on ? '' : 'none'; if(!on) return;
-  const opts = [['all', 'Total Vote'], ['vbm', 'Mail'], ['ev', 'Early'], ['ed', 'Election Day']];
-  const cur = (opts.find(o => o[0] === btView) || opts[0])[1];
-  bar.innerHTML = `<span class="lbl">Showing <b>${cur === 'Total Vote' ? 'the Total Vote' : cur + ' ballots only'}</b></span><span class="segmented">${opts.map(([k, nm]) => `<button type="button" data-k="${k}" class="${btView === k ? 'active' : ''}">${nm}</button>`).join('')}</span>`;
-}
-document.getElementById('czSplitBar').addEventListener('click', e => {
-  const b = e.target.closest('button[data-k]'); if(!b) return;
-  const row = document.querySelector('#btSummary [data-k="' + b.dataset.k + '"]'); if(row) row.click();
-  setTimeout(czSplitBarUpdate, 50);
-});
-function saResizeIn(el){ setTimeout(() => el.querySelectorAll('.js-plotly-plot').forEach(p => { try{ Plotly.Plots.resize(p); }catch(e){} }), 60); }
-// In the narrow side column, keep the date labels flat and few so they don't run into the legend.
-function sideChartTidy(){
+function czResizeIn(el){ setTimeout(() => el.querySelectorAll('.js-plotly-plot').forEach(p => { try{ Plotly.Plots.resize(p); }catch(e){} }), 60); }
+// In the right-hand column, keep the date labels flat and few so they don't run into the legend.
+setInterval(() => {
   const cv = document.getElementById('countyChartsView'); if(!cv || !cv.classList.contains('side')) return;
-  cv.querySelectorAll('.js-plotly-plot').forEach(p => { try{ if(!p.__tidy || p.__tidy !== p.data){ p.__tidy = p.data; Plotly.relayout(p, { 'xaxis.nticks':4, 'xaxis.tickangle':0, 'legend.y':-0.22 }); } }catch(e){} });
-}
-setInterval(sideChartTidy, 700);
+  cv.querySelectorAll('.js-plotly-plot').forEach(p => { try{ if(p.__tidy !== p.data){ p.__tidy = p.data; Plotly.relayout(p, { 'xaxis.nticks':4, 'xaxis.tickangle':0, 'legend.y':-0.22 }); } }catch(e){} });
+}, 700);
 if(splitsWideMQ.addEventListener) splitsWideMQ.addEventListener('change', () => { placeSplits(); window.dispatchEvent(new Event('resize')); });
 function btRender(){
   const box = document.getElementById('btView'); if(!box) return;
@@ -8949,7 +8928,7 @@ async function loadAndRenderCountyCharts(countyName){
   const typeSuffix = typeTrend ? ' \u2014 ' + (btView === 'all' ? 'Total Vote' : BT_LABELS[btView]) + (btDayLabel() ? ' \u2014 ' + btDayLabel() : '') : '';
   document.getElementById('countyDetailCumulativeLabel').textContent = 'Cumulative Votes' + typeSuffix;
   document.getElementById('countyDetailShareLabel').textContent = 'Vote Share Over Time' + typeSuffix;
-  document.getElementById('countyMarginWrap').style.display = (typeTrend || currentMetric === 'demrepnpa') ? 'block' : 'none';
+  document.getElementById('countyMarginWrap').style.display = 'none';   // the county view shows the raw vote and share trends only
   renderLiveTurnoutTrack(countyName, rows).catch(() => {});
   if(typeTrend){
     document.getElementById('countyZoomBarChart').innerHTML = '';
@@ -8974,7 +8953,7 @@ async function loadAndRenderCountyCharts(countyName){
     // Clears out any bar chart left over from a previous Drop Winners
     // zoom -- every other metric's info panel has no bar chart at all.
     document.getElementById('countyZoomBarChart').innerHTML = '';
-    await renderCountyDetailCharts(countyRows, currentMetric === 'demrepnpa');
+    await renderCountyDetailCharts(countyRows);
   }
 }
 
@@ -9019,7 +8998,8 @@ async function openCountyZoom(countyName){
   setZoomResetButtonActive(true);
 
   document.getElementById('tableWrap').style.display = 'none';
-  document.getElementById('tableHint').style.display = 'none';   // the table is replaced by this county's charts, so its "click a row" hint goes too
+  document.getElementById('tableHint').style.display = 'none';
+  document.getElementById('countyTableTitle').style.display = 'none';   // the table is replaced by this county's charts, so its "click a row" hint goes too
   document.getElementById('countyChartsView').classList.add('active');
   if(typeof placeSplits === 'function') placeSplits();
   document.getElementById('countyChartsTitle').textContent = countyName + ' County \u2014 Historical Trend';
@@ -9062,6 +9042,7 @@ function closeCountyZoom(){
 
   document.getElementById('tableWrap').style.display = '';
   document.getElementById('tableHint').style.display = '';
+  document.getElementById('countyTableTitle').style.display = '';
   document.getElementById('countyChartsView').classList.remove('active');
   if(typeof placeSplits === 'function') placeSplits();
   document.getElementById('countyZoomBarChart').innerHTML = '';
@@ -9943,9 +9924,10 @@ async function renderCountyDetailCharts(countyRows, typeMode){
   lastCountyCumulativeData = { times, dem, rep, npaOnly, npaOther, restartIdx };
   await renderCumulativeChartWindowed('countyDetailCumulativeChart', 'countyWindowNote', lastCountyCumulativeData, countyShowAllCumulative);
 
-  const ratingLookup = buildRatingLookup(dem, rep, npaOnly, npaOther);
   const lineBase = { mode:'lines+markers', marker:{size:6}, line:{width:2.5} };
   const cIx = shareChartIdx(times), cp = a => cIx.map(i => a[i]), cTimes = cp(times);
+  // The share chart starts at Oct 19, so its point 0 is history row cIx[0]: the rating lookup has to be offset by that, or the hover rating comes from an older row.
+  const ratingLookup = buildRatingLookup(dem, rep, npaOnly, npaOther, cIx.length ? cIx[0] : 0);
   const shareTraces = [
     { ...lineBase, x:cTimes, y:cp(demPct), name:'DEM %', line:{color:'#5b9bd9', width:2.5} },
     { ...lineBase, x:cTimes, y:cp(repPct), name:'REP %', line:{color:'#d4675a', width:2.5} },

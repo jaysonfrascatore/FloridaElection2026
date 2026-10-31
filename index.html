@@ -975,36 +975,6 @@
   .sa-pace-cell .nm{ font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; }
   .sa-med{ font-size:clamp(26px,4.4vw,38px); font-weight:700; line-height:1.1; margin:6px 0 4px; letter-spacing:-.01em; }
   .sa-pace-cell .mini{ font-size:11.5px; color:var(--muted); line-height:1.4; }
-  #saScenSlider{ background:#2a3347; }
-  .sa-scen-take{ margin-top:12px; padding:12px 14px; background:var(--panel-2); border:1px solid var(--border); border-left:3px solid #ffd23f; border-radius:10px; font-size:13px; line-height:1.6; display:grid; gap:4px; }
-  .sa-scen-take b{ color:var(--text); }
-  .sa-scen-leg{ margin-top:10px; } .sa-scen-leg i{ width:12px !important; height:12px !important; border-radius:2px; border-top:0 !important; } .sa-scen-leg em{ font-style:normal; color:var(--text); font-weight:600; }
-  .sa-scen-leg2{ margin-top:6px; }
-  .sa-odds-cards{ grid-template-columns:repeat(4,minmax(0,1fr)) !important; }
-  @media (max-width:760px){ .sa-odds-cards{ grid-template-columns:repeat(2,minmax(0,1fr)) !important; } }
-  .sa-odds-pick{ margin-top:8px; padding:10px 14px; background:var(--panel-2); border:1px solid var(--border); border-radius:10px; font-size:13px; line-height:1.6; }
-  .sa-odds-bars .row{ display:grid; grid-template-columns:110px 1fr 56px; gap:10px; align-items:center; padding:3px 0; font-size:12.5px; }
-  .sa-odds-bars .bar{ height:8px; border-radius:4px; background:#212a3b; overflow:hidden; } .sa-odds-bars .bar i{ display:block; height:100%; background:#5b9bd9; } .sa-odds-bars .pc{ font-family:var(--mono); text-align:right; }
-  .sa-scen-before{ margin-top:12px; font-size:13px; color:var(--muted); } .sa-scen-before b{ color:var(--text); }
-  .sa-scen-table{ margin-top:10px; font-size:13px; } .sa-scen-table td, .sa-scen-table th{ padding:9px 10px; vertical-align:top; }
-  .sa-scen-table .sub{ font-size:11px; color:var(--muted); font-weight:400; margin-top:2px; }
-  .sa-scen-table tr.fc td{ background:rgba(255,210,63,.06); } .sa-scen-table tr.fl td:first-child b{ color:#5b9bd9; } .sa-scen-table tr.ce td:first-child b{ color:#d4675a; } .sa-scen-table tr.fc td:first-child b{ color:#ffd23f; }
-  .sa-scen-imp{ margin-top:10px; padding:10px 14px; border:1px dashed rgba(154,164,184,.4); border-radius:10px; font-size:12.5px; color:var(--muted); line-height:1.5; } .sa-scen-imp b{ color:var(--text); }
-  .sa-scen-top{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; margin:14px 0 4px; }
-  .sa-scen-val{ font:700 16px var(--mono); } .sa-scen-sub{ font-size:12px; color:var(--muted); }
-  .sa-scen-reset{ margin-left:auto; }
-  .sa-scen-strip{ height:8px; border-radius:6px; margin:2px 0 6px; opacity:.9; }
-  .sa-scen-ends{ display:flex; justify-content:space-between; gap:8px; font-size:11.5px; color:var(--muted); line-height:1.4; }
-  .sa-scen-ends b{ color:var(--text); font-weight:600; } .sa-scen-ends > div:nth-child(2){ text-align:center; } .sa-scen-ends > div:last-child{ text-align:right; }
-  .sa-scen-big .net{ font:700 14px var(--mono); margin-top:4px; }
-  .sa-scen-tally{ margin-top:10px; font-size:13px; line-height:1.6; } .sa-scen-tally b{ font-family:var(--mono); }
-  .sa-scen-sum{ margin-top:14px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
-  .sa-scen-sum > div{ background:var(--panel-2); border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
-  .sa-scen-sum .n{ font:700 26px var(--mono); line-height:1.1; } .sa-scen-sum .t{ font-size:11.5px; color:var(--muted); margin-top:2px; line-height:1.4; }
-  .sa-scen-chips{ margin-top:10px; display:flex; flex-wrap:wrap; gap:6px; }
-  .sa-scen-chips span{ font:600 11px var(--mono); padding:4px 8px; border-radius:999px; background:rgba(255,210,63,.1); border:1px solid rgba(255,210,63,.45); color:#ffd23f; }
-  .sa-scen-chips span em{ font-style:normal; color:var(--muted); font-weight:500; }
-  @media (max-width:760px){ .sa-scen-sum{ grid-template-columns:1fr; } }
   .sa-fin-row{ display:flex; align-items:center; justify-content:center; gap:4px; }
   .sa-fin-row #saFinMap, .sa-fin-row #saScenMap{ flex:0 1 560px; min-width:0; }
   .sa-fin-big{ flex:0 0 auto; text-align:center; }
@@ -1349,7 +1319,6 @@
       <div id="saShareHead" class="sa-note"></div>
       <div id="saShareChart" style="height:280px;"></div>
     </div>
-    <div class="panel sa-sec sa-reveal" id="saSecScen"></div>
   </div>
 
   <div class="grid" id="liveGrid">
@@ -13339,237 +13308,6 @@ async function saDrawForecastMap(elId, legId, data, rowLabel, totalLabel, noneMs
   const lg = document.getElementById(legId);
   if(lg) lg.innerHTML = SA_ED_CATS.slice().reverse().map(k => `<span><i style="background:${k.color}"></i>${k.key}</span>`).join('');
 }
-// ---- Election Day: Floor to Ceiling (November 3 only) ----
-// Three pieces add up to the final result: the ballots already counted, the early vote and mail still to come before Election Day (from the
-// forecast), and the November 3 vote itself. The November 3 vote is what moves: Republican turnout on the day (from a collapse to record numbers,
-// as a share of the forecast) and how NPA/other voters break (D+10 to D+25, from polling). Party loyalty comes from your settings.
-let saScenSel = null;                             // { rho, npa } of the clicked dot; null = the forecast
-const SA_SC_CAP = 12;                             // Republicans are not expected to win statewide by more than this; runs past it are dropped
-const SA_SC_RHO = [0.5, 1.75];                    // Republican Nov 3 ballots vs the forecast: collapse (floor) .. record turnout (ceiling)
-const SA_SC_NPA = [10, 25];                       // NPA/other margin toward Democrats (points), low and high marker
-const SA_SC_NPA_MID = (SA_SC_NPA[0] + SA_SC_NPA[1]) / 2;
-const SA_SC_XS = [], SA_SC_YS = [];
-for(let v = SA_SC_RHO[0] * 100; v <= SA_SC_RHO[1] * 100 + 1e-9; v += 5) SA_SC_XS.push(v);
-for(let v = SA_SC_NPA[0]; v <= SA_SC_NPA[1] + 1e-9; v += 1) SA_SC_YS.push(v);
-const SA_SC_BINS = [
-  { key:'rb', lab:'Republicans win by 5+', c:'#85182a', test:f => f <= -5 },
-  { key:'rm', lab:'Republicans win by 1 to 5', c:'#d4675a', test:f => f > -5 && f <= -1 },
-  { key:'rc', lab:'Republicans win by under 1', c:'#f3b5ab', test:f => f > -1 && f < 0 },
-  { key:'dc', lab:'Democrats win by under 1', c:'#b9d9f7', test:f => f >= 0 && f < 1 },
-  { key:'dm', lab:'Democrats win by 1 to 5', c:'#5b9bd9', test:f => f >= 1 && f < 5 },
-  { key:'db', lab:'Democrats win by 5+', c:'#1f4f8f', test:f => f >= 5 }
-];
-const saScenBin = f => SA_SC_BINS.find(b => b.test(f)) || SA_SC_BINS[0];
-const saScenMargTxt = m => Math.abs(m) < 0.05 ? 'Even' : (m > 0 ? 'D+' : 'R+') + Math.abs(m).toFixed(1);
-function saScenModel(){
-  const b = saState.ctx; if(!b) return null;
-  const ed = saCountyED(b.M), fin = saCountyFinal(b.M);
-  const dl = demLoyalty / 100, rl = repLoyalty / 100;
-  const rows = []; let regR = 0, usedR = 0, edR0 = 0;
-  SIM_COUNTY_NAMES.forEach(n => {
-    if(!FL_FIPS[n]) return; const f = fin[n], e = ed[n]; if(!f || !(f.t > 0)) return;
-    const ee = e || { d:0, r:0, n:0 };
-    const pre = { d:Math.max(0, f.d - ee.d), r:Math.max(0, f.r - ee.r), n:Math.max(0, f.n - ee.n) };   // counted + the rest of early voting and mail
-    rows.push({ n, pre, e:{ d:ee.d, r:ee.r, n:ee.n } });
-    const reg = SIM_REG[n]; if(reg) regR += reg[0] * reg[1] / 100; usedR += pre.r; edR0 += ee.r;
-  });
-  if(!rows.length) return null;
-  // votes from a pile of ballots by registration: loyalty for D and R, and the NPA/other split (npa = margin toward Democrats in points)
-  const votes = (o, npa) => { const s = (50 + npa / 2) / 100; return { D:o.d * dl + o.r * (1 - rl) + o.n * s, R:o.r * rl + o.d * (1 - dl) + o.n * (1 - s), t:o.d + o.r + o.n }; };
-  const ev = (rho, npa) => {
-    let pD = 0, pR = 0, pT = 0, eD = 0, eR = 0, eT = 0; const out = [];
-    rows.forEach(r => {
-      const p = votes(r.pre, npa), e = votes({ d:r.e.d, r:rho * r.e.r, n:r.e.n }, npa);
-      pD += p.D; pR += p.R; pT += p.t; eD += e.D; eR += e.R; eT += e.t;
-      out.push({ n:r.n, T:p.t + e.t, net:(p.D + e.D) - (p.R + e.R) });
-    });
-    const T = pT + eT, net = (pD + eD) - (pR + eR);
-    return { T, net, margin:T > 0 ? net / T * 100 : 0, D:pD + eD, R:pR + eR,
-      ed:{ t:eT, D:eD, R:eR, margin:eT > 0 ? (eD - eR) / eT * 100 : 0 }, pre:{ t:pT, D:pD, R:pR, margin:pT > 0 ? (pD - pR) / pT * 100 : 0 }, rows:out };
-  };
-  const mod = { rows, ev, regR, usedR, edR0 };
-  mod.finalRTurnout = rho => regR > 0 ? (usedR + rho * edR0) / regR * 100 : 0;
-  mod.rhoMax = edR0 > 0 ? Math.max(0, regR - usedR) / edR0 : SA_SC_RHO[1];   // every registered Republican who hasn't voted shows up on Nov 3
-  mod.fc = ev(1, SA_SC_NPA_MID); mod.floor = ev(SA_SC_RHO[0], SA_SC_NPA[1]); mod.ceil = ev(SA_SC_RHO[1], SA_SC_NPA[0]); mod.max = ev(mod.rhoMax, SA_SC_NPA[0]);
-  // the grid
-  const dots = [], maps = new Set(), seenD = {}, seenR = {}, cnt = {}; SA_SC_BINS.forEach(q => { cnt[q.key] = 0; });
-  SA_SC_XS.forEach(xv => SA_SC_YS.forEach(yv => {
-    const r = ev(xv / 100, yv); if(r.margin < -SA_SC_CAP) return;
-    const q = saScenBin(r.margin); cnt[q.key]++;
-    maps.add(r.rows.map(o => o.net > 0 ? 'D' : 'R').join(''));
-    r.rows.forEach(o => { if(o.net > 0) seenD[o.n] = 1; else seenR[o.n] = 1; });
-    dots.push({ x:xv, y:yv, f:r.margin, net:r.net, T:r.T, edM:r.ed.margin, edT:r.ed.t, bin:q });
-  }));
-  mod.dots = dots; mod.cnt = cnt; mod.combos = maps.size;
-  mod.lockR = rows.filter(r => !seenD[r.n]).map(r => r.n); mod.lockD = rows.filter(r => !seenR[r.n]).map(r => r.n);
-  mod.inPlay = rows.filter(r => seenD[r.n] && seenR[r.n]).map(r => r.n);
-  // tie line: for each turnout level, the NPA margin at which the race is tied (final margin is linear in the NPA split)
-  mod.tie = []; for(let v = SA_SC_RHO[0] * 100; v <= SA_SC_RHO[1] * 100 + 1e-9; v += 2.5){ const a = ev(v / 100, 0).net, b2 = ev(v / 100, 100).net; if(a !== b2) mod.tie.push({ x:v, y:-a / (b2 - a) * 100 }); }
-  return mod;
-}
-function saScenHTML(){
-  const mod = saState.scen = saScenModel();
-  const tab = saState.scenTab === 'odds' ? 'odds' : 'grid';
-  const head = `<div class="sa-sec-head"><div class="sa-eyebrow">Election Day: Floor to Ceiling</div><div class="segmented sa-seg" id="saScenTabs"><button data-t="grid" class="${tab === 'grid' ? 'active' : ''}">Scenario Grid</button><button data-t="odds" class="${tab === 'odds' ? 'active' : ''}">Win Odds</button></div></div>`;
-  if(!mod) return head + '<div class="sa-empty">This fills in once votes are counted.</div>';
-  const row = (name, note, r, rho, npa, cls) => `<tr class="${cls || ''}"><td><b>${name}</b><div class="sub">${note}</div></td>
-    <td>${Math.round(rho * 100)}%<div class="sub">final R turnout ${mod.finalRTurnout(rho).toFixed(1)}%</div></td><td>D+${npa}</td>
-    <td>${fmt(Math.round(r.ed.t))}</td><td style="color:${saMarginColor(r.ed.margin)}"><b>${saScenMargTxt(r.ed.margin)}</b><div class="sub">R ${(r.ed.R / r.ed.t * 100).toFixed(1)}% · D ${(r.ed.D / r.ed.t * 100).toFixed(1)}%</div></td>
-    <td style="color:${saMarginColor(r.margin)}"><b>${saPts(r.margin)}</b><div class="sub">net ${saNetTxt(r.net)} votes</div></td></tr>`;
-  const pre = mod.fc.pre;
-  return head + `<div class="sa-note"><b>What Election Day (November 3 only) has to look like, and where it lands.</b> The final result is three pieces added together: the ballots already counted, the early vote and mail still to come before Election Day (from the forecast), and the November 3 vote. Only the November 3 vote moves here. Republican turnout on the day runs from a collapse to record numbers, and NPA/other voters break anywhere from D+10 to D+25. Party loyalty comes from your settings (${demLoyalty.toFixed(1).replace(/\.0$/, '')}% D, ${repLoyalty.toFixed(1).replace(/\.0$/, '')}% R).</div>
-    <div class="sa-scen-before">Everything before November 3 (counted plus the rest of early voting and mail): <b>${fmt(Math.round(pre.t))}</b> ballots at <b style="color:${saMarginColor(pre.margin)}">${saPts(pre.margin)}</b> with NPA/other at D+${SA_SC_NPA_MID}.</div>
-    <div class="table-wrap"><table class="sa-scen-table"><thead><tr><th></th><th>Republican Nov 3 turnout<div class="sub">vs forecast</div></th><th>NPA/other</th><th>Nov 3 ballots</th><th>Nov 3 margin</th><th>Final margin</th></tr></thead><tbody>
-      ${row('Floor', 'Republican collapse', mod.floor, SA_SC_RHO[0], SA_SC_NPA[1], 'fl')}
-      ${row('Forecast', 'turnout model', mod.fc, 1, SA_SC_NPA_MID, 'fc')}
-      ${row('Ceiling', 'record Republican turnout', mod.ceil, SA_SC_RHO[1], SA_SC_NPA[0], 'ce')}
-    </tbody></table></div>
-    <div class="sa-scen-imp"><b>Hard limit:</b> even if every registered Republican who hasn't voted yet showed up on November 3 (${Math.round(mod.rhoMax * 100)}% of the forecast) and NPA/other only broke D+${SA_SC_NPA[0]}, November 3 would be <b>${saScenMargTxt(mod.max.ed.margin)}</b>. Anything more Republican than that can't happen.</div>
-    <div id="saScenPaneGrid" style="${tab === 'odds' ? 'display:none' : ''}">
-    <div class="sa-note" style="margin-top:14px"><b>Scenario Grid.</b> Each dot is one November 3: left to right is Republican turnout on the day (collapse on the left, record on the right), bottom to top is how NPA/other voters break. The color is the final statewide result once it's added to everything before Election Day. Dots where Republicans would win by more than ${SA_SC_CAP} are left out. <b>Click a dot</b> for its map, its November 3 split and the counties in play.</div>
-    <div id="saScenChart" style="height:440px;margin-top:10px"></div>
-    <div class="sa-leg2 sa-scen-leg">${SA_SC_BINS.map(q => `<span><i style="background:${q.c}"></i>${q.lab} <em>${mod.cnt[q.key]}</em></span>`).join('')}</div>
-    <div class="sa-leg2 sa-scen-leg2"><span><i class="ln" style="border-top:2px dashed #e9edf5"></i>Tie line: Democrats win above it</span><span><b style="color:#ffd23f">★</b> Forecast</span><span><b>F</b> Floor · <b>C</b> Ceiling</span></div>
-    <div class="sa-scen-top"><div><div class="sa-scen-val" id="saScenVal"></div><div class="sa-scen-sub" id="saScenSub"></div></div><button class="sim-btn sa-scen-reset" id="saScenReset" type="button">Back to forecast</button></div>
-    <div class="sa-key" style="margin-top:12px"><b style="color:var(--text)">County by county</b> · the selected scenario <span style="color:#ffd23f">(yellow outline: counties that can flip somewhere in this range)</span></div>
-    <div class="sa-fin-row"><div class="sa-fin-big sa-scen-big" id="saScenBig"></div><div id="saScenMap" style="height:460px;"></div></div>
-    <div class="sa-legend-row" id="saScenLeg"></div>
-    <div class="sa-scen-sum">
-      <div><div class="n" style="color:${SA_COL.r}">${mod.lockR.length}</div><div class="t">counties Republicans win in every scenario here</div></div>
-      <div><div class="n" style="color:${SA_COL.d}">${mod.lockD.length}</div><div class="t">counties Democrats win in every scenario here</div></div>
-      <div><div class="n" style="color:#ffd23f">${mod.inPlay.length}</div><div class="t">counties that can go either way · <b>${mod.combos}</b> different county maps across these ${mod.dots.length} scenarios</div></div>
-    </div>
-    <div id="saScenFlips"></div></div>
-    <div id="saScenPaneOdds" style="${tab === 'odds' ? '' : 'display:none'}"></div>`;
-}
-// ---- Win Odds: randomized November 3rds inside the floor and ceiling ----
-// Each run draws Republican turnout on Nov 3 (centered on the forecast, never past the floor or the ceiling) and an NPA/other break anywhere
-// from D+10 to D+25, adds that day to everything before it, and records the result. Fixed seed, so the same data always gives the same answer.
-const SA_ODDS_N = 10000, SA_ODDS_SIG_T = 0.25;
-function saOddsRun(mod){
-  let seed = 20261103; const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
-  const gauss = () => { let u = 0, v = 0; while(!u) u = rnd(); while(!v) v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
-  const out = [], edm = [], cw = {}; mod.rows.forEach(r => { cw[r.n] = 0; });
-  let tries = 0;
-  while(out.length < SA_ODDS_N && tries < SA_ODDS_N * 6){
-    tries++;
-    const rho = 1 + SA_ODDS_SIG_T * gauss(); if(rho < SA_SC_RHO[0] || rho > SA_SC_RHO[1]) continue;
-    const npa = SA_SC_NPA[0] + (SA_SC_NPA[1] - SA_SC_NPA[0]) * rnd();
-    const r = mod.ev(rho, npa); if(r.margin < -SA_SC_CAP) continue;
-    out.push(r.margin); edm.push(r.ed.margin); r.rows.forEach(o => { if(o.net > 0) cw[o.n]++; });
-  }
-  return { out, edm, cw, N:out.length };
-}
-async function saOddsFill(){
-  const mod = saState.scen, pane = document.getElementById('saScenPaneOdds'); if(!mod || !pane) return;
-  const R = saState.odds = saOddsRun(mod), N = R.N, o = R.out;
-  if(!N){ pane.innerHTML = '<div class="sa-empty">Not enough data yet.</div>'; return; }
-  const pr = o.filter(f => f < 0).length / N * 100, pd = 100 - pr, p1 = o.filter(f => f >= 1).length / N * 100;
-  const q = (a, p) => { const s2 = a.slice().sort((x, y) => x - y); return s2[Math.min(s2.length - 1, Math.floor(s2.length * p))]; };
-  const med = q(o, 0.5), lo = q(o, 0.05), hi = q(o, 0.95), em = q(R.edm, 0.5), elo = q(R.edm, 0.05), ehi = q(R.edm, 0.95);
-  const card = (n, c, t) => `<div><div class="n" style="color:${c}">${n}</div><div class="t">${t}</div></div>`;
-  const pf = v => v === 0 ? '0%' : (v < 0.1 ? v.toFixed(2) : v.toFixed(1)) + '%';
-  const prS = pr < 0.1 || pr > 99.9 ? pr.toFixed(2) : pr.toFixed(1), pdS = (100 - parseFloat(prS)).toFixed(prS.split('.')[1].length);
-  const flip = mod.rows.map(r => ({ n:r.n, p:R.cw[r.n] / N * 100 })).filter(f => f.p > 0 && f.p < 100).sort((a, b) => b.p - a.p);
-  pane.innerHTML = `<div class="sa-note" style="margin-top:14px"><b>Win Odds.</b> ${N.toLocaleString()} randomized November 3rds, each added to everything before Election Day. Republican turnout on the day is centered on the forecast and never goes past the floor (${Math.round(SA_SC_RHO[0] * 100)}%) or the ceiling (${Math.round(SA_SC_RHO[1] * 100)}%). NPA/other breaks anywhere from D+${SA_SC_NPA[0]} to D+${SA_SC_NPA[1]}. Runs where Republicans would win by more than ${SA_SC_CAP} are dropped.</div>
-    <div class="sa-scen-sum sa-odds-cards">${card(pf(pr), SA_COL.r, 'chance Republicans win statewide')}${card(pf(pd), SA_COL.d, 'chance Democrats win statewide')}${card(saScenMargTxt(em), saMarginColor(em), 'likely November 3 margin · 90% of runs between ' + saScenMargTxt(elo) + ' and ' + saScenMargTxt(ehi))}${card(saPts(med), saMarginColor(med), 'likely final margin · 90% of runs between ' + saPts(lo) + ' and ' + saPts(hi))}</div>
-    <div class="sa-note" style="margin-top:8px">Republicans <b style="color:${SA_COL.r}">${prS}%</b> + Democrats <b style="color:${SA_COL.d}">${pdS}%</b> = <b>100%</b> of the ${N.toLocaleString()} runs. Democrats win by 1 point or more in ${pf(p1)}.</div>
-    <div id="saOddsChart" style="height:320px;margin-top:10px"></div>
-    <div class="sa-odds-pick" id="saOddsPick">Click any bar to see how often the race ends there.</div>
-    <div class="sa-note" style="margin-top:6px">Each bar is the share of runs that ended at that final margin. Red bars are Republican wins, blue bars are Democratic wins. Runs where Republicans would win by more than ${SA_SC_CAP} are left out.</div>
-    ${flip.length ? `<div class="sa-note" style="margin-top:12px">Counties that could flip, and how often Democrats carry them across the runs:</div>
-    <div class="sa-odds-bars">${flip.map(f => `<div class="row"><span class="nm">${f.n}</span><span class="bar"><i style="width:${f.p}%"></i></span><span class="pc">${f.p.toFixed(f.p < 1 ? 2 : 1)}%</span></div>`).join('')}</div>` : ''}`;
-  const el = document.getElementById('saOddsChart');
-  const lo0 = -15, hi0 = 15, bw = 0.5, nb = Math.round((hi0 - lo0) / bw), cnt = new Array(nb).fill(0);
-  o.forEach(f => { const k = Math.floor((Math.max(lo0, Math.min(hi0 - 1e-9, f)) - lo0) / bw); cnt[k]++; });
-  const xs = cnt.map((_, k) => lo0 + bw * k + bw / 2);
-  const lab = v => Math.abs(v) < 0.005 ? 'Even' : (v < 0 ? 'R+' : 'D+') + Math.abs(v).toFixed(1);
-  const pcx = v => v === 0 ? '0%' : (v < 0.01 ? '<0.01%' : (v < 0.1 ? v.toFixed(2) : v.toFixed(1)) + '%');
-  const rows = cnt.map((c, k) => { const e0 = lo0 + bw * k, e1 = e0 + bw, share = c / N * 100;
-    const atR = o.filter(f => f < e0).length / N * 100, atD = o.filter(f => f >= e1).length / N * 100;
-    return { e0, e1, c, share, atR, atD, text:`<div class="sorted-hover-date">Final margin ${lab(e0)} to ${lab(e1)}</div>` + saRow(e1 <= 0 ? SA_COL.r : SA_COL.d, 'Chance it ends here', pcx(share)) + `<div class="sorted-hover-row"><span class="sorted-hover-gap">${c.toLocaleString()} of ${N.toLocaleString()} runs</span></div>` }; });
-  await saPlot(el, [{ type:'bar', name:'bars', x:xs, y:cnt.map(c => c / N * 100), marker:{ color:xs.map(x => x < 0 ? SA_COL.r : SA_COL.d) }, customdata:rows.map(r => r.text), hoverinfo:'none' }], { margin:{ t:8, r:14, b:44, l:52 }, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', bargap:0.08, showlegend:false, hovermode:'closest', font:{ family:'Inter, sans-serif', color:'#9aa4b8', size:11 },
-    xaxis:{ range:[-15, 15], gridcolor:'#212a3b', tickvals:[-15, -10, -5, 0, 5, 10, 15], ticktext:['R+15', 'R+10', 'R+5', 'Even', 'D+5', 'D+10', 'D+15'], title:{ text:'Final statewide margin', font:{ size:11 } } },
-    yaxis:{ gridcolor:'#212a3b', ticksuffix:'%', title:{ text:'Share of runs', font:{ size:11 } } } }, { displayModeBar:false, responsive:true });
-  saAttachHtmlTip(el);
-  el.on('plotly_click', d => {
-    const p = (d.points || [])[0]; if(!p) return; const r = rows[p.pointNumber]; if(!r) return;
-    Plotly.restyle(el, { 'marker.line.color':[xs.map((_, i) => i === p.pointNumber ? '#ffffff' : 'rgba(0,0,0,0)')], 'marker.line.width':[xs.map((_, i) => i === p.pointNumber ? 2 : 0)] }, [0]);
-    document.getElementById('saOddsPick').innerHTML = `<b>Final margin ${lab(r.e0)} to ${lab(r.e1)}:</b> <span style="color:${r.e1 <= 0 ? SA_COL.r : SA_COL.d}">${pcx(r.share)}</span> chance of the race ending in this range${r.c ? ` (${r.c.toLocaleString()} of ${N.toLocaleString()} runs)` : ' (it never happened in these runs)'}.<br>
-      <span style="color:var(--muted)">Better for Republicans than this range: <b style="color:var(--text)">${pcx(r.atR)}</b> · In this range: <b style="color:var(--text)">${pcx(r.share)}</b> · Better for Democrats than this range: <b style="color:var(--text)">${pcx(r.atD)}</b> (adds up to 100%)</span>`;
-  });
-}
-async function saScenDraw(){
-  const mod = saState.scen, el = document.getElementById('saScenChart'); if(!mod || !el || !mod.dots.length) return;
-  const hover = mod.dots.map(d => `<div class="sorted-hover-date">Republican Nov 3 turnout ${d.x}% of forecast · NPA/other D+${d.y}</div>` + saRow('#e9edf5', 'Nov 3 ballots', fmt(Math.round(d.edT))) + saRow(saMarginColor(d.edM), 'Nov 3 margin', saScenMargTxt(d.edM)) + saRow(saScenBin(d.f).c, 'Final margin', saPts(d.f)) + saRow('#ffd23f', 'Net votes', saNetTxt(d.net)) + `<div class="sorted-hover-row"><span class="sorted-hover-gap">${d.f < 0 ? 'Republicans win statewide' : 'Democrats win statewide'} · click for the map</span></div>`);
-  const colSp = Math.max(0, (el.clientWidth || 900) - 76) * 5 / ((SA_SC_RHO[1] - SA_SC_RHO[0]) * 100 + 10), rowSp = 360 / (SA_SC_NPA[1] - SA_SC_NPA[0] + 2);
-  const msz = Math.max(5, Math.min(16, Math.floor(Math.min(colSp, rowSp) - 3)));
-  const dots = { type:'scatter', mode:'markers', name:'dots', x:mod.dots.map(d => d.x), y:mod.dots.map(d => d.y), marker:{ symbol:'square', size:msz, color:mod.dots.map(d => d.bin.c), line:{ color:'rgba(10,14,23,.7)', width:msz > 8 ? 1 : 0 } }, customdata:hover, hoverinfo:'none', showlegend:false };
-  const tie = { type:'scatter', mode:'lines', x:mod.tie.map(t => t.x), y:mod.tie.map(t => t.y), line:{ color:'#e9edf5', width:2, dash:'dash' }, hoverinfo:'skip', showlegend:false };
-  const star = { type:'scatter', mode:'markers', name:'forecast', x:[100], y:[SA_SC_NPA_MID], marker:{ symbol:'star', size:16, color:'#ffd23f', line:{ color:'#0a0e17', width:1.5 } }, hoverinfo:'skip', showlegend:false };
-  const sel = saScenSel || { rho:1, npa:SA_SC_NPA_MID };
-  const ring = { type:'scatter', mode:'markers', name:'sel', x:[sel.rho * 100], y:[sel.npa], marker:{ symbol:'circle-open', size:24, color:'#ffffff', line:{ width:3, color:'#ffffff' } }, hoverinfo:'skip', showlegend:false };
-  const ann = (x, y, t, ax) => ({ x, y, text:t, showarrow:false, xanchor:ax, font:{ color:'#ffd23f', size:12, family:'IBM Plex Mono, monospace' } });
-  const xr = [SA_SC_RHO[0] * 100 - 6, SA_SC_RHO[1] * 100 + 6];
-  await saPlot(el, [dots, tie, star, ring], {
-    margin:{ t:10, r:14, b:56, l:62 }, paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', showlegend:false, hovermode:'closest',
-    font:{ family:'Inter, sans-serif', color:'#9aa4b8', size:11 },
-    annotations:[ann(SA_SC_RHO[0] * 100 - 3, SA_SC_NPA[1] + 0.9, 'F', 'center'), ann(SA_SC_RHO[1] * 100 + 3, SA_SC_NPA[0] - 0.9, 'C', 'center')],
-    xaxis:{ range:xr, tickvals:SA_SC_XS.filter(v => v % 25 === 0), ticksuffix:'%', gridcolor:'#212a3b', zeroline:false, title:{ text:'Republican turnout on November 3, as a share of the forecast (collapse ← → record)', font:{ size:11 } } },
-    yaxis:{ range:[SA_SC_NPA[0] - 1.6, SA_SC_NPA[1] + 1.6], tickvals:[10, 15, 20, 25], ticktext:['D+10', 'D+15', 'D+20', 'D+25'], gridcolor:'#212a3b', zeroline:false, title:{ text:'How NPA/other voters break', font:{ size:11 } } } }, { displayModeBar:false, responsive:true });
-  saAttachHtmlTip(el);
-  el.on('plotly_click', d => { const p = (d.points || []).find(q => q.data && q.data.name === 'dots'); if(!p) return; saScenSel = { rho:p.x / 100, npa:p.y }; saScenSelect().catch(() => {}); });
-}
-async function saScenSelect(){
-  const mod = saState.scen; if(!mod) return;
-  await ensureGeojson();
-  const sel = saScenSel || { rho:1, npa:SA_SC_NPA_MID }, r = mod.ev(sel.rho, sel.npa), base = mod.fc;
-  const chart = document.getElementById('saScenChart');
-  if(chart && chart.data && chart.data.length === 4) Plotly.restyle(chart, { x:[[sel.rho * 100]], y:[[sel.npa]] }, [3]);
-  const fm = r.margin, mc = saMarginColor(fm), isF = !saScenSel;
-  let dC = 0, rC = 0; r.rows.forEach(o => { if(o.net > 0) dC++; else rC++; });
-  const valEl = document.getElementById('saScenVal'); if(!valEl) return;
-  valEl.innerHTML = `${isF ? 'The forecast' : 'Selected'}: November 3 <span style="color:${saMarginColor(r.ed.margin)}">${saScenMargTxt(r.ed.margin)}</span> on ${fmt(Math.round(r.ed.t))} ballots`;
-  document.getElementById('saScenSub').innerHTML = `Republican turnout ${Math.round(sel.rho * 100)}% of forecast (final R turnout ${mod.finalRTurnout(sel.rho).toFixed(1)}%) · NPA/other D+${sel.npa} · November 3 vote R ${(r.ed.R / r.ed.t * 100).toFixed(1)}% / D ${(r.ed.D / r.ed.t * 100).toFixed(1)}% · before November 3 ${saPts(r.pre.margin)}`;
-  document.getElementById('saScenBig').innerHTML = `<div class="lbl">Final margin in this scenario</div><div class="sa-big"><span style="color:${mc}">${saPts(fm)}</span></div><div class="tot">about <b>${fmt(Math.round(r.T))}</b> total ballots</div><div class="net" style="color:${mc}">Net ${saNetTxt(r.net)} votes</div>
-    <div class="sa-scen-tally"><b style="color:${SA_COL.r}">${rC}</b> counties Republican<br><b style="color:${SA_COL.d}">${dC}</b> counties Democratic<br><span style="color:var(--muted)">${fm > 0 ? 'Democrats' : 'Republicans'} win statewide</span></div>`;
-  const bn = {}; base.rows.forEach(o => { bn[o.n] = o.net > 0; });
-  const toD = r.rows.filter(o => o.net > 0 && !bn[o.n]).map(o => o.n), toR = r.rows.filter(o => o.net <= 0 && bn[o.n]).map(o => o.n);
-  document.getElementById('saScenFlips').innerHTML = (toD.length || toR.length)
-    ? `<div class="sa-note" style="margin-top:12px">Compared with the forecast, this scenario flips:</div><div class="sa-scen-chips">${toD.map(n => `<span style="color:${SA_COL.d};border-color:${SA_COL.d}66;background:${SA_COL.d}14">${n} <em>to Democrats</em></span>`).join('')}${toR.map(n => `<span style="color:${SA_COL.r};border-color:${SA_COL.r}66;background:${SA_COL.r}14">${n} <em>to Republicans</em></span>`).join('')}</div>`
-    : `<div class="sa-note" style="margin-top:12px">${isF ? 'This is the forecast.' : 'No county flips compared with the forecast in this scenario.'}</div>`;
-  const names = r.rows.map(o => o.n), res = {};
-  r.rows.forEach(o => { const mm = o.net / o.T * 100; res[o.n] = { m:mm, n:o.net, T:o.T, rating:saRatingOf(mm) }; });
-  const catColor = k => SA_ED_CATS.find(c => c.key === k).color;
-  const hover = names.map(nm => { const o = res[nm]; return `<div class="sorted-hover-date">${nm} County</div>` + saRow(catColor(o.rating), 'This scenario', o.rating, saPts(o.m)) + saRow('#ffd23f', 'Net votes', saNetTxt(o.n)) + `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>PROJECTED BALLOTS</b>&nbsp;${fmt(Math.round(o.T))}</div>`; });
-  const z = names.map(nm => SA_ED_CATS.findIndex(k => k.key === res[nm].rating) + 0.5);
-  const mapEl = document.getElementById('saScenMap');
-  if(mapEl.data && mapEl.data.length === 3){ Plotly.restyle(mapEl, { z:[z], customdata:[hover] }, [1]); return; }
-  const loc = names.map(nm => FL_FIPS[nm]), line = { color:'#0a0e17', width:1 };
-  const baseT = { type:'choropleth', geojson:geojsonFL, locations:loc, z:names.map(() => 0), featureidkey:'id', zmin:0, zmax:1, colorscale:[[0, '#222b3d'], [1, '#222b3d']], showscale:false, marker:{ line }, hoverinfo:'skip' };
-  const tr = { type:'choropleth', geojson:geojsonFL, locations:loc, z, featureidkey:'id', zmin:0, zmax:SA_ED_CATS.length, colorscale:stepColorscale(SA_ED_CATS), customdata:hover, hoverinfo:'none', marker:{ line }, showscale:false };
-  const ol = { type:'choropleth', geojson:geojsonFL, locations:mod.inPlay.map(n => FL_FIPS[n]), z:mod.inPlay.map(() => 0), featureidkey:'id', zmin:0, zmax:1, colorscale:[[0, 'rgba(0,0,0,0)'], [1, 'rgba(0,0,0,0)']], showscale:false, marker:{ line:{ color:'#ffd23f', width:2.6 } }, hoverinfo:'skip' };
-  await saPlot(mapEl, [baseT, tr, ol], { geo:{ projection:{ type:'mercator' }, fitbounds:'geojson', visible:false, bgcolor:'rgba(0,0,0,0)' }, paper_bgcolor:'rgba(0,0,0,0)', margin:{ t:4, b:6, l:4, r:4 }, font:{ family:'Inter, sans-serif' } }, { displayModeBar:false, responsive:true });
-  saAttachHtmlTip(mapEl);
-  const lg = document.getElementById('saScenLeg');
-  if(lg) lg.innerHTML = SA_ED_CATS.slice().reverse().map(k => `<span><i style="background:${k.color}"></i>${k.key}</span>`).join('');
-}
-async function saScenUpdate(){ await saScenDraw(); await saScenSelect(); if(saState.scenTab === 'odds') await saOddsFill(); }
-document.getElementById('splitAvgView').addEventListener('click', e => {
-  const b = e.target.closest('#saScenTabs button'); if(!b) return;
-  saState.scenTab = b.dataset.t;
-  document.querySelectorAll('#saScenTabs button').forEach(x => x.classList.toggle('active', x === b));
-  document.getElementById('saScenPaneGrid').style.display = b.dataset.t === 'grid' ? '' : 'none';
-  document.getElementById('saScenPaneOdds').style.display = b.dataset.t === 'odds' ? '' : 'none';
-  if(b.dataset.t === 'odds') saOddsFill(); else saScenDraw().then(saScenSelect).catch(() => {});
-});
-function saScenRefresh(){
-  const box = document.getElementById('saSecScen'); if(!box || !saState.ctx) return;
-  box.innerHTML = saScenHTML(); saScenUpdate().catch(e => console.error(e));
-}
-document.getElementById('splitAvgView').addEventListener('click', e => {
-  if(e.target.closest('#saScenReset')){ saScenSel = null; saScenSelect().catch(() => {}); }
-});
 async function saDrawEdMap(){
   const b = saState.ctx; if(!b) return;
   await saDrawForecastMap('saEdMap', 'saEdLegend', saCountyED(b.M), 'Forecast', 'STILL TO COME', 'No Election Day ballots projected');
@@ -13581,7 +13319,7 @@ document.getElementById('splitAvgView').addEventListener('input', e => {
     if(isD) demLoyalty = v; else repLoyalty = v;
     const live = document.getElementById(isD ? 'demLoyaltySlider' : 'repLoyaltySlider'); if(live) live.value = v;
     try{ (isD ? updateDemLoyaltyLabel : updateRepLoyaltyLabel)(); }catch(_){}
-    saRenderNeeds(); saDrawEdMap().catch(() => {}); saFcRender(false).catch(() => {}); saScenRefresh();
+    saRenderNeeds(); saDrawEdMap().catch(() => {}); saFcRender(false).catch(() => {});
     return;
   }
   if(e.target.id !== 'saNpa') return;
@@ -13591,7 +13329,6 @@ document.getElementById('splitAvgView').addEventListener('input', e => {
   saRenderNeeds();
   saDrawEdMap().catch(() => {});
   saFcRender(false).catch(() => {});
-  saScenRefresh();
 });
 document.getElementById('splitAvgView').addEventListener('click', e => {
   const mb = e.target.closest('.sa-mview button');
@@ -13630,7 +13367,6 @@ async function saRender(){
   saRenderNeeds();
   saDrawEdMap().catch(() => {});
   try{ saState.fc = saFcBuild(pts, M); saState.fcPath = saTurnPathData(M, pts); saFcRender(true).catch(() => {}); }catch(e){ console.error(e); }
-  saScenRefresh();
   // party share chart
   const per = saIncsCum(pts);
   const shareEl = document.getElementById('saShareChart');

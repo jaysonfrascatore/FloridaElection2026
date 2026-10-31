@@ -7,7 +7,7 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 31st, 2026 at 3:00pm Eastern Time
+Updated at October 31st, 2026 at 7:00pm Eastern Time
 
 Counties Loaded:
 67 / 67
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-1,901,151
+1,939,560
 
 REP:
-2,050,735
+2,093,910
 
 OTHER:
-1,086,200
+1,114,368
 
 TOTAL:
-5,038,086
+5,147,838
 
 STATEWIDE SUMMARY
 =================================
 
-🔴 Republicans lead by 149,584 votes statewide.
+🔴 Republicans lead by 154,350 votes statewide.
 
 Margin Change:
--0.23% toward Republicans
+-0.02% toward Republicans
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +65,327
-🔴 REP: +88,244
-🟣 OTHER: +48,842
-🟢 TOTAL: +202,413
+🔵 DEM: +38,409
+🔴 REP: +43,175
+🟣 OTHER: +28,168
+🟢 TOTAL: +109,752
 
 REJECTED COUNTY UPDATES
 =================================
@@ -72,46 +72,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️3 PM Florida EV & VBM Update
+🗳️7 PM Florida EV & VBM Update
 
-New votes have been cast in 67 counties over the last hour, with the largest update coming from Broward County.
+New votes have been cast in 67 counties over the last hour, with the largest update coming from Miami-Dade County.
 
-🔵 DEM: +65,327
-🔴 REP: +88,244
-🟣 OTHER: +48,842
-🟢 TOTAL: +202,413
+🔵 DEM: +38,409
+🔴 REP: +43,175
+🟣 OTHER: +28,168
+🟢 TOTAL: +109,752
 
-🔴 Republicans lead by 149,584 votes statewide.
+🔴 Republicans lead by 154,350 votes statewide.
 
-🔴 Margin Change: -0.23% toward Republicans
+🔴 Margin Change: -0.02% toward Republicans
 
 Largest County Updates
 
 
-🥇Broward County
+🥇Miami-Dade County
 
-🔵 DEM: +9,049
-🔴 REP: +4,296
-🟣 OTHER: +5,353
-🟢 TOTAL: +18,698
+🔵 DEM: +4,088
+🔴 REP: +5,333
+🟣 OTHER: +4,099
+🟢 TOTAL: +13,520
 
 
 
-🥈Miami-Dade County
+🥈Broward County
 
-🔵 DEM: +4,593
-🔴 REP: +5,770
-🟣 OTHER: +4,416
-🟢 TOTAL: +14,779
+🔵 DEM: +5,741
+🔴 REP: +2,612
+🟣 OTHER: +3,555
+🟢 TOTAL: +11,908
 
 
 
 🥉Palm Beach County
 
-🔵 DEM: +4,510
-🔴 REP: +4,435
-🟣 OTHER: +3,533
-🟢 TOTAL: +12,478
+🔵 DEM: +2,697
+🔴 REP: +2,155
+🟣 OTHER: +1,854
+🟢 TOTAL: +6,706
 
 
 

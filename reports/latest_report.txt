@@ -7,16 +7,16 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 30th, 2026 at 7:00pm Eastern Time
+Updated at October 30th, 2026 at 11:00pm Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-67
+17
 
 Unchanged Counties:
-False
+True
 
 Rejected County Updates:
 0
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-1,796,103
+1,799,917
 
 REP:
-1,913,906
+1,916,155
 
 OTHER:
-1,008,611
+1,010,832
 
 TOTAL:
-4,718,620
+4,726,904
 
 STATEWIDE SUMMARY
 =================================
 
-🔴 Republicans lead by 117,803 votes statewide.
+🔴 Republicans lead by 116,238 votes statewide.
 
 Margin Change:
--0.06% toward Republicans
++0.02% toward Democrats
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +52,286
-🔴 REP: +59,828
-🟣 OTHER: +36,131
-🟢 TOTAL: +148,245
+🔵 DEM: +3,814
+🔴 REP: +2,249
+🟣 OTHER: +2,221
+🟢 TOTAL: +8,284
 
 REJECTED COUNTY UPDATES
 =================================
@@ -72,46 +72,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️7 PM Florida EV & VBM Update
+🗳️11 PM Florida EV & VBM Update
 
-New votes have been cast in 67 counties over the last hour, with the largest update coming from Broward County.
+New votes have been cast in 17 counties over the last hour, with the largest update coming from Palm Beach County.
 
-🔵 DEM: +52,286
-🔴 REP: +59,828
-🟣 OTHER: +36,131
-🟢 TOTAL: +148,245
+🔵 DEM: +3,814
+🔴 REP: +2,249
+🟣 OTHER: +2,221
+🟢 TOTAL: +8,284
 
-🔴 Republicans lead by 117,803 votes statewide.
+🔴 Republicans lead by 116,238 votes statewide.
 
-🔴 Margin Change: -0.06% toward Republicans
+🔴 Margin Change: +0.02% toward Democrats
 
 Largest County Updates
 
 
-🥇Broward County
+🥇Palm Beach County
 
-🔵 DEM: +7,156
-🔴 REP: +3,121
-🟣 OTHER: +4,137
-🟢 TOTAL: +14,414
-
-
-
-🥈Miami-Dade County
-
-🔵 DEM: +4,679
-🔴 REP: +4,617
-🟣 OTHER: +3,997
-🟢 TOTAL: +13,293
+🔵 DEM: +1,486
+🔴 REP: +626
+🟣 OTHER: +789
+🟢 TOTAL: +2,901
 
 
 
-🥉Hillsborough County
+🥈Orange County
 
-🔵 DEM: +3,554
-🔴 REP: +2,914
-🟣 OTHER: +2,386
-🟢 TOTAL: +8,854
+🔵 DEM: +673
+🔴 REP: +352
+🟣 OTHER: +425
+🟢 TOTAL: +1,450
+
+
+
+🥉Lake County
+
+🔵 DEM: +384
+🔴 REP: +482
+🟣 OTHER: +280
+🟢 TOTAL: +1,146
 
 
 

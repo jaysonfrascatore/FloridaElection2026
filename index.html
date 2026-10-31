@@ -975,6 +975,14 @@
   .sa-pace-cell .nm{ font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; }
   .sa-med{ font-size:clamp(26px,4.4vw,38px); font-weight:700; line-height:1.1; margin:6px 0 4px; letter-spacing:-.01em; }
   .sa-pace-cell .mini{ font-size:11.5px; color:var(--muted); line-height:1.4; }
+  .sa-fin-row{ display:flex; align-items:center; justify-content:center; gap:4px; }
+  .sa-fin-row #saFinMap{ flex:0 1 560px; min-width:0; }
+  .sa-fin-big{ flex:0 0 auto; text-align:center; }
+  .sa-fin-big .sa-big{ font-size:clamp(44px,5.2vw,72px); margin:6px 0 4px; }
+  .sa-fin-big .lbl{ font:600 10px var(--mono); color:var(--muted); text-transform:uppercase; letter-spacing:.08em; }
+  .sa-fin-big .tot{ font-size:12px; color:var(--muted); margin-top:2px; } .sa-fin-big .tot b{ color:var(--text); }
+  .sa-fin-big .net{ font:700 15px var(--mono); margin-top:4px; }
+  @media (max-width:760px){ .sa-fin-row{ flex-direction:column; align-items:stretch; gap:4px; } .sa-fin-row #saFinMap{ width:100%; flex:1 1 auto; } .sa-fin-big .sa-big{ font-size:clamp(52px,16vw,80px); } .sa-fin-big{ margin-top:10px; } }
   .sa-big{ font-size:clamp(52px,11vw,96px); font-weight:700; line-height:1; letter-spacing:-.03em; margin:8px 0 6px; }
   .sa-sub{ font-size:13px; color:var(--muted); line-height:1.55; }
   .sa-sub b{ color:var(--text); }
@@ -984,6 +992,9 @@
   .sa-chart-wrap{ margin-top:14px; }
   .sa-key{ font-size:11.5px; color:var(--muted); margin:2px 0 0; }
   .sa-key i{ display:inline-block; width:18px; height:0; border-top:3px solid; vertical-align:middle; margin:0 4px 0 8px; }
+  .sa-leg2{ display:flex; flex-wrap:wrap; gap:6px 18px; font-size:12px; line-height:1.4; }
+  .sa-leg2 span{ display:inline-flex; align-items:center; gap:6px; } .sa-leg2 b{ color:var(--text); font-weight:600; } .sa-leg2 em{ font-style:normal; color:var(--muted); }
+  .sa-leg2 i.ln{ display:inline-block; width:22px; height:0; margin:0; } .sa-leg2 i.bx{ display:inline-block; width:22px; height:12px; border-radius:2px; margin:0; }
   .sa-key i.dot{ border-top:2px dotted #9aa4b8; }
   #saNpa{ background:linear-gradient(90deg,#5603ad 0%,#c77dff 50%,#820646 100%); }
   #saNpa::-webkit-slider-thumb{ background:#F5B942; } #saNpa::-moz-range-thumb{ background:#F5B942; }
@@ -12276,6 +12287,8 @@ const SA_COL = { d:'#5b9bd9', r:'#d4675a', n:'#c77dff' };
 const SA_DAY = 86400000;
 const saState = { mview:'daily', swing:false, gran:'day', shown:false, tpMode:'pct', ctx:null, paceParty:'g', paceSel:null };
 let saReplayCache = null, saReplayRows = null, saTypesCache = null, saTypesRows = null;
+const saNetV = (o) => { const t = o.d + o.r + o.n; const m = saFcMargin(o); return m === null ? null : t * m / 100; };
+const saNetTxt = n => n === null ? '\u2014' : (Math.abs(n) < 0.5 ? 'Even' : (n > 0 ? 'D+' : 'R+') + fmt(Math.round(Math.abs(n))));
 const saPts = v => Math.abs(v) < 0.005 ? 'Even' : (v > 0 ? 'D+' : 'R+') + Math.abs(v).toFixed(2);
 const saStamp = t => t.toLocaleDateString('en-US', { month:'short', day:'numeric' }) + ', ' + t.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit' });
 const saDayLabel = t => t.toLocaleDateString('en-US', { month:'short', day:'numeric' });
@@ -13005,7 +13018,7 @@ function saEdHTML(M, types, meth){
     <div class="sa-note">The projected final result in each county once every vote is in: the ballots already counted plus the Election Day vote above, with the same turnout model and party loyalty.</div>
     <div id="saFinFc"></div>
     <div class="sa-key" style="margin-top:18px"><b style="color:var(--text)">County by county</b> · Final Forecast</div>
-    <div id="saFinMap" style="height:460px;"></div>
+    <div class="sa-fin-row"><div class="sa-fin-big" id="saFinBig"></div><div id="saFinMap" style="height:460px;"></div></div>
     <div class="sa-legend-row" id="saFinLegend"></div>
     <div class="sa-proj-title">Party loyalty</div>
     <div class="sa-slidebox">
@@ -13151,23 +13164,26 @@ async function saFcRender(animate){
     const showAct = k === 'ed' && edAct.length && fm !== null;
     const rows = list.map(p => ({ p, o:p[k], m:saFcMargin(p[k]) })).filter(r => r.m !== null);
     const head = `<div class="sa-sec-head"><div class="sa-eyebrow">Forecasted margin</div>${saGranBtns()}</div>`;
-    if(!rows.length){ box.innerHTML = head + '<div class="sa-empty">No ballots projected yet.</div>'; continue; }
+    if(!rows.length){ box.innerHTML = head + '<div class="sa-empty">No ballots projected yet.</div>'; if(k === 'fin'){ const sd = document.getElementById('saFinBig'); if(sd) sd.innerHTML = ''; } continue; }
     const li = rows.length - 1, cur = rows[li], pv = li ? rows[li - 1] : null, dm = pv ? cur.m - pv.m : null;
     const when = gran === 'day' ? '11 PM yesterday' : 'the previous update';
     const bigTxt = (cur.m >= 0 ? 'D+' : 'R+') + Math.abs(cur.m).toFixed(2);
-    box.innerHTML = head + `<div class="sa-big">${animate ? saCountEl(0, Math.abs(cur.m), 2, cur.m >= 0 ? 'D+' : 'R+', '', saMarginColor(cur.m)) : `<span style="color:${saMarginColor(cur.m)}">${bigTxt}</span>`}</div>
+    const bigHtml = `<div class="sa-big">${animate ? saCountEl(0, Math.abs(cur.m), 2, cur.m >= 0 ? 'D+' : 'R+', '', saMarginColor(cur.m)) : `<span style="color:${saMarginColor(cur.m)}">${bigTxt}</span>`}</div>`;
+    const side = k === 'fin' ? document.getElementById('saFinBig') : null;
+    if(side) side.innerHTML = `<div class="lbl">Projected final margin</div>${bigHtml}<div class="tot">about <b>${fmt(Math.round(cur.o.t))}</b> total ballots</div><div class="net" style="color:${saMarginColor(cur.m)}">Net ${saNetTxt(saNetV(cur.o))} votes</div>`;
+    box.innerHTML = head + (side ? '' : bigHtml) + `
       <div class="sa-sub"><b>${k === 'ed' ? 'Election Day Only Forecast' : 'Final Forecast'}</b> · about ${fmt(Math.round(cur.o.t))} ${noun}. ${desc} <b>Based on party registration only</b>, since how people actually vote has to be assumed: ${demLoyalty.toFixed(1).replace(/\.0$/,'')}% of Democrats and ${repLoyalty.toFixed(1).replace(/\.0$/,'')}% of Republicans vote their party, and <span style="color:#c77dff">NPA/other</span> voters split <b style="color:#5b9bd9">${npaSplitToDem.toFixed(1)}% D</b> / <b style="color:#d4675a">${(100 - npaSplitToDem).toFixed(1)}% R</b>.</div>
-      <div class="sa-shift"><div><span class="lbl">Forecast vs ${when}</span> ${saShift(dm)}${pv ? ` <span class="was">(${saPts(pv.m)} → ${saPts(cur.m)})</span>` : ''}</div>
+      <div class="sa-shift"><div><span class="lbl">Net votes</span> <b style="color:${saMarginColor(cur.m)}">${saNetTxt(saNetV(cur.o))}</b> <span class="was">(of about ${fmt(Math.round(cur.o.t))} ${noun})</span></div><div><span class="lbl">Forecast vs ${when}</span> ${saShift(dm)}${pv ? ` <span class="was">(${saPts(pv.m)} → ${saPts(cur.m)})</span>` : ''}</div>
       ${saState.fcBand && saState.fcBand[k] ? `<div><span class="lbl">Margin of error</span> <b style="color:var(--text)">${saPts(saState.fcBand[k][0])} to ${saPts(saState.fcBand[k][1])}</b> <span class="was">(final turnout 5% either way, NPA/other splitting 10 points either way, each party's loyalty 2 points either way, combined as independent errors)</span></div>` : ''}
       ${showAct ? `<div><span class="lbl">Actual Election Day so far</span> <b style="color:${saMarginColor(edAct[edAct.length - 1].m)}">${saPts(edAct[edAct.length - 1].m)}</b> <span class="was">(${fmt(Math.round(edAct[edAct.length - 1].v[0] + edAct[edAct.length - 1].v[1] + edAct[edAct.length - 1].v[2]))} ballots counted vs a forecast of ${saPts(fm)})</span> ${saShift(edAct[edAct.length - 1].m - fm)}</div>` : ''}</div>
-      <div class="sa-chart-wrap"><div class="sa-key">Forecasted margin after each ${gran} (solid), blue when Democrats are projected ahead and red when Republicans are. <span style="color:#ffd23f">Yellow staircase</span>: the forecast held flat until the next update (or day) arrives, then stepped to the new one, so you can see what it said against where it landed. <span style="color:#d9695d">Shaded red</span>: the margin-of-error range for where the final result could land. ${showAct ? '<span style="color:#80ed99">Green</span>: the actual Election Day vote as it is counted. ' : ''}<span style="color:#ff6fae">Dotted pink</span>: ${k === 'ed' ? 'the margin of the Election Day vote still to come, as the count fills in through Nov 3' : 'the latest forecast held steady through Nov 3, since it only moves when the count or your sliders do'}</div>
+      <div class="sa-chart-wrap"><div class="sa-key sa-leg2"><span><i class="ln" style="border-top:3px solid #5b9bd9"></i><i class="ln" style="border-top:3px solid #d9695d;margin-left:0"></i><b>Forecast after each ${gran}</b> <em>(blue = D ahead, red = R ahead)</em></span><span><i class="ln" style="border-top:2px dotted #ffd23f"></i><b>What it said at the time</b></span><span><i class="ln" style="border-top:4px dashed #ff6fae"></i><b>${k === 'ed' ? 'Election Day margin still to come' : 'Where it lands on Nov 3'}</b> <em>(${k === 'ed' ? 'holds steady as the count fills in' : 'holds steady unless the count or your sliders move'})</em></span><span><i class="bx" style="background:rgba(217,105,93,0.35)"></i><b>Margin of error</b></span>${showAct ? '<span><i class="ln" style="border-top:3px solid #80ed99"></i><b>Actual Election Day vote</b></span>' : ''}</div>
       <div id="${id}Ch" style="height:250px;"></div></div>`;
     const xs = rows.map(r => r.p.t), ys = rows.map(r => r.m);
     const traces = saSignedSegs(xs, ys).map(sg => ({ x:sg.x, y:sg.y, type:'scatter', mode:'lines', line:{ color:sg.c, width:3.5 }, hoverinfo:'skip', showlegend:false }));
     const tipOf = (r, i) => {
       const q = i ? rows[i - 1] : null, d = q ? r.m - q.m : null, t = r.o.t;
       return `<div class="sorted-hover-date">${gran === 'day' ? saDayLabel(r.p.t) : formatSortedHoverDate(r.p.t)}</div>` +
-        saRow(saMarginColor(r.m), 'Forecasted margin', saPts(r.m)) +
+        saRow(saMarginColor(r.m), 'Forecasted margin', saPts(r.m)) + saRow('#ffd23f', 'Net votes', saNetTxt(saNetV(r.o))) +
         saRow(SA_COL.d, 'DEM', (r.o.d / t * 100).toFixed(1) + '%') + saRow(SA_COL.r, 'REP', (r.o.r / t * 100).toFixed(1) + '%') + saRow(SA_COL.n, 'NPA/Other', (r.o.n / t * 100).toFixed(1) + '%') +
         `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>${tot}</b>&nbsp;${fmt(Math.round(t))}</div>` +
         `<div class="sorted-hover-gain-header">Shift vs ${gran === 'day' ? '11 PM yesterday' : 'the previous update'}:</div>` +
@@ -13184,11 +13200,12 @@ async function saFcRender(animate){
         const o = q.o, mm = saFcMargin(o); if(mm === null) return;
         const isLast = i === vals.length - 1, tt = o.d + o.r + o.n;
         pxs.push(q.t); pys.push(mm);
-        ptip.push(`<div class="sorted-hover-date">${i === 0 ? 'Now' : isLast ? 'Nov 3 · Election Day' : saDayLabel(q.t)} · ${i === 0 ? 'latest count' : k === 'ed' ? 'Projected' : 'Forecast carried forward'}</div>` + saRow(saMarginColor(mm), k === 'ed' ? 'Election Day margin still to come' : 'Forecasted margin', saPts(mm)) +
+        ptip.push(`<div class="sorted-hover-date">${i === 0 ? 'Now' : isLast ? 'Nov 3 · Election Day' : saDayLabel(q.t)} · ${i === 0 ? 'latest count' : k === 'ed' ? 'Projected' : 'Forecast carried forward'}</div>` + saRow(saMarginColor(mm), k === 'ed' ? 'Election Day margin still to come' : 'Forecasted margin', saPts(mm)) + saRow('#ffd23f', 'Net votes', saNetTxt(saNetV(o))) +
           saRow(SA_COL.d, 'DEM', (o.d / tt * 100).toFixed(1) + '%') + saRow(SA_COL.r, 'REP', (o.r / tt * 100).toFixed(1) + '%') + saRow(SA_COL.n, 'NPA/Other', (o.n / tt * 100).toFixed(1) + '%') +
           `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>${k === 'ed' ? 'STILL TO COME' : 'BALLOTS'}</b>&nbsp;${fmt(Math.round(tt))}</div>`);
       });
-      traces.push({ x:pxs, y:pys, type:'scatter', mode:'lines', line:{ color:'#ff6fae', width:3, dash:'dot' }, hoverinfo:'skip', showlegend:false });
+      traces.push({ x:pxs, y:pys, type:'scatter', mode:'lines', line:{ color:'#ff6fae', width:4, dash:'dash' }, hoverinfo:'skip', showlegend:false });
+      if(pxs.length) traces.push({ x:[pxs[pxs.length - 1]], y:[pys[pys.length - 1]], type:'scatter', mode:'markers', marker:{ size:11, color:'#ff6fae', line:{ color:'#0b1018', width:2 } }, hoverinfo:'skip', showlegend:false });
       traces.push({ x:pxs, y:pys, type:'scatter', mode:'markers', showlegend:false, marker:{ size:14, opacity:0 }, customdata:ptip, hoverinfo:'none' });
     }
     if(showAct){
@@ -13196,7 +13213,7 @@ async function saFcRender(animate){
       traces.push({ x:ax, y:ay, type:'scatter', mode:'lines', line:{ color:'#80ed99', width:3.5 }, hoverinfo:'skip', showlegend:false });
       traces.push({ x:ax, y:ay, type:'scatter', mode:'markers', showlegend:false, marker:{ size:14, opacity:0 }, hoverinfo:'none',
         customdata:edAct.map(o => { const t = o.v[0] + o.v[1] + o.v[2], d = o.m - fm;
-          return `<div class="sorted-hover-date">${formatSortedHoverDate(o.t)} · Actual Election Day vote</div>` + saRow(saMarginColor(o.m), 'Actual margin so far', saPts(o.m)) + saRow('#ff6fae', 'Forecast going in', saPts(fm)) +
+          return `<div class="sorted-hover-date">${formatSortedHoverDate(o.t)} · Actual Election Day vote</div>` + saRow(saMarginColor(o.m), 'Actual margin so far', saPts(o.m)) + saRow('#ffd23f', 'Net votes', saNetTxt(o.m / 100 * (o.v[0] + o.v[1] + o.v[2]))) + saRow('#ff6fae', 'Forecast going in', saPts(fm)) +
             saRow(SA_COL.d, 'DEM', (o.v[0] / t * 100).toFixed(1) + '%') + saRow(SA_COL.r, 'REP', (o.v[1] / t * 100).toFixed(1) + '%') + saRow(SA_COL.n, 'NPA/Other', (o.v[2] / t * 100).toFixed(1) + '%') +
             `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>ELECTION DAY BALLOTS</b>&nbsp;${fmt(Math.round(t))}</div><div class="sorted-hover-gain-header">Vs forecast:</div><div class="sorted-hover-row">${saShift(d)}</div>`; }) });
       pys = pys.concat(ay);
@@ -13207,7 +13224,6 @@ async function saFcRender(animate){
       if(gran === 'day'){ const dl = {}; list0.forEach(p => { dl[saKey(p.t)] = p; }); src = Object.keys(dl).sort().map(kk => dl[kk]); }
       src = src.filter(p => saKey(p.t) >= SA_EV_START && saFcMargin(p[k]) !== null);
       const fx = src.map(p => p.t), fy = src.map(p => saFcMargin(p[k]));
-      if(fx.length && pxs.length){ fx.push(pxs[pxs.length - 1]); fy.push(fy[fy.length - 1]); }
       if(fx.length > 1) traces.push({ x:fx, y:fy, type:'scatter', mode:'lines', line:{ color:'#ffd23f', width:2.5, dash:'dot', shape:'hv' }, hoverinfo:'skip', showlegend:false });
     }
     const BD = saState.fcBand && saState.fcBand[k], bandOn = BD && pxs.length > 1;
@@ -13269,7 +13285,7 @@ async function saDrawForecastMap(elId, legId, data, rowLabel, totalLabel, noneMs
   });
   const z = names.map(c => res[c] ? SA_ED_CATS.findIndex(k => k.key === res[c].rating) + 0.5 : null);
   const hover = names.map(c => { const o = res[c]; const col = o ? SA_ED_CATS.find(k => k.key === o.rating).color : '#9aa4b8';
-    return `<div class="sorted-hover-date">${c} County</div>` + (o ? saRow(col, 'Forecast', o.rating, saPts(o.m)) + saRow(SA_COL.d, 'DEM', o.d.toFixed(1) + '%') + saRow(SA_COL.r, 'REP', o.r.toFixed(1) + '%') + saRow(SA_COL.n, 'NPA/Other', o.n.toFixed(1) + '%') + `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>${totalLabel}</b>&nbsp;${fmt(Math.round(o.t))}</div>` : `<div class="sorted-hover-row"><span class="sorted-hover-gap">${noneMsg}</span></div>`); });
+    return `<div class="sorted-hover-date">${c} County</div>` + (o ? saRow(col, 'Forecast', o.rating, saPts(o.m)) + saRow('#ffd23f', 'Net votes', saNetTxt(o.m / 100 * o.t)) + saRow(SA_COL.d, 'DEM', o.d.toFixed(1) + '%') + saRow(SA_COL.r, 'REP', o.r.toFixed(1) + '%') + saRow(SA_COL.n, 'NPA/Other', o.n.toFixed(1) + '%') + `<div class="sorted-hover-row sorted-hover-total">${saDot('#80ed99')}<b>${totalLabel}</b>&nbsp;${fmt(Math.round(o.t))}</div>` : `<div class="sorted-hover-row"><span class="sorted-hover-gap">${noneMsg}</span></div>`); });
   const base = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z:names.map(() => 0), featureidkey:'id', zmin:0, zmax:1, colorscale:[[0, '#222b3d'], [1, '#222b3d']], showscale:false, marker:{ line:{ color:'#0a0e17', width:1 } }, hoverinfo:'skip' };
   const tr = { type:'choropleth', geojson:geojsonFL, locations:names.map(c => FL_FIPS[c]), z, featureidkey:'id', zmin:0, zmax:SA_ED_CATS.length, colorscale:stepColorscale(SA_ED_CATS),
     customdata:hover, hoverinfo:'none', marker:{ line:{ color:'#0a0e17', width:1 } }, showscale:false };

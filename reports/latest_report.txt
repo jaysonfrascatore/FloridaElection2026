@@ -7,7 +7,7 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at October 31st, 2026 at 11:00pm Eastern Time
+Updated at November 1st, 2026 at 11:00am Eastern Time
 
 Counties Loaded:
 67 / 67
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-1,943,657
+1,968,909
 
 REP:
-2,099,166
+2,120,339
 
 OTHER:
-1,117,467
+1,136,425
 
 TOTAL:
-5,160,290
+5,225,673
 
 STATEWIDE SUMMARY
 =================================
 
-🔴 Republicans lead by 155,509 votes statewide.
+🔴 Republicans lead by 151,430 votes statewide.
 
 Margin Change:
--0.01% toward Republicans
++0.07% toward Democrats
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +4,097
-🔴 REP: +5,256
-🟣 OTHER: +3,099
-🟢 TOTAL: +12,452
+🔵 DEM: +25,252
+🔴 REP: +21,173
+🟣 OTHER: +18,958
+🟢 TOTAL: +65,383
 
 REJECTED COUNTY UPDATES
 =================================
@@ -72,46 +72,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️11 PM Florida EV & VBM Update
+🗳️11 AM Florida EV & VBM Update
 
-New votes have been cast in 19 counties over the last hour, with the largest update coming from Lake County.
+New votes have been cast in 19 counties over the last hour, with the largest update coming from Miami-Dade County.
 
-🔵 DEM: +4,097
-🔴 REP: +5,256
-🟣 OTHER: +3,099
-🟢 TOTAL: +12,452
+🔵 DEM: +25,252
+🔴 REP: +21,173
+🟣 OTHER: +18,958
+🟢 TOTAL: +65,383
 
-🔴 Republicans lead by 155,509 votes statewide.
+🔴 Republicans lead by 151,430 votes statewide.
 
-🔴 Margin Change: -0.01% toward Republicans
+🔴 Margin Change: +0.07% toward Democrats
 
 Largest County Updates
 
 
-🥇Lake County
+🥇Miami-Dade County
 
-🔵 DEM: +2,540
-🔴 REP: +4,377
-🟣 OTHER: +2,161
-🟢 TOTAL: +9,078
-
-
-
-🥈Orange County
-
-🔵 DEM: +585
-🔴 REP: +287
-🟣 OTHER: +402
-🟢 TOTAL: +1,274
+🔵 DEM: +6,009
+🔴 REP: +5,242
+🟣 OTHER: +4,947
+🟢 TOTAL: +16,198
 
 
 
-🥉Palm Beach County
+🥈Broward County
 
-🔵 DEM: +461
-🔴 REP: +163
-🟣 OTHER: +220
-🟢 TOTAL: +844
+🔵 DEM: +3,684
+🔴 REP: +1,973
+🟣 OTHER: +2,544
+🟢 TOTAL: +8,201
+
+
+
+🥉Hillsborough County
+
+🔵 DEM: +2,886
+🔴 REP: +2,471
+🟣 OTHER: +2,141
+🟢 TOTAL: +7,498
 
 
 

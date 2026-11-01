@@ -5559,7 +5559,7 @@ function renderTweetCarousel(){
 function updateFooterNote(){
   const refreshedNote = lastLoadedAt ? ` \u00b7 data refreshed ${lastLoadedAt.toLocaleTimeString()}` : ' \u00b7 live feed not yet reporting (0 votes)';
   const el = document.getElementById('footerNote');
-  el.textContent = `${activeCountiesFor(currentMetric).length} counties parsed \u00b7 Florida Votes 2026 · Created by Jayson Frascatore \u00b7 `;
+  el.textContent = '2026 Florida Vote Tracker \u00b7 Created by Jayson Frascatore \u00b7 ';
   const a = document.createElement('a');
   a.href = 'https://paypal.me/JaysonFras'; a.target = '_blank'; a.rel = 'noopener'; a.className = 'support-link';
   a.textContent = '\u2615 Support this tracker';

@@ -7,13 +7,13 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at November 1st, 2026 at 3:00pm Eastern Time
+Updated at November 1st, 2026 at 7:00pm Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-23
+19
 
 Unchanged Counties:
 True
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-2,007,417
+2,039,514
 
 REP:
-2,151,643
+2,174,482
 
 OTHER:
-1,163,470
+1,186,600
 
 TOTAL:
-5,322,530
+5,400,596
 
 STATEWIDE SUMMARY
 =================================
 
-🔴 Republicans lead by 144,226 votes statewide.
+🔴 Republicans lead by 134,968 votes statewide.
 
 Margin Change:
-+0.12% toward Democrats
++0.13% toward Democrats
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +38,508
-🔴 REP: +31,304
-🟣 OTHER: +27,045
-🟢 TOTAL: +96,857
+🔵 DEM: +32,097
+🔴 REP: +22,839
+🟣 OTHER: +23,130
+🟢 TOTAL: +78,066
 
 REJECTED COUNTY UPDATES
 =================================
@@ -72,46 +72,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️3 PM Florida EV & VBM Update
+🗳️7 PM Florida EV & VBM Update
 
-New votes have been cast in 23 counties over the last hour, with the largest update coming from Miami-Dade County.
+New votes have been cast in 19 counties over the last hour, with the largest update coming from Miami-Dade County.
 
-🔵 DEM: +38,508
-🔴 REP: +31,304
-🟣 OTHER: +27,045
-🟢 TOTAL: +96,857
+🔵 DEM: +32,097
+🔴 REP: +22,839
+🟣 OTHER: +23,130
+🟢 TOTAL: +78,066
 
-🔴 Republicans lead by 144,226 votes statewide.
+🔴 Republicans lead by 134,968 votes statewide.
 
-🔴 Margin Change: +0.12% toward Democrats
+🔴 Margin Change: +0.13% toward Democrats
 
 Largest County Updates
 
 
 🥇Miami-Dade County
 
-🔵 DEM: +5,766
-🔴 REP: +5,952
-🟣 OTHER: +5,533
-🟢 TOTAL: +17,251
+🔵 DEM: +5,128
+🔴 REP: +5,678
+🟣 OTHER: +5,162
+🟢 TOTAL: +15,968
 
 
 
 🥈Broward County
 
-🔵 DEM: +7,603
-🔴 REP: +3,696
-🟣 OTHER: +4,956
-🟢 TOTAL: +16,255
+🔵 DEM: +6,763
+🔴 REP: +3,066
+🟣 OTHER: +4,370
+🟢 TOTAL: +14,199
 
 
 
-🥉Palm Beach County
+🥉Orange County
 
-🔵 DEM: +3,554
-🔴 REP: +3,469
-🟣 OTHER: +2,846
-🟢 TOTAL: +9,869
+🔵 DEM: +3,920
+🔴 REP: +2,208
+🟣 OTHER: +2,789
+🟢 TOTAL: +8,917
 
 
 

@@ -7,13 +7,13 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at November 1st, 2026 at 7:00pm Eastern Time
+Updated at November 1st, 2026 at 11:00pm Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-19
+10
 
 Unchanged Counties:
 True
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-2,039,514
+2,043,025
 
 REP:
-2,174,482
+2,176,346
 
 OTHER:
-1,186,600
+1,189,064
 
 TOTAL:
-5,400,596
+5,408,435
 
 STATEWIDE SUMMARY
 =================================
 
-🔴 Republicans lead by 134,968 votes statewide.
+🔴 Republicans lead by 133,321 votes statewide.
 
 Margin Change:
-+0.13% toward Democrats
++0.02% toward Democrats
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +32,097
-🔴 REP: +22,839
-🟣 OTHER: +23,130
-🟢 TOTAL: +78,066
+🔵 DEM: +3,511
+🔴 REP: +1,864
+🟣 OTHER: +2,464
+🟢 TOTAL: +7,839
 
 REJECTED COUNTY UPDATES
 =================================
@@ -72,46 +72,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️7 PM Florida EV & VBM Update
+🗳️11 PM Florida EV & VBM Update
 
-New votes have been cast in 19 counties over the last hour, with the largest update coming from Miami-Dade County.
+New votes have been cast in 10 counties over the last hour, with the largest update coming from Orange County.
 
-🔵 DEM: +32,097
-🔴 REP: +22,839
-🟣 OTHER: +23,130
-🟢 TOTAL: +78,066
+🔵 DEM: +3,511
+🔴 REP: +1,864
+🟣 OTHER: +2,464
+🟢 TOTAL: +7,839
 
-🔴 Republicans lead by 134,968 votes statewide.
+🔴 Republicans lead by 133,321 votes statewide.
 
-🔴 Margin Change: +0.13% toward Democrats
+🔴 Margin Change: +0.02% toward Democrats
 
 Largest County Updates
 
 
-🥇Miami-Dade County
+🥇Orange County
 
-🔵 DEM: +5,128
-🔴 REP: +5,678
-🟣 OTHER: +5,162
-🟢 TOTAL: +15,968
-
-
-
-🥈Broward County
-
-🔵 DEM: +6,763
-🔴 REP: +3,066
-🟣 OTHER: +4,370
-🟢 TOTAL: +14,199
+🔵 DEM: +1,250
+🔴 REP: +627
+🟣 OTHER: +837
+🟢 TOTAL: +2,714
 
 
 
-🥉Orange County
+🥈Miami-Dade County
 
-🔵 DEM: +3,920
-🔴 REP: +2,208
-🟣 OTHER: +2,789
-🟢 TOTAL: +8,917
+🔵 DEM: +711
+🔴 REP: +545
+🟣 OTHER: +663
+🟢 TOTAL: +1,919
+
+
+
+🥉Palm Beach County
+
+🔵 DEM: +899
+🔴 REP: +402
+🟣 OTHER: +553
+🟢 TOTAL: +1,854
 
 
 

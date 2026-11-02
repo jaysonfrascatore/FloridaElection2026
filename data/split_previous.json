@@ -1,15 +1,15 @@
 {
-  "run_time": "Updated at November 1st, 2026 at 7:00pm",
+  "run_time": "Updated at November 1st, 2026 at 11:00pm",
   "previous": {
     "vbm": [
-      828968,
-      676833,
-      427956
+      830555,
+      677783,
+      428826
     ],
     "ev": [
-      1178449,
-      1474810,
-      735514
+      1208959,
+      1496699,
+      757774
     ],
     "ed": [
       0,
@@ -18,8 +18,8 @@
     ]
   },
   "last_changed": {
-    "vbm": "Updated at November 1st, 2026 at 7:00pm",
-    "ev": "Updated at November 1st, 2026 at 7:00pm",
+    "vbm": "Updated at November 1st, 2026 at 11:00pm",
+    "ev": "Updated at November 1st, 2026 at 11:00pm",
     "ed": null
   },
   "county_last_changed": {
@@ -54,9 +54,9 @@
       "ed": null
     },
     "BRO": {
-      "all": "Updated at November 1st, 2026 at 7:00pm",
-      "vbm": "Updated at November 1st, 2026 at 7:00pm",
-      "ev": "Updated at November 1st, 2026 at 7:00pm",
+      "all": "Updated at November 1st, 2026 at 11:00pm",
+      "vbm": "Updated at November 1st, 2026 at 11:00pm",
+      "ev": "Updated at November 1st, 2026 at 11:00pm",
       "ed": null
     },
     "CAL": {
@@ -132,8 +132,8 @@
       "ed": null
     },
     "GAD": {
-      "all": "Updated at November 1st, 2026 at 7:00pm",
-      "vbm": "Updated at November 1st, 2026 at 7:00pm",
+      "all": "Updated at November 1st, 2026 at 11:00pm",
+      "vbm": "Updated at November 1st, 2026 at 11:00pm",
       "ev": "Updated at November 1st, 2026 at 7:00pm",
       "ed": null
     },
@@ -186,9 +186,9 @@
       "ed": null
     },
     "HIL": {
-      "all": "Updated at November 1st, 2026 at 7:00pm",
+      "all": "Updated at November 1st, 2026 at 11:00pm",
       "vbm": "Updated at November 1st, 2026 at 7:00pm",
-      "ev": "Updated at November 1st, 2026 at 7:00pm",
+      "ev": "Updated at November 1st, 2026 at 11:00pm",
       "ed": null
     },
     "HOL": {
@@ -234,8 +234,8 @@
       "ed": null
     },
     "LEO": {
-      "all": "Updated at November 1st, 2026 at 7:00pm",
-      "vbm": "Updated at November 1st, 2026 at 7:00pm",
+      "all": "Updated at November 1st, 2026 at 11:00pm",
+      "vbm": "Updated at November 1st, 2026 at 11:00pm",
       "ev": "Updated at November 1st, 2026 at 7:00pm",
       "ed": null
     },
@@ -276,9 +276,9 @@
       "ed": null
     },
     "DAD": {
-      "all": "Updated at November 1st, 2026 at 7:00pm",
+      "all": "Updated at November 1st, 2026 at 11:00pm",
       "vbm": "Updated at November 1st, 2026 at 7:00pm",
-      "ev": "Updated at November 1st, 2026 at 7:00pm",
+      "ev": "Updated at November 1st, 2026 at 11:00pm",
       "ed": null
     },
     "MON": {
@@ -306,21 +306,21 @@
       "ed": null
     },
     "ORA": {
-      "all": "Updated at November 1st, 2026 at 7:00pm",
-      "vbm": "Updated at November 1st, 2026 at 7:00pm",
-      "ev": "Updated at November 1st, 2026 at 7:00pm",
+      "all": "Updated at November 1st, 2026 at 11:00pm",
+      "vbm": "Updated at November 1st, 2026 at 11:00pm",
+      "ev": "Updated at November 1st, 2026 at 11:00pm",
       "ed": null
     },
     "OSC": {
-      "all": "Updated at November 1st, 2026 at 7:00pm",
+      "all": "Updated at November 1st, 2026 at 11:00pm",
       "vbm": "Updated at November 1st, 2026 at 7:00pm",
-      "ev": "Updated at November 1st, 2026 at 7:00pm",
+      "ev": "Updated at November 1st, 2026 at 11:00pm",
       "ed": null
     },
     "PAL": {
-      "all": "Updated at November 1st, 2026 at 7:00pm",
-      "vbm": "Updated at November 1st, 2026 at 7:00pm",
-      "ev": "Updated at November 1st, 2026 at 7:00pm",
+      "all": "Updated at November 1st, 2026 at 11:00pm",
+      "vbm": "Updated at November 1st, 2026 at 11:00pm",
+      "ev": "Updated at November 1st, 2026 at 11:00pm",
       "ed": null
     },
     "PAS": {
@@ -330,9 +330,9 @@
       "ed": null
     },
     "PIN": {
-      "all": "Updated at November 1st, 2026 at 7:00pm",
+      "all": "Updated at November 1st, 2026 at 11:00pm",
       "vbm": "Updated at November 1st, 2026 at 3:00pm",
-      "ev": "Updated at November 1st, 2026 at 7:00pm",
+      "ev": "Updated at November 1st, 2026 at 11:00pm",
       "ed": null
     },
     "POL": {
@@ -360,9 +360,9 @@
       "ed": null
     },
     "SEM": {
-      "all": "Updated at November 1st, 2026 at 7:00pm",
-      "vbm": "Updated at November 1st, 2026 at 7:00pm",
-      "ev": "Updated at November 1st, 2026 at 7:00pm",
+      "all": "Updated at November 1st, 2026 at 11:00pm",
+      "vbm": "Updated at November 1st, 2026 at 11:00pm",
+      "ev": "Updated at November 1st, 2026 at 11:00pm",
       "ed": null
     },
     "STJ": {

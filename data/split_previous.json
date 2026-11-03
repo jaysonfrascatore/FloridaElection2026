@@ -1,423 +1,429 @@
 {
-  "run_time": "Updated at November 3rd, 2026 at 11:00am",
+  "run_time": "Updated at November 3rd, 2026 at 3:00pm",
   "previous": {
     "vbm": [
-      854779,
-      696989,
-      445967
+      774144,
+      676224,
+      416829
     ],
     "ev": [
-      1210796,
-      1497769,
-      759235
+      1051353,
+      1423712,
+      678630
     ],
     "ed": [
-      0,
-      0,
-      0
+      193532,
+      402917,
+      176936
     ]
   },
   "last_changed": {
-    "vbm": "Updated at November 3rd, 2026 at 11:00am",
-    "ev": "Updated at November 3rd, 2026 at 11:00am",
-    "ed": "Updated at November 3rd, 2026 at 11:00am"
+    "vbm": "Updated at November 3rd, 2026 at 3:00pm",
+    "ev": "Updated at November 3rd, 2026 at 3:00pm",
+    "ed": "Updated at November 3rd, 2026 at 3:00pm"
   },
   "county_last_changed": {
     "ALA": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at November 1st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "BAK": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
       "vbm": "Updated at November 3rd, 2026 at 11:00am",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "BAY": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 11:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "BRA": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at November 1st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "BRE": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
+    },
+    "BRO": {
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
+      "ev": "Updated at November 3rd, 2026 at 3:00pm",
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "CAL": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 2nd, 2026 at 7:00pm",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "CHA": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "CIT": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "CLA": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "CLL": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "CLM": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "DES": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "DIX": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
       "vbm": "Updated at November 3rd, 2026 at 11:00am",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "DUV": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at November 3rd, 2026 at 11:00am",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "ESC": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 11:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "FLA": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 2nd, 2026 at 7:00pm",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "FRA": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "GAD": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at November 1st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "GIL": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "GLA": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 2nd, 2026 at 7:00pm",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "GUL": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "HAM": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "HAR": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 2nd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "HEN": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "HER": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "HIG": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "HIL": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
-      "ev": "Updated at November 2nd, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
+      "ev": "Updated at November 3rd, 2026 at 3:00pm",
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "HOL": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 2nd, 2026 at 7:00pm",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "IND": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "JAC": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 2nd, 2026 at 7:00pm",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "JEF": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 2nd, 2026 at 7:00pm",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "LAF": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
       "vbm": "Updated at November 2nd, 2026 at 7:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "LAK": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 11:00pm",
       "ed": null
     },
     "LEE": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "LEO": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at November 1st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "LEV": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at November 1st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "LIB": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "MAD": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "MAN": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
-      "ev": "Updated at November 2nd, 2026 at 11:00am",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
+      "ev": "Updated at November 3rd, 2026 at 3:00pm",
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "MRN": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "MRT": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "DAD": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at November 2nd, 2026 at 3:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "MON": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "NAS": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "OKA": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 11:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "OKE": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "ORA": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at November 3rd, 2026 at 11:00am",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "OSC": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at November 2nd, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "PAL": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
-      "ev": "Updated at November 1st, 2026 at 11:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
+      "ev": "Updated at November 3rd, 2026 at 3:00pm",
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "PAS": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at November 2nd, 2026 at 11:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "PIN": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at November 1st, 2026 at 11:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "POL": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at November 2nd, 2026 at 11:00am",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "PUT": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "SAN": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 11:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "SAR": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at November 1st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "SEM": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at November 1st, 2026 at 11:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "STJ": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "STL": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "SUM": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "SUW": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "TAY": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
       "vbm": "Updated at November 3rd, 2026 at 11:00am",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "UNI": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "VOL": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at November 1st, 2026 at 3:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "WAK": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "WAL": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 11:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     },
     "WAS": {
-      "all": "Updated at November 3rd, 2026 at 11:00am",
-      "vbm": "Updated at November 3rd, 2026 at 11:00am",
+      "all": "Updated at November 3rd, 2026 at 3:00pm",
+      "vbm": "Updated at November 3rd, 2026 at 3:00pm",
       "ev": "Updated at October 31st, 2026 at 7:00pm",
-      "ed": "Updated at November 3rd, 2026 at 11:00am"
+      "ed": "Updated at November 3rd, 2026 at 3:00pm"
     }
   }
 }

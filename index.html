@@ -236,7 +236,7 @@
   .next-update.nu-red .nu-time{ color:var(--rep); }
   .next-update.nu-yellow .nu-time{ color:#d8b466; }
   .next-update.nu-green .nu-time{ color:var(--total-green); }
-  .next-update.nu-green .nu-time.nu-prep{ font-size:16px; letter-spacing:.02em; }
+  .next-update.nu-green .nu-time.nu-prep, .next-update.nu-yellow .nu-time.nu-prep{ font-size:16px; letter-spacing:.02em; }
   /* Desktop: the countdown moves to the very top of the page, centered and large. */
   #clockTop{ display:none; }
   @media (min-width:761px){
@@ -245,7 +245,7 @@
     #clockTop .next-update.on{ display:block; }
     #clockTop .next-update .nu-label{ font-size:14px; letter-spacing:.14em; }
     #clockTop .next-update .nu-time{ font-size:64px; line-height:1.05; margin-top:6px; letter-spacing:.03em; }
-    #clockTop .next-update.nu-green .nu-time.nu-prep{ font-size:40px; }
+    #clockTop .next-update.nu-green .nu-time.nu-prep, #clockTop .next-update.nu-yellow .nu-time.nu-prep{ font-size:40px; }
   }
   @media (max-width:1499px){ .next-update{ margin:0 12px; } }
   @media (max-width:760px){ .next-update{ flex:1 1 100%; margin:0; } }
@@ -2826,6 +2826,13 @@ function tickNextUpdateClock(){
   const labelEl = document.getElementById('nuLabel');
   box.classList.add('on');
   box.classList.remove('nu-red', 'nu-yellow', 'nu-green');
+  if(diff <= 0 && target === Date.UTC(2026, 10, 3, 19, 0, 0)){   // 7 PM on Election Day: polls close
+    box.classList.add('nu-yellow');
+    labelEl.textContent = 'Next update';
+    timeEl.classList.add('nu-prep');
+    timeEl.textContent = 'Polls are now closed.';
+    return;
+  }
   if(diff <= 0){
     box.classList.add('nu-green');
     labelEl.textContent = 'Next update';
@@ -11411,7 +11418,22 @@ function anPollWeight(daysLeft){ return 0.55 + 0.35 * (1 - Math.min(daysLeft, 12
 // ---- the forecast engine ----
 // Expected final ballots per county, given how many ballots each county has counted so far (counted = {county: n}).
 // Pure, so the same rule can be replayed on any past update to draw a county's projection over time.
+// Election Day ballots counted so far in each county (by name), as of a time, from data/county_history_types.csv.
+// The turnout forecast leaves these out of its pace math: it is built from the vote cast BEFORE Election Day, so the
+// forecast holds steady on election night instead of jumping every time a county reports its Election Day vote.
+function anEdCounted(asOf){
+  const by = typeof saPreIndex === 'function' ? saPreIndex() : null, out = {}; if(!by) return out;
+  const t = asOf ? +new Date(asOf) : Infinity;
+  COUNTIES.forEach(c => {
+    const l = by[c.code]; if(!l || !l.length) return;
+    let r = null; for(let i = 0; i < l.length; i++){ if(+l[i]._t <= t) r = l[i]; else break; }
+    if(r) out[c.county] = num(r['DEM ED']) + num(r['REP ED']) + num(r['NPA ED']) + num(r['OTHER ED']);
+  });
+  return out;
+}
 function anProjectTurnout(actual, asOf){
+  const edC = (() => { try{ return anEdCounted(asOf); }catch(e){ return {}; } })();
+  const preA = {}; SIM_COUNTY_NAMES.forEach(n => { preA[n] = Math.max(0, (actual[n] || 0) - (edC[n] || 0)); });   // ballots cast before Election Day
   const names = SIM_COUNTY_NAMES;
   const rate = (yr, n) => ((yr[n][0] + yr[n][1]) / AN_PAST_TWO_PARTY_SHARE) / SIM_REG[n][0];
   const W = asOf && new Date(asOf) < AN_METHOD_CUTOVER ? AN_TURNOUT_W_ORIG : AN_TURNOUT_W;
@@ -11428,7 +11450,7 @@ function anProjectTurnout(actual, asOf){
     if(asOf && typeof saPreEd === 'function'){
       const asD = new Date(asOf), P = saPreEd(asD);
       if(P){
-        let aT = 0, rem = 0; names.forEach(n => { aT += actual[n] || 0; });
+        let aT = 0, rem = 0; names.forEach(n => { aT += preA[n] || 0; });
         Object.values(P.byName).forEach(v => { rem += v[0] + v[1] + v[2]; });
         const pre = aT + rem, lo = pre / AN_PRE_ED_SHARE.hi, hi = pre / AN_PRE_ED_SHARE.lo;
         const ramp = anClamp((+asD - +new Date(2026, 9, 19)) / (AN_PACE_RAMP_DAYS * 86400000), 0, 1);
@@ -11438,12 +11460,12 @@ function anProjectTurnout(actual, asOf){
     }
   }catch(e){ target = histSum; range = null; }
   let aSum = 0, hWith = 0;
-  names.forEach(n => { if(actual[n] > 0){ aSum += actual[n]; hWith += hist[n]; } });
+  names.forEach(n => { if(preA[n] > 0){ aSum += preA[n]; hWith += hist[n]; } });
   const rho = hWith > 0 ? aSum / hWith : 0;
   const paced = {};
   names.forEach(n => {
-    if(actual[n] > 0 && rho > 0){
-      const rel = anClamp((actual[n] / hist[n]) / rho, 0.7, 1.3);
+    if(preA[n] > 0 && rho > 0){
+      const rel = anClamp((preA[n] / hist[n]) / rho, 0.7, 1.3);
       paced[n] = hist[n] * (1 + AN_PACE_WEIGHT * (rel - 1));
     }else paced[n] = hist[n];
   });

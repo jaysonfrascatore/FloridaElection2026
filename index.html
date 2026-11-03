@@ -5122,30 +5122,22 @@ function splitTextInfo(key){
 // Voting, from the change in each split's statewide total. Election Day is only mentioned if it
 // actually added votes. Left out when there is no previous run to compare to.
 function splitDropShareLine(){
+  // Mail and Election Day only: in-person early voting ended Nov 1.
   if(!btHas || !btStat || !btPrev) return '';
   const cur = k => btStat[k] ? btStat[k][0] + btStat[k][1] + btStat[k][2] : 0;
   const prv = k => btPrev[k] ? btPrev[k][0] + btPrev[k][1] + btPrev[k][2] : null;
-  if(prv('vbm') === null || prv('ev') === null) return '';
-  const dm = cur('vbm') - prv('vbm'), de = cur('ev') - prv('ev'), dd = btPrev.ed ? cur('ed') - prv('ed') : 0;
-  if(dm < 0 || de < 0 || dd < 0) return '';            // a rollback or fix: don't describe it as a split
-  const sum = dm + de + dd;
+  if(prv('vbm') === null) return '';
+  const dm = cur('vbm') - prv('vbm'), dd = cur('ed') - (prv('ed') || 0);
+  if(dm < 0 || dd < 0) return '';                      // a rollback or fix: don't describe it as a split
+  const sum = dm + dd;
   if(!sum) return '';
-  const pct = v => (v / sum * 100).toFixed(2) + '%';
   const mailLine = `\u{1F4EC} Mail: ${fmt(dm)} ballots`;
-  const ipevLine = `\u{1F4C5} In Person Early Vote: ${fmt(de)} ballots`;
   const edLine = `\u{1F5F3}\u{FE0F} Election Day: ${fmt(dd)} ballots`;
-  // Biggest share first
-  const parts = [{v: dm, n: 'Mail', l: mailLine}, {v: de, n: 'In Person Early Vote', l: ipevLine}];
-  if(dd > 0) parts.push({v: dd, n: 'Election Day', l: edLine});
-  parts.sort((x, y) => y.v - x.v);
-  let head;
-  if(dd > 0){
-    head = `\u{1F7E2} This drop was ${parts.map(p => pct(p.v) + ' ' + p.n).join(', ').replace(/, ([^,]*)$/, ' and $1')}.`;
-  } else {
-    const top = (parts[0].v / sum * 100).toFixed(2);
-    head = `\u{1F7E2} This drop was ${top}% ${parts[0].n} and ${(100 - parseFloat(top)).toFixed(2)}% ${parts[1].n}.`;
-  }
-  return head + '\n' + parts.map(p => p.l).join('\n');
+  if(dd <= 0) return `\u{1F7E2} This drop was 100% Mail.\n${mailLine}`;
+  if(dm <= 0) return `\u{1F7E2} This drop was 100% Election Day.\n${edLine}`;
+  const parts = [{ v:dm, n:'Mail', l:mailLine }, { v:dd, n:'Election Day', l:edLine }].sort((x, y) => y.v - x.v);   // biggest share first
+  const top = (parts[0].v / sum * 100).toFixed(2);
+  return `\u{1F7E2} This drop was ${top}% ${parts[0].n} and ${(100 - parseFloat(top)).toFixed(2)}% ${parts[1].n}.\n` + parts.map(p => p.l).join('\n');
 }
 function splitHeadline(label, info){
   if(!info.leader) return `\u{1F7E1} ${label}: Even`;
@@ -5337,18 +5329,13 @@ function buildTweetSections(){
   // grand total, the leader line, and the counties-with-votes line --
   // all one card, matching the exact wording and order of the
   // reference example.
-  // The splits card is now the Election Day vote only (Nov 3 ballots), with the same math as the old splits:
-  // each party's share of all Election Day ballots, the margin (D - R) / all Election Day ballots, the raw lead,
-  // and the change from the previous run (data/split_previous.json).
-  const edInfo = splitTextInfo('ed');
+  // The splits card: Vote by Mail, then Election Day (in place of In Person Early Voting, which ended Nov 1).
+  const vbmInfo = splitTextInfo('vbm'), edInfo = splitTextInfo('ed');
   const splitsCard = btHas
-    ? (edInfo
-      ? 'Election Day Vote Only:\n\n' + orderedPartyLines([
-          { v: edInfo.r, line: `\u{1F534} REP: ${fmt(edInfo.r)} (${formatPctTweet(edInfo.r / edInfo.t)})` },
-          { v: edInfo.d, line: `\u{1F535} DEM: ${fmt(edInfo.d)} (${formatPctTweet(edInfo.d / edInfo.t)})` },
-          { v: edInfo.n, line: `\u{1F7E3} OTHER: ${fmt(edInfo.n)} (${formatPctTweet(edInfo.n / edInfo.t)})` }
-        ]) + `\n\u{1F7E2} TOTAL: ${fmt(edInfo.t)}\n\n` + splitBlockText('Election Day', 'Election Day', edInfo)
-      : 'Election Day Vote Only:\n\nNo Election Day ballots have been counted yet. They start coming in after polls close at 7:00 PM on Tuesday, November 3.')
+    ? 'Splits:\n\n' + (splitDropShareLine() ? splitDropShareLine() + '\n\n' : '') + [
+        vbmInfo ? splitBlockText('Vote by Mail', 'VBM', vbmInfo) : '',
+        edInfo ? splitBlockText('Election Day', 'Election Day', edInfo) : '\u{1F5F3}\u{FE0F} Election Day: the first Election Day drop will be updated at 11:00 AM Eastern.'
+      ].filter(Boolean).join('\n\n')
     : '';
   // What this update is made of: early voting ended Nov 1, Nov 2 is mail only, and from Nov 3 it is the Election Day vote plus mail.
   const runD = lastCheckedRaw ? parseHistoryTimestamp(lastCheckedRaw) : new Date();

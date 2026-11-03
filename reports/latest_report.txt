@@ -7,13 +7,13 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at November 2nd, 2026 at 3:00pm Eastern Time
+Updated at November 2nd, 2026 at 7:00pm Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-59
+56
 
 Unchanged Counties:
 False
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-2,061,754
+2,064,572
 
 REP:
-2,192,029
+2,194,259
 
 OTHER:
-1,202,613
+1,204,513
 
 TOTAL:
-5,456,396
+5,463,344
 
 STATEWIDE SUMMARY
 =================================
 
-🔴 Republicans lead by 130,275 votes statewide.
+🔴 Republicans lead by 129,687 votes statewide.
 
 Margin Change:
-+0.02% toward Democrats
++0.01% toward Democrats
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +9,119
-🔴 REP: +7,865
-🟣 OTHER: +6,420
-🟢 TOTAL: +23,404
+🔵 DEM: +2,818
+🔴 REP: +2,230
+🟣 OTHER: +1,900
+🟢 TOTAL: +6,948
 
 REJECTED COUNTY UPDATES
 =================================
@@ -64,12 +64,7 @@ RATING / FORECAST CHANGES
 =================================
 
 
-Escambia
-
-Safe R → Likely R
-
-Margin Move:
-+0.002
+No rating changes detected.
 
 
 
@@ -77,46 +72,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️3 PM Florida EV & VBM Update
+🗳️7 PM Florida EV & VBM Update
 
-New votes have been cast in 59 counties over the last hour, with the largest update coming from Broward County.
+New votes have been cast in 56 counties over the last hour, with the largest update coming from Broward County.
 
-🔵 DEM: +9,119
-🔴 REP: +7,865
-🟣 OTHER: +6,420
-🟢 TOTAL: +23,404
+🔵 DEM: +2,818
+🔴 REP: +2,230
+🟣 OTHER: +1,900
+🟢 TOTAL: +6,948
 
-🔴 Republicans lead by 130,275 votes statewide.
+🔴 Republicans lead by 129,687 votes statewide.
 
-🔴 Margin Change: +0.02% toward Democrats
+🔴 Margin Change: +0.01% toward Democrats
 
 Largest County Updates
 
 
 🥇Broward County
 
-🔵 DEM: +2,738
-🔴 REP: +867
-🟣 OTHER: +1,681
-🟢 TOTAL: +5,286
+🔵 DEM: +727
+🔴 REP: +323
+🟣 OTHER: +528
+🟢 TOTAL: +1,578
 
 
 
-🥈Pinellas County
+🥈Seminole County
 
-🔵 DEM: +725
-🔴 REP: +848
-🟣 OTHER: +609
-🟢 TOTAL: +2,182
+🔵 DEM: +168
+🔴 REP: +135
+🟣 OTHER: +133
+🟢 TOTAL: +436
 
 
 
-🥉Palm Beach County
+🥉Escambia County
 
-🔵 DEM: +798
-🔴 REP: +719
-🟣 OTHER: +641
-🟢 TOTAL: +2,158
+🔵 DEM: +156
+🔴 REP: +157
+🟣 OTHER: +79
+🟢 TOTAL: +392
 
 
 

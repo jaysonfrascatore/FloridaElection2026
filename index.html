@@ -2203,9 +2203,11 @@ function categoryForNpaDisplay(c){
 // so there is no Toss Up there -- a county the normal tiers would call a Toss Up is Tilt D or Tilt R by
 // whoever has more raw votes. Every other view still uses Toss Up.
 let btForceTilt = false;
+// Tilt D / Tilt R replace Toss Up on finished counts: a single day's map, and the In Person Early Voting split (early voting ended Nov 1, so it is final).
+function btTiltOn(){ return (typeof btDayActive === 'function' && btDayActive()) || (typeof btView !== 'undefined' && btView === 'ev' && typeof currentMetric !== 'undefined' && currentMetric === 'demrepnpa'); }
 function categoryForDayView(c){
   const base = categoryForNpaDisplay(c);
-  if(base === 'Toss Up' && ((typeof btDayActive === 'function' && btDayActive()) || btForceTilt)) return c.dem > c.rep ? 'Tilt D' : (c.rep > c.dem ? 'Tilt R' : 'Tie');
+  if(base === 'Toss Up' && (btTiltOn() || btForceTilt)) return c.dem > c.rep ? 'Tilt D' : (c.rep > c.dem ? 'Tilt R' : 'Tie');
   return base;
 }
 // RATING_CATS plus the pending "Not Updated" state and the NPA/Other
@@ -3297,15 +3299,20 @@ function btFillDaySelect(){
   const sel = document.getElementById('dayViewSelect'); if(!sel) return;
   // The list runs from October 18 (the first day worth mapping) through yesterday, newest first.
   const today = btTodayKey(), past = [];
-  for(let d = new Date(2026, 9, 18); btKeyOf(d) < today; d.setDate(d.getDate() + 1)) past.push(btKeyOf(d));
+  const BT_LAST_DAY = 20261104;   // Nov 4 (the final update) is expected to be the last day with new votes; change this if counting runs longer
+  for(let d = new Date(2026, 9, 18); btKeyOf(d) < today && btKeyOf(d) <= BT_LAST_DAY; d.setDate(d.getDate() + 1)) past.push(btKeyOf(d));
   past.reverse();
   const label = k => {
-    const ip = k === 20261103 ? 'Election Day' : (k === 20261102 ? 'Mail only (no early voting)' : btIpevText(k));
+    if(k === 20261102 || k === 20261103 || k === 20261104){   // no in-person early voting after Nov 1
+      const v = btCumThrough(k).t - btCumThrough(k - 1).t;
+      return (k === 20261102 ? 'November 2nd (Mail)' : (k === 20261103 ? 'November 3rd (Election Day)' : 'November 4th (Final count)')) + ` \u00b7 ${v.toLocaleString('en-US')} votes`;
+    }
+    const ip = btIpevText(k);
     if(!ip) return btKeyLabel(k, true);
     const votes = btCumThrough(k).t - btCumThrough(k - 1).t;
     return `${ip} \u00b7 ${btKeyLabel(k)} \u00b7 ${votes.toLocaleString('en-US')} votes`;
   };
-  sel.innerHTML = '<option value="full">Full Statewide</option><option value="today">Today only</option>' + past.map(k => `<option value="${k}">${label(k)}</option>`).join('');
+  sel.innerHTML = '<option value="full">Full Statewide</option>' + (today <= BT_LAST_DAY ? '<option value="today">Today only</option>' : '') + past.map(k => `<option value="${k}">${label(k)}</option>`).join('');
   sel.value = Array.from(sel.options).some(o => o.value === btDaySel) ? btDaySel : 'full';
   if(sel.value !== btDaySel) btDaySel = sel.value;
 }
@@ -4020,7 +4027,9 @@ function buildMapTrace(metric, activeCounties){
     // General Election: the tooltip is the same translucent HTML tooltip the Vote Share Over Time chart uses (see attachMapHtmlTip).
     if(metric === 'demrepnpa'){ trace.hoverinfo = 'none'; delete trace.hoverlabel; trace.customdata = text.map(t => '<div style="max-width:300px;white-space:normal;line-height:1.4">' + String(t).replace(/^<b>(.*?)<\/b><br>/, '<div class="sorted-hover-date">$1</div>') + '</div>'); }
     legendVisible = true;
-    legendHtml = cats.map(cat => {
+    const LEG_ORDER = ['Safe R', 'Likely R', 'Lean R', 'Tilt R', 'Toss Up', 'Tie', 'Tilt D', 'Lean D', 'Likely D', 'Safe D'];
+    const legRank = k => { const i = LEG_ORDER.indexOf(k); return i < 0 ? 99 : i; };
+    legendHtml = cats.slice().sort((a, b) => legRank(a.key) - legRank(b.key)).map(cat => {
       const count = activeCounties.filter(c=>m.catFn(c)===cat.key).length;
       if(!count) return '';
       return `<span class="swatch" style="background:${cat.color};color:${contrastText(cat.color)}">${cat.key} · ${count}</span>`;
@@ -4034,7 +4043,7 @@ function buildMapTrace(metric, activeCounties){
     }
     // General Election: the rating key beside the map too (the chips under
     // it stay, since they also cover Not Updated / NPA lead / ties).
-    if(m.ratingKey) sideLegendHtml = ratingSideLegendHtml(btDayActive());
+    if(m.ratingKey) sideLegendHtml = ratingSideLegendHtml(btTiltOn());
     if(m.evLegend){ legendVisible = false; legendHtml = ''; sideLegendHtml = evSideLegendHtml(activeCounties); }
   }else if(m.symmetric){
     const maxAbs = Math.max(0.01, ...activeCounties.map(c=>Math.abs(m.get(c))));
@@ -5328,21 +5337,30 @@ function buildTweetSections(){
   // grand total, the leader line, and the counties-with-votes line --
   // all one card, matching the exact wording and order of the
   // reference example.
-  const vbmInfo = splitTextInfo('vbm'), evInfo = splitTextInfo('ev');
-  // The splits card: Mail first, then In Person Early Voting. Left out when there is no split data yet.
-  const splitsCard = (vbmInfo || evInfo)
-    ? 'Splits:\n\n' + (splitDropShareLine() ? splitDropShareLine() + '\n\n' : '') + [
-        vbmInfo ? splitBlockText('Vote by Mail', 'VBM', vbmInfo) : '',
-        evInfo ? splitBlockText('In Person Early Voting', 'IPEV', evInfo) : ''
-      ].filter(Boolean).join('\n\n')
+  // The splits card is now the Election Day vote only (Nov 3 ballots), with the same math as the old splits:
+  // each party's share of all Election Day ballots, the margin (D - R) / all Election Day ballots, the raw lead,
+  // and the change from the previous run (data/split_previous.json).
+  const edInfo = splitTextInfo('ed');
+  const splitsCard = btHas
+    ? (edInfo
+      ? 'Election Day Vote Only:\n\n' + orderedPartyLines([
+          { v: edInfo.r, line: `\u{1F534} REP: ${fmt(edInfo.r)} (${formatPctTweet(edInfo.r / edInfo.t)})` },
+          { v: edInfo.d, line: `\u{1F535} DEM: ${fmt(edInfo.d)} (${formatPctTweet(edInfo.d / edInfo.t)})` },
+          { v: edInfo.n, line: `\u{1F7E3} OTHER: ${fmt(edInfo.n)} (${formatPctTweet(edInfo.n / edInfo.t)})` }
+        ]) + `\n\u{1F7E2} TOTAL: ${fmt(edInfo.t)}\n\n` + splitBlockText('Election Day', 'Election Day', edInfo)
+      : 'Election Day Vote Only:\n\nNo Election Day ballots have been counted yet. They start coming in after polls close at 7:00 PM on Tuesday, November 3.')
     : '';
+  // What this update is made of: early voting ended Nov 1, Nov 2 is mail only, and from Nov 3 it is the Election Day vote plus mail.
+  const runD = lastCheckedRaw ? parseHistoryTimestamp(lastCheckedRaw) : new Date();
+  const runKey = runD ? runD.getFullYear() * 10000 + (runD.getMonth() + 1) * 100 + runD.getDate() : 0;
+  const phase = runKey >= 20261103 ? { head:'Election Day + Mail', short:'Election Day and mail' } : (runKey >= 20261102 ? { head:'Mail', short:'mail' } : { head:'Vote By Mail + In Person Early Voting', short:'VBM + IPEV' });
   const section1 =
-`\u{1F5F3}\u{FE0F} Florida Vote By Mail + In Person Early Voting Update, ${headerDate}
+`\u{1F5F3}\u{FE0F} Florida ${phase.head} Update, ${headerDate}
 
 Statewide Total Votes:
 ${statewideLines}
 
-${fmt(totalNewTotal)} new VBM + IPEV ballots across ${countiesUpdatedCount} counties have been counted, with the largest update coming from ${topCountyName} County.
+${fmt(totalNewTotal)} new ${phase.short} ballots across ${countiesUpdatedCount} counties have been counted, with the largest update coming from ${topCountyName} County.
 
 Latest Drop:
 ${dropLines}
@@ -7293,7 +7311,7 @@ async function exportStatewidePng(btn, opts = {}){
     // The NPA block, when shown, stacks right above it.
     if(isGeneral){
       const keyTop = drawKeyOnCanvas(ctx, 24*scale, headerH*scale + mapImg.height - 24*scale, scale,
-        'COUNTY RATING', '', ratingKeyRows(btDayActive()));
+        'COUNTY RATING', '', ratingKeyRows(btTiltOn()));
       if(shiftSliderActive){
         const h = drawNpaHypotheticalBlock(ctx, 20*scale, 0, scale, 230, true);
         drawNpaHypotheticalBlock(ctx, 20*scale, keyTop - 14*scale - h, scale, 230, false);

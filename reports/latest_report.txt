@@ -7,13 +7,13 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at November 3rd, 2026 at 7:00pm Eastern Time
+Updated at November 3rd, 2026 at 11:00pm Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-67
+60
 
 Unchanged Counties:
 False
@@ -25,32 +25,32 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-2,803,292
+2,820,973
 
 REP:
-3,502,027
+3,524,174
 
 OTHER:
-1,897,646
+1,914,972
 
 TOTAL:
-8,202,965
+8,260,119
 
 STATEWIDE SUMMARY
 =================================
 
-🔴 Republicans lead by 698,735 votes statewide.
+🔴 Republicans lead by 703,201 votes statewide.
 
 Margin Change:
--0.81% toward Republicans
+-0.00% toward Republicans
 
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +286,781
-🔴 REP: +459,188
-🟣 OTHER: +276,797
-🟢 TOTAL: +1,022,766
+🔵 DEM: +17,681
+🔴 REP: +22,147
+🟣 OTHER: +17,326
+🟢 TOTAL: +57,154
 
 REJECTED COUNTY UPDATES
 =================================
@@ -64,39 +64,7 @@ RATING / FORECAST CHANGES
 =================================
 
 
-Hillsborough
-
-Lean D → Toss Up D
-
-Margin Move:
--0.014
-
-
-
-Madison
-
-Safe R → Likely R
-
-Margin Move:
-+0.008
-
-
-
-Osceola
-
-Safe D → Likely D
-
-Margin Move:
--0.012
-
-
-
-St. Lucie
-
-Toss Up R → Lean R
-
-Margin Move:
--0.014
+No rating changes detected.
 
 
 
@@ -104,46 +72,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️7 PM Florida EV & VBM Update
+🗳️11 PM Florida EV & VBM Update
 
-New votes have been cast in 67 counties over the last hour, with the largest update coming from Miami-Dade County.
+New votes have been cast in 60 counties over the last hour, with the largest update coming from Seminole County.
 
-🔵 DEM: +286,781
-🔴 REP: +459,188
-🟣 OTHER: +276,797
-🟢 TOTAL: +1,022,766
+🔵 DEM: +17,681
+🔴 REP: +22,147
+🟣 OTHER: +17,326
+🟢 TOTAL: +57,154
 
-🔴 Republicans lead by 698,735 votes statewide.
+🔴 Republicans lead by 703,201 votes statewide.
 
-🔴 Margin Change: -0.81% toward Republicans
+🔴 Margin Change: -0.00% toward Republicans
 
 Largest County Updates
 
 
-🥇Miami-Dade County
+🥇Seminole County
 
-🔵 DEM: +29,496
-🔴 REP: +31,178
-🟣 OTHER: +32,280
-🟢 TOTAL: +92,954
+🔵 DEM: +1,454
+🔴 REP: +1,598
+🟣 OTHER: +1,770
+🟢 TOTAL: +4,822
 
 
 
 🥈Broward County
 
-🔵 DEM: +30,395
-🔴 REP: +20,637
-🟣 OTHER: +25,450
-🟢 TOTAL: +76,482
+🔵 DEM: +1,889
+🔴 REP: +998
+🟣 OTHER: +1,587
+🟢 TOTAL: +4,474
 
 
 
-🥉Palm Beach County
+🥉Miami-Dade County
 
-🔵 DEM: +21,474
-🔴 REP: +25,207
-🟣 OTHER: +21,260
-🟢 TOTAL: +67,941
+🔵 DEM: +1,413
+🔴 REP: +1,243
+🟣 OTHER: +1,651
+🟢 TOTAL: +4,307
 
 
 

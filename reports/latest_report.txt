@@ -7,13 +7,13 @@ Election ID:
 FL-2026-General
 
 Run Time:
-Updated at November 4th, 2026 at 11:00am Eastern Time
+Updated at November 4th, 2026 at 3:00pm Eastern Time
 
 Counties Loaded:
 67 / 67
 
 Updated Counties:
-26
+35
 
 Unchanged Counties:
 True
@@ -25,21 +25,21 @@ STATEWIDE TOTALS
 =================================
 
 DEM:
-2,821,503
+2,821,753
 
 REP:
-3,524,565
+3,524,781
 
 OTHER:
-1,915,294
+1,915,452
 
 TOTAL:
-8,261,362
+8,261,986
 
 STATEWIDE SUMMARY
 =================================
 
-🔴 Republicans lead by 703,062 votes statewide.
+🔴 Republicans lead by 703,028 votes statewide.
 
 Margin Change:
 +0.00% toward Democrats
@@ -47,10 +47,10 @@ Margin Change:
 TOTAL NEW VOTES
 =================================
 
-🔵 DEM: +530
-🔴 REP: +391
-🟣 OTHER: +322
-🟢 TOTAL: +1,243
+🔵 DEM: +250
+🔴 REP: +216
+🟣 OTHER: +158
+🟢 TOTAL: +624
 
 REJECTED COUNTY UPDATES
 =================================
@@ -72,46 +72,46 @@ TWEET DRAFT
 =================================
 
 
-🗳️11 AM Florida EV & VBM Update
+🗳️3 PM Florida EV & VBM Update
 
-New votes have been cast in 26 counties over the last hour, with the largest update coming from Leon County.
+New votes have been cast in 35 counties over the last hour, with the largest update coming from Palm Beach County.
 
-🔵 DEM: +530
-🔴 REP: +391
-🟣 OTHER: +322
-🟢 TOTAL: +1,243
+🔵 DEM: +250
+🔴 REP: +216
+🟣 OTHER: +158
+🟢 TOTAL: +624
 
-🔴 Republicans lead by 703,062 votes statewide.
+🔴 Republicans lead by 703,028 votes statewide.
 
 🔴 Margin Change: +0.00% toward Democrats
 
 Largest County Updates
 
 
-🥇Leon County
+🥇Palm Beach County
 
-🔵 DEM: +184
-🔴 REP: +81
-🟣 OTHER: +76
-🟢 TOTAL: +341
-
-
-
-🥈St. Lucie County
-
-🔵 DEM: +156
-🔴 REP: +73
-🟣 OTHER: +103
-🟢 TOTAL: +332
+🔵 DEM: +41
+🔴 REP: +48
+🟣 OTHER: +47
+🟢 TOTAL: +136
 
 
 
-🥉Pasco County
+🥈Escambia County
 
 🔵 DEM: +33
-🔴 REP: +115
-🟣 OTHER: +69
-🟢 TOTAL: +217
+🔴 REP: +23
+🟣 OTHER: +21
+🟢 TOTAL: +77
+
+
+
+🥉Lake County
+
+🔵 DEM: +23
+🔴 REP: +16
+🟣 OTHER: +19
+🟢 TOTAL: +58
 
 
 

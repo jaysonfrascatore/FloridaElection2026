@@ -1181,11 +1181,48 @@
   }
   .support-link{ color:#d8b466; text-decoration:none; border-bottom:1px dotted rgba(216,180,102,.6); }
   .support-link:hover{ color:#ffd23f; border-bottom-color:#ffd23f; }
+  /* The cycle is over: the next-update clock is retired and a thank-you note sits at the top instead. */
+  #nextUpdateClock, #clockTop{ display:none !important; }
+  .thanks-box{ max-width:1100px; margin:18px auto 22px; padding:18px 24px; background:#e2afff; color:#3c096c; border-radius:14px; font-size:15.5px; line-height:1.6; box-sizing:border-box; }
+  .thanks-box p{ margin:0; }
+  .thanks-box .sig{ margin-top:8px; font-weight:700; text-align:right; }
+  @media (max-width:640px){ .thanks-box{ margin:12px 16px 18px; padding:14px 16px; font-size:14.5px; } }
 </style>
+<script>
+// Every chart stops at Nov 5, 2026: points dated after it are dropped and no axis is drawn past it.
+(function(){
+  const CUT = +new Date(2026, 10, 5, 23, 59, 59);
+  const isD = v => v instanceof Date || (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v));
+  const tm = v => +(v instanceof Date ? v : new Date(v));
+  function clip(data, layout){
+    (data || []).forEach(t => {
+      if(!t || !Array.isArray(t.x) || !t.x.length || !isD(t.x[0])) return;
+      const keep = t.x.map(v => !isD(v) || tm(v) <= CUT); if(keep.every(Boolean)) return;
+      const n = t.x.length, f = a => Array.isArray(a) && a.length === n ? a.filter((_, i) => keep[i]) : a;
+      ['x', 'y', 'customdata', 'text', 'hovertext'].forEach(k => { t[k] = f(t[k]); });
+      if(t.marker){ ['color', 'size', 'symbol', 'opacity'].forEach(k => { t.marker[k] = f(t.marker[k]); }); }
+    });
+    if(layout) Object.keys(layout).forEach(k => {
+      const ax = layout[k]; if(!/^xaxis\d*$/.test(k) || !ax || !Array.isArray(ax.range) || !isD(ax.range[1])) return;
+      if(tm(ax.range[1]) > CUT) ax.range = [ax.range[0], new Date(CUT)];
+    });
+  }
+  function wrap(){
+    if(!window.Plotly || Plotly.__cut) return !!window.Plotly; Plotly.__cut = true;
+    ['newPlot', 'react'].forEach(fn => { const o = Plotly[fn]; Plotly[fn] = function(el, data, layout, cfg){ try{ clip(data, layout); }catch(e){} return o.apply(this, arguments); }; });
+    return true;
+  }
+  if(!wrap()){ const iv = setInterval(() => { if(wrap()) clearInterval(iv); }, 20); }
+})();
+</script>
 </head>
 <body>
 
 <div id="clockTop"></div>
+<div class="thanks-box" role="note">
+  <p>Thank you to everyone who followed along for the 2026 Election Cycle. This project reached over 2 million views from Mid September - Early November with 11am, 3pm, 7pm, and 11pm updates. This website and my posts reached everyday people, as well as journalists, candidates for elected office, their campaign staff, and elected officials. Looking forward to being a reliable source for elections in 2028.</p>
+  <p class="sig">- Jayson Frascatore</p>
+</div>
 
 <header>
   <div class="title-block">
@@ -12725,6 +12762,11 @@ async function saLoadTypes(){
     }
     return o;
   });
+  // In-person early voting ended Nov 1, so the early-vote count is final from then on. Hold it at its last Nov 1 value: later
+  // "changes" (a county's small corrections, or Broward's site going down on Nov 3) are not early votes and would otherwise show up
+  // as fake early-vote swings (D+100 on a no-voting day, R+75 during the Broward outage).
+  { const EV_END = +new Date(2026, 10, 2, 0, 0, 0); let fz = null;
+    pts.forEach(o => { if(+o.t < EV_END) fz = o.ev.slice(); else if(fz) o.ev = fz.slice(); }); }
   saTypesRows = rows; saTypesCache = pts;
   return pts;
 }
@@ -13105,6 +13147,10 @@ function saDailyHTML(key, title, noun, types){
     const ry = inc.map((o, i) => saMargin(saRoll(inc, i, 7)));
     traces.push({ x:inc.map(o => o.t), y:ry, type:'scatter', mode:'lines', line:{ color:'#9aa4b8', width:1.6, dash:'dot' }, hoverinfo:'skip', showlegend:false });
     days.forEach(d => d.rows.forEach((o, i) => allRows.push({ o, i, d })));
+    if(key === 'ev'){   // early voting is over: hold its last value flat through the final update
+      const lastR = allRows[allRows.length - 1], lastT = +lastR.o.p.t;
+      types.filter(p => +p.t > lastT).forEach(p => allRows.push({ o:Object.assign({}, lastR.o, { p }), i:lastR.i + 1, d:lastR.d, held:true }));
+    }
     traces.push({ x:allRows.map(r => r.o.p.t), y:allRows.map(r => r.o.m), type:'scatter', mode:'lines', line:{ color:saMarginColor(allRows[allRows.length - 1].o.m), width:3.5, shape:'linear' }, connectgaps:true, hoverinfo:'skip', showlegend:false });
     const tipOf = r => { const o = r.o, q = r.i ? r.d.rows[r.i - 1] : null;
       return `<div class="sorted-hover-date">${formatSortedHoverDate(o.p.t)}</div>` +
@@ -13536,7 +13582,7 @@ async function saFcRender(animate){
       <div class="sa-shift"><div><span class="lbl">Net votes</span> <b style="color:${saMarginColor(cur.m)}">${saNetTxt(saNetV(cur.o))}</b> <span class="was">(of about ${fmt(Math.round(cur.o.t))} ${noun})</span></div><div><span class="lbl">Forecast vs ${when}</span> ${saShift(dm)}${pv ? ` <span class="was">(${saPts(pv.m)} → ${saPts(cur.m)})</span>` : ''}</div>
       ${saState.fcBand && saState.fcBand[k] ? `<div><span class="lbl">Margin of error</span> <b style="color:var(--text)">${saPts(saState.fcBand[k][0])} to ${saPts(saState.fcBand[k][1])}</b> <span class="was">(final turnout 5% either way, NPA/other splitting 10 points either way, each party's loyalty 2 points either way, combined as independent errors)</span></div>` : ''}
       ${showAct ? `<div><span class="lbl">Actual Election Day so far</span> <b style="color:${saMarginColor(edAct[edAct.length - 1].m)}">${saPts(edAct[edAct.length - 1].m)}</b> <span class="was">(${fmt(Math.round(edAct[edAct.length - 1].v[0] + edAct[edAct.length - 1].v[1] + edAct[edAct.length - 1].v[2]))} ballots counted vs a forecast of ${saPts(fm)})</span> ${saShift(edAct[edAct.length - 1].m - fm)}</div>` : ''}</div>
-      <div class="sa-chart-wrap"><div class="sa-key sa-leg2"><span><i class="ln" style="border-top:3px solid #5b9bd9"></i><i class="ln" style="border-top:3px solid #d9695d;margin-left:0"></i><b>Forecast after each ${gran}</b> <em>(blue = D ahead, red = R ahead)</em></span><span><i class="ln" style="border-top:2px dotted #ffd23f"></i><b>What it said at the time</b></span><span><i class="ln" style="border-top:4px dashed #ff6fae"></i><b>${k === 'ed' ? 'Election Day margin still to come' : 'Where it lands on Nov 3'}</b> <em>(${k === 'ed' ? 'holds steady as the count fills in' : 'holds steady unless the count or your sliders move'})</em></span><span><i class="bx" style="background:rgba(217,105,93,0.35)"></i><b>Margin of error</b></span>${showAct ? '<span><i class="ln" style="border-top:3px solid #80ed99"></i><b>Actual Election Day vote</b></span>' : ''}</div>
+      <div class="sa-chart-wrap"><div class="sa-key sa-leg2"><span><i class="ln" style="border-top:3px solid #5b9bd9"></i><i class="ln" style="border-top:3px solid #d9695d;margin-left:0"></i><b>Forecast after each ${gran}</b> <em>(blue = D ahead, red = R ahead)</em></span>${k === 'ed' ? '' : `<span><i class="ln" style="border-top:2px dotted #ffd23f"></i><b>What it said at the time</b></span><span><i class="ln" style="border-top:4px dashed #ff6fae"></i><b>${k === 'ed' ? 'Election Day margin still to come' : 'Where it lands on Nov 3'}</b> <em>(${k === 'ed' ? 'holds steady as the count fills in' : 'holds steady unless the count or your sliders move'})</em></span><span><i class="bx" style="background:rgba(217,105,93,0.35)"></i><b>Margin of error</b></span>`}</div>
       <div id="${id}Ch" style="height:250px;"></div></div>`;
     const xs = rows.map(r => r.p.t), ys = rows.map(r => r.m);
     const traces = saSignedSegs(xs, ys).map(sg => ({ x:sg.x, y:sg.y, type:'scatter', mode:'lines', line:{ color:sg.c, width:3.5 }, hoverinfo:'skip', showlegend:false }));
@@ -13552,7 +13598,7 @@ async function saFcRender(animate){
     traces.push({ x:xs, y:ys, type:'scatter', mode:'markers', showlegend:false, marker:{ size:14, opacity:0 }, customdata:rows.map(tipOf), hoverinfo:'none' });
     // projected path to Nov 3 (dotted)
     const PP = saState.fcPath; let pxs = [], pys = [], ptip = [];
-    if(PP){
+    if(PP && k !== 'ed'){   // the Election Day Only Forecast shows just its forecast line
       const fin = PP.fin, remOf = q => ({ d:Math.max(0, fin.d - q.d), r:Math.max(0, fin.r - q.r), n:Math.max(0, fin.n - q.n) });
       const seq = [{ t:PP.cur.t, o:{ d:PP.cur.d, r:PP.cur.r, n:PP.cur.n } }].concat(PP.proj.map(q => ({ t:q.t, o:{ d:q.d, r:q.r, n:q.n } })));
       const vals = seq.map(q => ({ t:q.t, o:k === 'ed' ? (showAct ? frozen.ed : cur.o) : fin }));   // Election Day only: the forecast holds steady, since nothing else is left once early voting and mail finish   // Final: the projected final total, so the line continues from the solid forecast
@@ -13568,7 +13614,7 @@ async function saFcRender(animate){
       if(pxs.length) traces.push({ x:[pxs[pxs.length - 1]], y:[pys[pys.length - 1]], type:'scatter', mode:'markers', marker:{ size:11, color:'#ff6fae', line:{ color:'#0b1018', width:2 } }, hoverinfo:'skip', showlegend:false });
       traces.push({ x:pxs, y:pys, type:'scatter', mode:'markers', showlegend:false, marker:{ size:14, opacity:0 }, customdata:ptip, hoverinfo:'none' });
     }
-    if(showAct){
+    if(showAct && k !== 'ed'){
       const ax = edAct.map(o => o.t), ay = edAct.map(o => o.m);
       traces.push({ x:ax, y:ay, type:'scatter', mode:'lines', line:{ color:'#80ed99', width:3.5 }, hoverinfo:'skip', showlegend:false });
       traces.push({ x:ax, y:ay, type:'scatter', mode:'markers', showlegend:false, marker:{ size:14, opacity:0 }, hoverinfo:'none',
@@ -13584,7 +13630,7 @@ async function saFcRender(animate){
       if(gran === 'day'){ const dl = {}; list0.forEach(p => { dl[saKey(p.t)] = p; }); src = Object.keys(dl).sort().map(kk => dl[kk]); }
       src = src.filter(p => saKey(p.t) >= SA_EV_START && saFcMargin(p[k]) !== null);
       const fx = src.map(p => p.t), fy = src.map(p => saFcMargin(p[k]));
-      if(fx.length > 1) traces.push({ x:fx, y:fy, type:'scatter', mode:'lines', line:{ color:'#ffd23f', width:2.5, dash:'dot', shape:'hv' }, hoverinfo:'skip', showlegend:false });
+      if(fx.length > 1 && k !== 'ed') traces.push({ x:fx, y:fy, type:'scatter', mode:'lines', line:{ color:'#ffd23f', width:2.5, dash:'dot', shape:'hv' }, hoverinfo:'skip', showlegend:false });
     }
     const BD = saState.fcBand && saState.fcBand[k], bandOn = BD && pxs.length > 1;
     if(bandOn){
